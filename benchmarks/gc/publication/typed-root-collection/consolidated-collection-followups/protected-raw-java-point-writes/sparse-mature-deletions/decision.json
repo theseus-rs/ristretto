@@ -1,0 +1,19 @@
+{
+  "revision": "c051ed39326913534d8b8b280323970632db077f",
+  "parent": "dd8c2f98",
+  "collection_control": "f1daebeb",
+  "java_control": "f462e61c",
+  "individual_minimum_lower_95": {
+    "native": 10.84863020975796,
+    "wasm": 10.90623965868743
+  },
+  "allocation_screen": true,
+  "native_capacity_ratio": 1.1352319247731129,
+  "wasi_capacity_ratio": 0.9682864427471628,
+  "native_sustained_p999_ratio": 1.1513157894736843,
+  "wasi_sustained_p999_ratio": 0.9419354838709677,
+  "native_screen": false,
+  "wasi_short": true,
+  "wasi_sustained": true,
+  "include_in_alpha_pr": false
+}

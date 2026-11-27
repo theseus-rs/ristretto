@@ -1,0 +1,28 @@
+{
+  "ristretto-candidate-jit-before": [
+    {
+      "completed": 60000,
+      "p999_us": 2848,
+      "oom_kills": 0
+    },
+    {
+      "completed": 60000,
+      "p999_us": 3008,
+      "oom_kills": 0
+    }
+  ],
+  "ristretto-candidate-jit": [
+    {
+      "completed": 60000,
+      "p999_us": 2528,
+      "oom_kills": 0
+    },
+    {
+      "completed": 60000,
+      "p999_us": 3264,
+      "oom_kills": 0
+    }
+  ],
+  "ratio": 0.9890710382513661,
+  "pass_sustained": true
+}

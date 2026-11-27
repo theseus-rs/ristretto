@@ -1,0 +1,100 @@
+{
+  "collector_source": "c4f527d1501051f6166a2059cdf629dc23de2fa8",
+  "control_source": "8c215619aa0e52cdb76dfaf6d2149547e07bc2b4",
+  "wasi_integration_test_revision": "4d6d34f631db86bba6eb808647fbdd0a618e22ea",
+  "native": {
+    "passed": 1009,
+    "failed": 0,
+    "ignored": 1
+  },
+  "wasi_default": {
+    "passed": 452,
+    "failed": 0,
+    "ignored": 0
+  },
+  "wasi_all_features": {
+    "passed": 451,
+    "failed": 0,
+    "ignored": 0
+  },
+  "miri": {
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0
+  },
+  "java": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "checks": {
+    "clippy-final": "ee88e5291b9fd854d46f3c6d0c6d76a33d7dad265c00f35c0e89fb2de0a15c2a",
+    "clippy-wasi": "6e8694a1a21cc1ae752388528fc73a13324537e232cad94e235e2cbcd69bf31a",
+    "cargo-package": "d125dfdbbe31e4d17e792c7dc347f34c62b3df11b059d6dadfb3f73ec902e559",
+    "consumer-native": "3a2f39527ea87705caf6bec5141e484a34c8703ba1d7f359b079f30cedf30434",
+    "consumer-wasi": "138a65f845be4e1995f8a9b7500f36794892ff7192ab83c468481ebf6d3d66b8"
+  },
+  "audits": {
+    "design-high": {
+      "response": null,
+      "sha256": "6c3c83dc074bd2d1a04df5f28e29a0e09eb60e82f5cf20607eb2c2e30e00fd42"
+    },
+    "post-repeat": {
+      "response": "No, because the pre-reserved tree slot stays invisible until validation succeeds, the checks under the `publication` and `decision` guards reject a reused address when verifying `weak_is_cleared`, the reserved collector/address, and the original `ObjectId`, type, and logical liveness, and dropping the failed reservation cancels the unpublished occupancy without ever exposing a pointer.\n",
+      "sha256": "c2815d185f3734a38b059f6751c6df87106f4631a64517e6a819c76de14b9f48"
+    },
+    "neon": {
+      "response": null,
+      "sha256": "afcb411d1c507b5fec0b7bae3251d597e758300af691a92aadbd83365cd0a097"
+    }
+  },
+  "shipping_graphs": 14,
+  "schedules": {
+    "control_processes": 10,
+    "candidate_processes": 100,
+    "schedules_per_process": 6,
+    "control_patch_sha256": "fa39be15d3e0d1943b161215903da5218d1cda161e8a149d93e42947355f2b87",
+    "control_test_binary_sha256": "b56f22bc9d5369f4a3204b0c7379af0bbfb448f8fee428c90b0f266119c61999",
+    "candidate_test_binary_sha256": "1cfc3af71ee23b20e98f66647a168218dd598fc0c88657cb73fdbc53f9e239ee"
+  },
+  "browser": {
+    "offered": 36000,
+    "unfinished_by_fork": [
+      0,
+      0,
+      0,
+      0,
+      7,
+      0,
+      0,
+      0,
+      0
+    ],
+    "binary_sha256": "6538e4841c44936774f4bf3c10fb43ae8746d670f50e98736932dc0bd2a61979",
+    "sources_sha256": "58186e394950bd178fd55e569d455707882751f0d3da2b4952ef62308f99a7a9"
+  }
+}

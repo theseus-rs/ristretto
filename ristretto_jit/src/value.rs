@@ -4,8 +4,10 @@ pub enum Value {
     I64(i64),
     F32(f32),
     F64(f64),
-    /// Raw pointer to a GC-managed object reference (`Gc<RwLock<Reference>>`).
-    /// A value of 0 represents null.
+    /// Embedding-owned reference identity. Zero represents null.
+    /// Legacy VM code uses GC handles; request-only embeddings may use scoped
+    /// tokens. Generated code never dereferences this value. Its owning runtime
+    /// context must validate identity, equality and lifetime across every slice.
     Ptr(i64),
 }
 

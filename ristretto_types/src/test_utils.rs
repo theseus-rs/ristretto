@@ -396,7 +396,7 @@ impl MockVm {
     pub(crate) fn object_value(&self, class_name: &str) -> Result<Value> {
         let class = self.get_or_create_class(class_name)?;
         let object = Object::new(class)?;
-        Ok(Value::from_object(&self.garbage_collector, object))
+        Ok(Value::try_from_object(&self.garbage_collector, object)?)
     }
 }
 
@@ -614,12 +614,12 @@ impl MockThread {
         let bytes: Vec<i8> = value.bytes().map(u8::cast_signed).collect();
         object.set_value(
             "value",
-            Value::new_object(self.vm.garbage_collector(), Reference::from(bytes)),
+            Value::try_new_object(self.vm.garbage_collector(), Reference::from(bytes))?,
         )?;
         object.set_value("hash", Value::Int(0))?;
         object.set_value("coder", Value::Int(0))?;
         object.set_value("hashIsZero", Value::Int(0))?;
-        Ok(Value::from_object(self.vm.garbage_collector(), object))
+        Ok(Value::try_from_object(self.vm.garbage_collector(), object)?)
     }
 }
 

@@ -1,0 +1,32 @@
+{
+  "control": "c5d9e643 with control.patch.gz",
+  "forced_candidate": "2ec923ac",
+  "additional_schedules": "f6b44299",
+  "cost_seed": 251127297,
+  "cost_affinity": [
+    4,
+    6,
+    9
+  ],
+  "fixture_sha256": "10e36e25eb033dab59f6785da3e6f7120cb80eedd3d42b8f61a3aeb8f9058e43",
+  "executables_sha256": {
+    "parent-cost": "5d63f4632ccde6cb3c08acce748980840f16387b3cd30090109148d3d93baff0",
+    "candidate-cost": "151c73999c6639761a2f0da068410cb358adbf3d37f18ba431f871b697b66721",
+    "parent-suite": "0ecf73fa876cb8cd5a7a6e99d09365a7d2962b6806f41c7f77533edce557606c",
+    "candidate-suite": "ca558d488e9912443264a8457d42b2cea6c9c7f35edca95bef8209ec1698373f"
+  },
+  "additional_tests_sha256": "00b8df9e93f25d180c8ce404dcd7e4ebbc2c4d9e8de1e9bd38be721ef66ec606",
+  "ordinary_scheduling": {
+    "seed": 251127303,
+    "repeats": 300,
+    "source": {
+      "before": "c5d9e643",
+      "after": "98da7d8e"
+    },
+    "fixture_sha256": "03536a2276c0ca56f995ce8e667b9dfe02535c3ef1361574c1d0e628e8ef8baa",
+    "binary_sha256": {
+      "before": "37eb23132571adfedebfc397d41c03db9af92666d90e6fc6bc096b906fa65602",
+      "after": "e74e9247ad4ee421a207bbe59b7308a94b8ac807591873ce47e4a80eebcef68c"
+    }
+  }
+}

@@ -6,6 +6,9 @@
 
 pub mod tempdir;
 
+#[cfg(not(target_family = "wasm"))]
+pub mod process;
+
 pub use tempdir::init_wasi_tempdir;
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 pub use tempdir::{new_named_tempfile, new_tempdir};

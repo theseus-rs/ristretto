@@ -7,13 +7,15 @@ use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use ristretto_classfile::BaseType;
 use ristretto_classfile::attributes::ArrayType;
-use ristretto_classloader::{Class, Reference, Value};
-use ristretto_types::array::{allocate_array, allocate_primitive_array};
+use ristretto_classloader::{Class, Reference, ReferenceWriteGuardExt, Value};
+use ristretto_types::array::{
+    ArrayNodeBudget, allocate_null_reference_array_in_async, allocate_primitive_array_in_async,
+};
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray>
 #[inline]
-pub(crate) fn newarray(
+pub(crate) async fn newarray(
     frame: &Frame,
     stack: &mut OperandStack,
     array_type: &ArrayType,
@@ -36,7 +38,11 @@ pub(crate) fn newarray(
         ArrayType::Int => BaseType::Int,
         ArrayType::Long => BaseType::Long,
     };
-    let array = Value::new_object(collector, allocate_primitive_array(&base_type, count)?);
+    let array = Value::try_new_object_async(
+        collector,
+        allocate_primitive_array_in_async(collector, &base_type, count).await?,
+    )
+    .await?;
     stack.push(array)?;
     Ok(())
 }
@@ -61,8 +67,9 @@ pub(crate) async fn anewarray(
     }
     let count = usize::try_from(count)?;
     let vm = thread.vm()?;
-    let reference = Reference::try_from((class, allocate_array(count, Value::Object(None))?))?;
-    let array = Value::new_object(vm.garbage_collector(), reference);
+    let reference =
+        allocate_null_reference_array_in_async(vm.garbage_collector(), class, count).await?;
+    let array = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     stack.push(array)?;
     Ok(Continue)
 }
@@ -127,12 +134,27 @@ pub(crate) async fn multianewarray(
     Ok(Continue)
 }
 
-async fn create_multidimensional_array(
+pub(crate) async fn create_multidimensional_array(
     thread: &Thread,
     class: Arc<Class>,
     dimension_sizes: &[usize],
     depth: usize,
 ) -> Result<Value> {
+    let mut remaining = ArrayNodeBudget::default();
+    create_multidimensional_array_with_budget(thread, class, dimension_sizes, depth, &mut remaining)
+        .await
+}
+
+/// Count nodes across every recursion level, including zero-length children. No
+/// parent payload guard spans a poll boundary, and pending parents remain rooted.
+async fn create_multidimensional_array_with_budget(
+    thread: &Thread,
+    class: Arc<Class>,
+    dimension_sizes: &[usize],
+    depth: usize,
+    remaining: &mut ArrayNodeBudget,
+) -> Result<Value> {
+    remaining.next_node().await;
     let current_size = *dimension_sizes
         .get(depth)
         .ok_or_else(|| InternalError(format!("Invalid array dimension depth: {depth}")))?;
@@ -146,35 +168,50 @@ async fn create_multidimensional_array(
             let base_type = BaseType::parse(component_type.chars().next().unwrap_or_default())?;
             let vm = thread.vm()?;
             let collector = vm.garbage_collector();
-            let array = Value::new_object(
+            let array = Value::try_new_object_async(
                 collector,
-                allocate_primitive_array(&base_type, current_size)?,
-            );
+                allocate_primitive_array_in_async(
+                    thread.vm()?.garbage_collector(),
+                    &base_type,
+                    current_size,
+                )
+                .await?,
+            )
+            .await?;
             Ok(array)
         } else {
             // Object array
             let vm = thread.vm()?;
             let reference =
-                Reference::try_from((class, allocate_array(current_size, Value::Object(None))?))?;
-            let array = Value::new_object(vm.garbage_collector(), reference);
+                allocate_null_reference_array_in_async(vm.garbage_collector(), class, current_size)
+                    .await?;
+            let array = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
             Ok(array)
         }
     } else {
         let component = thread.array_component_class(&class).await?;
-        let mut elements = allocate_array(current_size, Value::Object(None))?;
-        for element in &mut elements {
-            *element = Box::pin(create_multidimensional_array(
+        // Charge and root the parent before allocating its children. No managed guard
+        // crosses the recursive await or an allocation slow path.
+        let vm = thread.vm()?;
+        let collector = vm.garbage_collector();
+        let reference =
+            allocate_null_reference_array_in_async(collector, class, current_size).await?;
+        let array = Value::try_new_object_async(collector, reference).await?;
+        for index in 0..current_size {
+            let child = Box::pin(create_multidimensional_array_with_budget(
                 thread,
                 component.clone(),
                 dimension_sizes,
                 depth + 1,
+                remaining,
             ))
             .await?;
+            let mut reference = array.as_reference_mut()?;
+            reference
+                .set_array_element(index, child)
+                .map_err(|_| InternalError("multidimensional array length changed".to_owned()))?;
         }
 
-        let vm = thread.vm()?;
-        let reference = Reference::try_from((class, elements))?;
-        let array = Value::new_object(vm.garbage_collector(), reference);
         Ok(array)
     }
 }
@@ -187,6 +224,31 @@ mod tests {
     use crate::java_object::JavaObject;
     use ristretto_classfile::attributes::ArrayType;
     use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_newarray_async_dispatch_yields_during_large_initialization() -> Result<()> {
+        use ristretto_classfile::attributes::Instruction;
+        use std::cell::Cell;
+        let (_vm, _thread, frame) = crate::test::frame().await?;
+        let mut stack = OperandStack::with_max_size(1);
+        stack.push_int(1024 * 1024)?;
+        let progress = Cell::new(false);
+        let allocation = async {
+            frame
+                .process_async(&mut stack, &Instruction::Newarray(ArrayType::Byte))
+                .await?;
+            assert!(progress.get(), "large newarray monopolized the executor");
+            Ok::<_, crate::Error>(())
+        };
+        let companion = async {
+            progress.set(true);
+        };
+        let (result, ()) = tokio::join!(allocation, companion);
+        result?;
+        let value = stack.pop()?;
+        assert_eq!(value.as_byte_vec_ref()?.len(), 1024 * 1024);
+        Ok(())
+    }
 
     /// Reproduce #940 without allocating gigabytes on a 64-bit test host.
     #[tokio::test]
@@ -213,14 +275,14 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(i32::MAX - 8)?;
-        let result = newarray(&frame, stack, &ArrayType::Long);
+        let result = newarray(&frame, stack, &ArrayType::Long).await;
         assert!(matches!(
             result,
             Err(JavaError(crate::JavaError::OutOfMemoryError(_)))
         ));
         // A failed allocation must leave the VM usable.
         stack.push_int(1)?;
-        newarray(&frame, stack, &ArrayType::Long)?;
+        newarray(&frame, stack, &ArrayType::Long).await?;
         assert_eq!(&[0_i64], &*stack.pop()?.as_long_vec_ref()?);
         Ok(())
     }
@@ -230,7 +292,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        newarray(&frame, stack, &ArrayType::Boolean)?;
+        newarray(&frame, stack, &ArrayType::Boolean).await?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::BooleanArray(_)));
@@ -242,7 +304,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        newarray(&frame, stack, &ArrayType::Byte)?;
+        newarray(&frame, stack, &ArrayType::Byte).await?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::ByteArray(_)));
@@ -254,7 +316,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        newarray(&frame, stack, &ArrayType::Char)?;
+        newarray(&frame, stack, &ArrayType::Char).await?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::CharArray(_)));
@@ -266,7 +328,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        newarray(&frame, stack, &ArrayType::Double)?;
+        newarray(&frame, stack, &ArrayType::Double).await?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::DoubleArray(_)));
@@ -278,7 +340,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        newarray(&frame, stack, &ArrayType::Float)?;
+        newarray(&frame, stack, &ArrayType::Float).await?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::FloatArray(_)));
@@ -290,7 +352,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        newarray(&frame, stack, &ArrayType::Int)?;
+        newarray(&frame, stack, &ArrayType::Int).await?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::IntArray(_)));
@@ -302,7 +364,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        newarray(&frame, stack, &ArrayType::Long)?;
+        newarray(&frame, stack, &ArrayType::Long).await?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::LongArray(_)));
@@ -314,7 +376,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        newarray(&frame, stack, &ArrayType::Short)?;
+        newarray(&frame, stack, &ArrayType::Short).await?;
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert!(matches!(*reference, Reference::ShortArray(_)));
@@ -334,6 +396,42 @@ mod tests {
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert_eq!("[Ljava/lang/Object;", reference.class_name()?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_anewarray_large_null_array_preserves_its_last_store() -> Result<()> {
+        use ristretto_gc::{GcWeak, ReferenceKind};
+        let (vm, _thread, mut frame) = crate::test::frame().await?;
+        let index = Arc::get_mut(frame.class_mut())
+            .expect("class")
+            .constant_pool_mut()
+            .add_class("java/lang/Object")?;
+        let mut stack = OperandStack::with_max_size(1);
+        stack.push_int(4097)?;
+        anewarray(&frame, &mut stack, index).await?;
+        let array = stack.pop()?;
+        {
+            let reference = array.as_reference()?;
+            let (_, values) = reference.as_class_vec_ref()?;
+            assert_eq!(values.len(), 4097);
+            assert!(values.iter().all(|v| matches!(v, Value::Object(None))));
+        }
+        let gc = vm.garbage_collector();
+        let child = Value::new_object(gc, Reference::from(vec![73_i8]));
+        let Value::Object(Some(handle)) = &child else {
+            return Err(InternalError("missing allocated child".to_owned()));
+        };
+        let witness = GcWeak::new(handle, ReferenceKind::Weak, 0);
+        array
+            .as_reference_mut()?
+            .set_array_element(4096, child)
+            .expect("last element");
+        gc.collect_full()?;
+        assert!(witness.upgrade().is_some());
+        drop(array);
+        gc.collect_full()?;
+        assert!(witness.is_cleared());
         Ok(())
     }
 
@@ -358,7 +456,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        newarray(&frame, stack, &ArrayType::Boolean)?;
+        newarray(&frame, stack, &ArrayType::Boolean).await?;
         arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
@@ -369,7 +467,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        newarray(&frame, stack, &ArrayType::Byte)?;
+        newarray(&frame, stack, &ArrayType::Byte).await?;
         arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
@@ -380,7 +478,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        newarray(&frame, stack, &ArrayType::Char)?;
+        newarray(&frame, stack, &ArrayType::Char).await?;
         arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
@@ -391,7 +489,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        newarray(&frame, stack, &ArrayType::Double)?;
+        newarray(&frame, stack, &ArrayType::Double).await?;
         arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
@@ -402,7 +500,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        newarray(&frame, stack, &ArrayType::Float)?;
+        newarray(&frame, stack, &ArrayType::Float).await?;
         arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
@@ -413,7 +511,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        newarray(&frame, stack, &ArrayType::Int)?;
+        newarray(&frame, stack, &ArrayType::Int).await?;
         arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
@@ -424,7 +522,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        newarray(&frame, stack, &ArrayType::Long)?;
+        newarray(&frame, stack, &ArrayType::Long).await?;
         arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())
@@ -435,7 +533,7 @@ mod tests {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        newarray(&frame, stack, &ArrayType::Short)?;
+        newarray(&frame, stack, &ArrayType::Short).await?;
         arraylength(stack)?;
         assert_eq!(3, stack.pop_int()?);
         Ok(())

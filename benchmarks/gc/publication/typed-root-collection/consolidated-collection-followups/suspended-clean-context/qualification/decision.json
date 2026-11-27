@@ -1,0 +1,25 @@
+{
+  "revision": "729aea8f2b5a506d949fa016459daaae23d4be2e",
+  "passed": true,
+  "native_cycle_lower": 10.430266760762931,
+  "wasm_cycle_lower": 10.443181748603928,
+  "short_capacity_ratio": 1.0066373604099035,
+  "short_candidate_unfinished": 0,
+  "short_candidate_failures": 0,
+  "two_minute_candidate": {
+    "runtime": "Ristretto candidate",
+    "status": "ok",
+    "offered": "60000",
+    "completed": "60000",
+    "unfinished": "0",
+    "p999_us": "1261568",
+    "p9999_us": "1327104",
+    "max_backlog": "664",
+    "peak_mib": "128.16015625",
+    "oom_kills": "0"
+  },
+  "maximum_direct_ratio": {
+    "native": 0.9978861188924052,
+    "wasi": 1.0071553046584731
+  }
+}

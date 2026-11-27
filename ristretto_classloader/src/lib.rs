@@ -23,7 +23,7 @@
 //! use ristretto_classloader::{runtime, ClassLoader, JavaStr, Result};
 //! use std::sync::Arc;
 //!
-//! #[tokio::main]
+//! #[tokio::main(flavor = "current_thread")]
 //! async fn main() -> Result<()> {
 //!     let (_java_home, java_version, class_loader) = runtime::version_class_loader("21").await?;
 //!     let class_name = "java.util.HashMap";
@@ -45,7 +45,7 @@
 //! | `tls-native-tls`           | Enables Native TLS support                     | No       |
 //! | `tls-rustls-aws-lc-rs`     | Enables Rustls with the AWS-LC crypto provider | No       |
 //! | `tls-rustls-ring`          | Enables Rustls with the Ring crypto provider   | Yes      |
-//! | `url`                      | Enables URL class path entries                 | No       |
+//! | `url`                      | Enables URL class path entries on native hosts | No       |
 
 #![deny(unsafe_code)]
 #![cfg_attr(
@@ -58,6 +58,11 @@
     )
 )]
 
+mod array_elements;
+mod reference_write_guard;
+pub use reference_write_guard::ReferenceWriteGuardExt;
+mod card_set;
+pub use array_elements::ArrayElements;
 mod class;
 mod class_loader;
 mod class_loader_type;
@@ -75,8 +80,8 @@ mod tls;
 mod value;
 
 pub use class::{
-    Class, InitializationAction, InitializationState, MethodResolutionError, POLYMORPHIC_METHODS,
-    ResolvedMethod,
+    Class, InitializationAction, InitializationState, JavaReferenceField, MethodResolutionError,
+    POLYMORPHIC_METHODS, ResolvedMethod,
 };
 pub use class_loader::ClassLoader;
 pub use class_loader_type::ClassLoaderType;
@@ -92,4 +97,4 @@ pub use runtime::{
     ALL_LTS_VERSIONS, DEFAULT_JAVA_VERSION, JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION,
     JAVA_21_VERSION, JAVA_25_VERSION,
 };
-pub use value::Value;
+pub use value::{ReferenceReadProjection, ReferenceWriteProjection, Value};

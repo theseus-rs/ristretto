@@ -85,7 +85,7 @@ pub fn add_item_to_keychain<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/security/KeychainStore._getEncodedKeyData(J[C)[B", Any)]
-pub fn get_encoded_key_data<T: Thread + 'static>(
+pub async fn get_encoded_key_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -110,10 +110,9 @@ pub fn get_encoded_key_data<T: Thread + 'static>(
         return Ok(Some(Value::Object(None)));
     };
     let vm = thread.vm()?;
-    Ok(Some(Value::new_object(
-        vm.garbage_collector(),
-        Reference::from(item.data),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), Reference::from(item.data)).await?,
+    ))
 }
 
 #[intrinsic_method("apple/security/KeychainStore._releaseKeychainItemRef(J)V", Any)]
@@ -202,7 +201,7 @@ mod tests {
         let data = Value::new_object(vm.garbage_collector(), Reference::from(vec![1_i8, 2, 3]));
         let password = Value::new_object(
             vm.garbage_collector(),
-            Reference::CharArray(vec![112_u16, 119].into_boxed_slice()),
+            Reference::CharArray(vec![112_u16, 119].into()),
         );
         let handle = add_item_to_keychain(
             thread.clone(),
@@ -215,7 +214,8 @@ mod tests {
         let encoded = get_encoded_key_data(
             thread.clone(),
             Parameters::new(vec![Value::Long(handle), Value::Object(None)]),
-        )?
+        )
+        .await?
         .expect("encoded key");
         assert_eq!(&[1_i8, 2, 3], &*encoded.as_byte_vec_ref()?);
 
@@ -241,7 +241,7 @@ mod tests {
         let password = || {
             Value::new_object(
                 vm.garbage_collector(),
-                Reference::CharArray(vec![112_u16, 119].into_boxed_slice()),
+                Reference::CharArray(vec![112_u16, 119].into()),
             )
         };
         let add = |alias: Value, data: Vec<i8>, password: Value| {
@@ -265,7 +265,8 @@ mod tests {
         let encoded = get_encoded_key_data(
             thread,
             Parameters::new(vec![Value::Long(first), Value::Object(None)]),
-        )?
+        )
+        .await?
         .expect("first item");
         assert_eq!(&[1], &*encoded.as_byte_vec_ref()?);
         Ok(())

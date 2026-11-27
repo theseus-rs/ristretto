@@ -140,9 +140,10 @@ impl Configuration {
         self.verify_mode
     }
 
-    /// Returns the maximum size in bytes of each interpreted Java stack.
+    /// Returns the maximum size in bytes of each Java stack.
     ///
-    /// The value is rounded down to a whole interpreter value slot.
+    /// The value is rounded down to a whole stored-value slot and shared by interpreted
+    /// and compiled frames. Native machine-stack consumption is separate.
     #[must_use]
     pub fn max_java_stack_size(&self) -> usize {
         self.max_java_stack_size

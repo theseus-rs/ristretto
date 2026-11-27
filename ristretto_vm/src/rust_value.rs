@@ -16,7 +16,7 @@ pub async fn process_values(thread: &Thread, values: &[impl RustValue]) -> Resul
             let value = string_value.to_object(thread).await?;
             results.push(value);
         } else {
-            results.push(value.to_value(garbage_collector));
+            results.push(value.try_to_value_async(garbage_collector).await?);
         }
     }
     Ok(results)
@@ -40,6 +40,24 @@ mod tests {
 
         let processed_again = process_values(&thread, &values).await?;
         assert_eq!(values, processed_again);
+
+        let vectors = [vec![0x81_u8; 65_537]];
+        let arguments = process_values(&thread, &vectors).await?;
+        assert!(
+            arguments
+                .first()
+                .expect("vector argument")
+                .as_byte_vec_ref()?
+                .iter()
+                .all(|&byte| byte == -127)
+        );
+        assert!(
+            vectors
+                .first()
+                .expect("input vector")
+                .iter()
+                .all(|&byte| byte == 0x81)
+        );
         Ok(())
     }
 }

@@ -62,6 +62,8 @@ tokio = { workspace = true, features = ["io-util", "net", "rt-multi-thread"] }
 
 [features]
 default = ["tls-rustls-ring"]
+# Compatibility alias: typed VM array projection coverage is always enabled.
+experimental-trace-projections = ["ristretto_gc/experimental-trace-projections"]
 tls-native-tls = [
     "reqwest/native-tls",
     "reqwest/native-tls-vendored",

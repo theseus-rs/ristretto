@@ -36,7 +36,7 @@
 //! Each instruction implementation follows the JVM specification regarding operand stack
 //! manipulation, control flow, and runtime behavior.
 
-mod array;
+pub(crate) mod array;
 mod branch;
 mod byte;
 mod char;

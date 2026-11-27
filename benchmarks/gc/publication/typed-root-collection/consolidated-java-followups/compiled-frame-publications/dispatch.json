@@ -1,0 +1,98 @@
+[
+  {
+    "arm": "before",
+    "workload": "control",
+    "entries": 6427,
+    "backedges": 0,
+    "resumes": 6427,
+    "code_bytes": 27056,
+    "completed": 6427,
+    "checksum": 406751,
+    "complete_collections": 0,
+    "binary_sha256": "6478d0e4c6a80670b2d80bf724bd304116b3191879711667b76945201fa74763"
+  },
+  {
+    "arm": "before",
+    "workload": "allocation",
+    "entries": 1372,
+    "backedges": 0,
+    "resumes": 17836,
+    "code_bytes": 27056,
+    "completed": 1372,
+    "checksum": 170932,
+    "complete_collections": 0,
+    "binary_sha256": "6478d0e4c6a80670b2d80bf724bd304116b3191879711667b76945201fa74763"
+  },
+  {
+    "arm": "before",
+    "workload": "roots",
+    "entries": 217,
+    "backedges": 6944,
+    "resumes": 15624,
+    "code_bytes": 27056,
+    "completed": 217,
+    "checksum": 218744,
+    "complete_collections": 0,
+    "binary_sha256": "6478d0e4c6a80670b2d80bf724bd304116b3191879711667b76945201fa74763"
+  },
+  {
+    "arm": "before",
+    "workload": "mixed",
+    "entries": 1386,
+    "backedges": 0,
+    "resumes": 18018,
+    "code_bytes": 27056,
+    "completed": 1386,
+    "checksum": 173690,
+    "complete_collections": 1,
+    "binary_sha256": "6478d0e4c6a80670b2d80bf724bd304116b3191879711667b76945201fa74763"
+  },
+  {
+    "arm": "after",
+    "workload": "control",
+    "entries": 6724,
+    "backedges": 0,
+    "resumes": 6724,
+    "code_bytes": 21024,
+    "completed": 6724,
+    "checksum": 424934,
+    "complete_collections": 0,
+    "binary_sha256": "d95dfa47a9d6aadece59ff1cfc38b4235bf853245ada94e4e0ad6102553eb467"
+  },
+  {
+    "arm": "after",
+    "workload": "allocation",
+    "entries": 1395,
+    "backedges": 0,
+    "resumes": 18135,
+    "code_bytes": 21024,
+    "completed": 1395,
+    "checksum": 175670,
+    "complete_collections": 0,
+    "binary_sha256": "d95dfa47a9d6aadece59ff1cfc38b4235bf853245ada94e4e0ad6102553eb467"
+  },
+  {
+    "arm": "after",
+    "workload": "roots",
+    "entries": 230,
+    "backedges": 7360,
+    "resumes": 16560,
+    "code_bytes": 21024,
+    "completed": 230,
+    "checksum": 240064,
+    "complete_collections": 0,
+    "binary_sha256": "d95dfa47a9d6aadece59ff1cfc38b4235bf853245ada94e4e0ad6102553eb467"
+  },
+  {
+    "arm": "after",
+    "workload": "mixed",
+    "entries": 1457,
+    "backedges": 0,
+    "resumes": 18941,
+    "code_bytes": 21024,
+    "completed": 1457,
+    "checksum": 181168,
+    "complete_collections": 1,
+    "binary_sha256": "d95dfa47a9d6aadece59ff1cfc38b4235bf853245ada94e4e0ad6102553eb467"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "duration_seconds": 30,
+  "warmup_seconds": 10,
+  "schedules_per_arm": 2,
+  "rate": 500,
+  "seed": 251130341,
+  "cpus": [
+    8,
+    10
+  ],
+  "hardware_threads_including_siblings": [
+    8,
+    9,
+    10,
+    11
+  ],
+  "diagnostic_only": true,
+  "original_sustained_allocation_counts": {
+    "before": 60000,
+    "candidate": 31096
+  },
+  "purpose": "Distinguish repeatable loss from fork variability without replacing the failed 120-second gate. Capture thread CPU for each process."
+}

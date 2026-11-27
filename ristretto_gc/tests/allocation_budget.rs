@@ -13,7 +13,9 @@ struct Payload {
     charged_drops: Arc<AtomicUsize>,
 }
 
-impl Trace for Payload {
+// SAFETY: the weak collector link and atomic counters contain no managed edges.
+#[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+unsafe impl Trace for Payload {
     fn trace(&self, _: &GarbageCollector) {}
 }
 
@@ -26,6 +28,95 @@ impl Drop for Payload {
             self.charged_drops.fetch_add(1, Ordering::SeqCst);
         }
     }
+}
+
+#[test]
+fn clearing_a_heap_buffer_without_element_destructors_runs_no_element_hooks() {
+    struct Leaf;
+    // SAFETY: this leaf contains no managed edges.
+    #[expect(unsafe_code)]
+    unsafe impl Trace for Leaf {
+        fn may_contain_gc_references() -> bool {
+            panic!("retirement invoked the element's tracing policy")
+        }
+
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+
+    let mut buffer = ristretto_gc::HeapBuffer::from(vec![Leaf, Leaf]);
+    assert!(ristretto_gc::HeapBuffer::<Leaf>::has_bounded_cleanup());
+    assert_eq!(
+        buffer.clear_step(0, 1),
+        ristretto_gc::TraceProgress::Complete
+    );
+    assert!(buffer.is_empty());
+}
+
+#[test]
+fn element_retirement_requires_bounded_destruction_before_clearing() {
+    use ristretto_gc::HeapBuffer;
+
+    assert!(Vec::<Option<String>>::has_bounded_cleanup());
+    assert!(HeapBuffer::<Vec<u8>>::has_bounded_cleanup());
+    assert!(!Vec::<Vec<String>>::has_bounded_cleanup());
+    assert!(HeapBuffer::<u8>::has_bounded_cleanup());
+    assert!(!Vec::<HeapBuffer<u8>>::has_bounded_cleanup());
+    assert!(!HeapBuffer::<Payload>::has_bounded_cleanup());
+}
+
+#[test]
+fn nested_container_backing_is_charged_before_admission_and_refunded_after_drop()
+-> ristretto_gc::Result<()> {
+    use ristretto_gc::HeapBuffer;
+    let value = || HeapBuffer::from(vec![Some(String::with_capacity(4096)), None]);
+    let buffer = value();
+    let expected = buffer.capacity() * size_of::<Option<String>>()
+        + buffer.iter().flatten().map(String::capacity).sum::<usize>();
+    assert_eq!(buffer.external_size(), expected);
+    let size = Gc::allocation_size(&buffer)?;
+    let heap = GarbageCollector::with_config(Configuration::builder().max_heap_bytes(size).build());
+    let root = Gc::try_new(&heap, buffer)?;
+    assert_eq!(heap.managed_bytes(), size);
+    assert!(matches!(
+        Gc::try_new_once(&heap, value()),
+        Err((Error::OutOfMemory, _))
+    ));
+    drop(root);
+    heap.collect_full()?;
+    assert_eq!(heap.managed_bytes(), 0);
+    let insufficient =
+        GarbageCollector::with_config(Configuration::builder().max_heap_bytes(size - 1).build());
+    assert!(matches!(
+        Gc::try_new_once(&insufficient, value()),
+        Err((Error::OutOfMemory, _))
+    ));
+    Ok(())
+}
+
+#[test]
+fn nested_storage_size_overflow_is_rejected_before_reservation() {
+    struct Large(usize);
+    // SAFETY: this accounting fixture has no managed edges.
+    #[expect(unsafe_code)]
+    unsafe impl Trace for Large {
+        fn trace(&self, _: &GarbageCollector) {}
+        fn external_size(&self) -> usize {
+            self.0
+        }
+    }
+    let values = || vec![Large(usize::MAX), Large(1)];
+    assert!(matches!(
+        Gc::allocation_size(&values()),
+        Err(Error::OutOfMemory)
+    ));
+    assert!(matches!(
+        Gc::allocation_size(&ristretto_gc::HeapBuffer::from(values())),
+        Err(Error::OutOfMemory)
+    ));
+    assert!(matches!(
+        Gc::allocation_size(&(Some(Large(usize::MAX)), Large(1))),
+        Err(Error::OutOfMemory)
+    ));
 }
 
 #[test]
@@ -81,5 +172,56 @@ fn existing_constructor_uses_the_same_budget() -> ristretto_gc::Result<()> {
     drop(root);
     collector.stop()?;
     assert_eq!(collector.managed_bytes(), 0);
+    Ok(())
+}
+
+#[test]
+fn recovering_constructor_reclaims_an_unrooted_donor_at_the_logical_cap() -> ristretto_gc::Result<()>
+{
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .max_heap_bytes(32)
+            .allocation_threshold(usize::MAX)
+            .incremental_step_size(1)
+            .build(),
+    );
+    drop(Gc::try_new(&gc, ((1u64, 2u64), (3u64, 4u64)))?);
+    let before = gc.statistics()?.collections_completed;
+    let Err((Error::OutOfMemory, value)) = Gc::try_new_once(&gc, 23u64) else {
+        panic!("single attempt must return the unpublished value")
+    };
+    assert_eq!(gc.statistics()?.collections_completed, before);
+    assert_eq!(gc.managed_bytes(), 32);
+    let recovered = Gc::try_new(&gc, value)?;
+    assert_eq!(**recovered, 23);
+    assert_eq!(gc.managed_bytes(), 8);
+    drop(recovered);
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
+    Ok(())
+}
+
+#[test]
+fn synchronous_recovery_retains_the_unpublished_parents_strong_edge() -> ristretto_gc::Result<()> {
+    let size = Gc::<u64>::allocation_size(&7)?;
+    let gc = GarbageCollector::with_config(
+        Configuration::builder()
+            .max_heap_bytes(size + 64)
+            .allocation_threshold(usize::MAX)
+            .build(),
+    );
+    let child = Gc::try_new(&gc, 7u64)?.into_rooted();
+    let id = child.as_handle_i64();
+    drop(Gc::try_new(
+        &gc,
+        ((0u64, 1u64, 2u64), (3u64, 4u64, 5u64), (6u64, 7u64)),
+    )?);
+    let parent = Gc::try_new(&gc, Some(child))?;
+    let surviving = Gc::<u64>::from_handle_rooted(&gc, id)?;
+    assert_eq!(*surviving, 7);
+    assert_eq!((**parent).as_ref().map(Gc::as_handle_i64), Some(id));
+    drop((parent, surviving));
+    gc.collect_full()?;
+    assert_eq!(gc.managed_bytes(), 0);
     Ok(())
 }

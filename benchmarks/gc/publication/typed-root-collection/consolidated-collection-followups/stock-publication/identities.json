@@ -1,0 +1,522 @@
+{
+  "binaries": {
+    "native-stock-gc_compare": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "native",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "gc_compare",
+      "sha256": "fb1c62376d4f1fa7ec8e6c234d6e1f2d78242a81d17b0d20576b09b7a27d1f21",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ],
+      "archive_sha256": "da2acffd48730eb1327eff5f1de4956a0798f3d962ac144afdd40caf9200647b",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    },
+    "native-stock-java": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "native",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "java",
+      "sha256": "ca2de55e0c772d0e2535616095d4d2044a806615983bcced23a07b32efe5b740",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ],
+      "archive_sha256": "703dea6f8eab049b9d991cc0fe4a9b4b9712e2f3aa70fb2f9685cf4d3d3e4766",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    },
+    "native-counted-java": {
+      "revision": "c7b22b9fb0de469c255153cd1c2b9194aac7b92c",
+      "target": "native",
+      "policy": "counted",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "java",
+      "sha256": "ca2de55e0c772d0e2535616095d4d2044a806615983bcced23a07b32efe5b740",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-counted-stock-default-v1/ristretto_gc/src/lib.rs"
+      ],
+      "archive_sha256": "fffced634a075b72c87debfea94e9ddcfd0f947b9bb1c92a4f5c1be5e8f2d457",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    },
+    "native-stock-gc_recovery_latency": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "native",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_classloader",
+        "--example",
+        "gc_recovery_latency",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "gc_recovery_latency",
+      "sha256": "10be223dce7c6868454483ffe610d94c9b2ff26e419ae356dd87630aef3112e3",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ],
+      "archive_sha256": "857703d64b59a58a89fc82299b593d304c1cb57f584891ef830a9ca65ede35f3",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    },
+    "wasi-stock-gc_compare": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "wasi",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics",
+        "--target",
+        "wasm32-wasip2",
+        "--no-default-features"
+      ],
+      "binary": "gc_compare.wasm",
+      "sha256": "ce5542ce913cc0e71a9652046dfeee4c91897a44125d006a8dde0436af88c15d",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ],
+      "archive_sha256": "da2acffd48730eb1327eff5f1de4956a0798f3d962ac144afdd40caf9200647b",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    },
+    "wasi-stock-java": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "wasi",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics",
+        "--target",
+        "wasm32-wasip2",
+        "--no-default-features"
+      ],
+      "binary": "java.wasm",
+      "sha256": "54729d7cdd9f17b9c68791bf4cd1bfc60668356c534f4a3cd51aa573b425e6c3",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ],
+      "archive_sha256": "9ff1b51710faeeca25b9e49385965e2017bf24017b848c5d46a89ed92978f08d",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    },
+    "wasi-counted-java": {
+      "revision": "c7b22b9fb0de469c255153cd1c2b9194aac7b92c",
+      "target": "wasi",
+      "policy": "counted",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics",
+        "--target",
+        "wasm32-wasip2",
+        "--no-default-features"
+      ],
+      "binary": "java.wasm",
+      "sha256": "54729d7cdd9f17b9c68791bf4cd1bfc60668356c534f4a3cd51aa573b425e6c3",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-counted-stock-default-v1/ristretto_gc/src/lib.rs"
+      ],
+      "archive_sha256": "e1abef4aac52d5df2bba902c2581036b1e94d68fb70e00e5197088f4dbed8f6d",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    }
+  },
+  "short_run_policy": {
+    "parent": "5a098aa8",
+    "harness": "19d3cdb7",
+    "stock_control": "shipping Configuration::builder plus heap and workers",
+    "candidate": "same binary with only concurrent_publication=true",
+    "workload": "reference-array",
+    "warmup": 4,
+    "seconds": 10,
+    "repeats": 5,
+    "long_warmup": 10,
+    "long_seconds": 120,
+    "long_repeats": 2,
+    "rates": [
+      0,
+      500
+    ],
+    "seed": {
+      "native": 251127711,
+      "wasi": 251127713,
+      "native-long": 251127715,
+      "wasi-long": 251127717
+    },
+    "cpus": {
+      "native": [
+        20,
+        22
+      ],
+      "wasi": [
+        8,
+        10
+      ]
+    },
+    "cpu_quota": 2,
+    "heap_mib": 64,
+    "rss_mib": 512,
+    "capacity_floor": 0.95,
+    "long_p999_ceiling": 1.1,
+    "required_per_scheduled_fork": [
+      5000,
+      60000
+    ],
+    "required_oom_misses": 0
+  },
+  "ordinary_launchers": {
+    "native": {
+      "arch": "native",
+      "cpus": [
+        12,
+        14
+      ],
+      "rss_mib": 1024,
+      "runs": [
+        [
+          0,
+          0,
+          "counted"
+        ],
+        [
+          0,
+          0,
+          "stock"
+        ],
+        [
+          0,
+          1,
+          "stock"
+        ],
+        [
+          0,
+          1,
+          "counted"
+        ],
+        [
+          0,
+          2,
+          "counted"
+        ],
+        [
+          0,
+          2,
+          "stock"
+        ],
+        [
+          500,
+          0,
+          "counted"
+        ],
+        [
+          500,
+          0,
+          "stock"
+        ],
+        [
+          500,
+          1,
+          "stock"
+        ],
+        [
+          500,
+          1,
+          "counted"
+        ],
+        [
+          500,
+          2,
+          "stock"
+        ],
+        [
+          500,
+          2,
+          "counted"
+        ]
+      ],
+      "scheduled_rate": 500,
+      "seconds": 10,
+      "warmup": 4,
+      "capacity_floor": 0.95,
+      "p999_ceiling": 1.1
+    },
+    "wasi": {
+      "arch": "wasi",
+      "cpus": [
+        4,
+        6
+      ],
+      "rss_mib": 1024,
+      "runs": [
+        [
+          0,
+          0,
+          "counted"
+        ],
+        [
+          0,
+          0,
+          "stock"
+        ],
+        [
+          0,
+          1,
+          "counted"
+        ],
+        [
+          0,
+          1,
+          "stock"
+        ],
+        [
+          0,
+          2,
+          "counted"
+        ],
+        [
+          0,
+          2,
+          "stock"
+        ],
+        [
+          500,
+          0,
+          "stock"
+        ],
+        [
+          500,
+          0,
+          "counted"
+        ],
+        [
+          500,
+          1,
+          "stock"
+        ],
+        [
+          500,
+          1,
+          "counted"
+        ],
+        [
+          500,
+          2,
+          "counted"
+        ],
+        [
+          500,
+          2,
+          "stock"
+        ]
+      ],
+      "scheduled_rate": 500,
+      "seconds": 10,
+      "warmup": 4,
+      "capacity_floor": 0.95,
+      "p999_ceiling": 1.1
+    },
+    "recovery": {
+      "arch": "recovery",
+      "cpus": [
+        16,
+        18
+      ],
+      "rss_mib": 512,
+      "runs": [
+        [
+          false,
+          0,
+          "stock"
+        ],
+        [
+          false,
+          0,
+          "counted"
+        ],
+        [
+          false,
+          1,
+          "counted"
+        ],
+        [
+          false,
+          1,
+          "stock"
+        ],
+        [
+          false,
+          2,
+          "counted"
+        ],
+        [
+          false,
+          2,
+          "stock"
+        ],
+        [
+          false,
+          3,
+          "counted"
+        ],
+        [
+          false,
+          3,
+          "stock"
+        ],
+        [
+          false,
+          4,
+          "stock"
+        ],
+        [
+          false,
+          4,
+          "counted"
+        ],
+        [
+          true,
+          0,
+          "counted"
+        ],
+        [
+          true,
+          0,
+          "stock"
+        ],
+        [
+          true,
+          1,
+          "counted"
+        ],
+        [
+          true,
+          1,
+          "stock"
+        ],
+        [
+          true,
+          2,
+          "counted"
+        ],
+        [
+          true,
+          2,
+          "stock"
+        ],
+        [
+          true,
+          3,
+          "stock"
+        ],
+        [
+          true,
+          3,
+          "counted"
+        ],
+        [
+          true,
+          4,
+          "counted"
+        ],
+        [
+          true,
+          4,
+          "stock"
+        ]
+      ],
+      "scheduled_rate": 500,
+      "seconds": 6,
+      "warmup": 0,
+      "capacity_floor": 0.95,
+      "p999_ceiling": 1.1
+    }
+  },
+  "debugger": [
+    {
+      "request": 131400,
+      "empty": 2,
+      "used": 67007057,
+      "limit": 67108864,
+      "retired_bytes": 57549696,
+      "retired_objects": 438,
+      "retired_ready": 438,
+      "cap_mib": 64,
+      "stack": [
+        "<ristretto_gc::collector::GarbageCollector>::make_room_async::{closure#0} ()",
+        "ristretto_types::array::allocate_null_reference_array_in_async::{closure#0} ()",
+        "<ristretto_vm::frame::Frame>::process_async::{closure#0} ()",
+        "<ristretto_vm::thread::Thread>::execute_in_context::<ristretto_classloader::value::Value>::{closure#0} ()",
+        "<ristretto_vm::thread::Thread>::execute::<ristretto_classloader::value::Value>::{closure#0} ()",
+        "gc_compare::run::{closure#0} ()"
+      ]
+    },
+    {
+      "request": 131400,
+      "empty": 2,
+      "used": 536864849,
+      "limit": 536870912,
+      "retired_bytes": 527407488,
+      "retired_objects": 4014,
+      "retired_ready": 4014,
+      "cap_mib": 512,
+      "stack": [
+        "<ristretto_gc::collector::GarbageCollector>::make_room_async::{closure#0} ()",
+        "ristretto_types::array::allocate_null_reference_array_in_async::{closure#0} ()",
+        "<ristretto_vm::frame::Frame>::process_async::{closure#0} ()",
+        "<ristretto_vm::thread::Thread>::execute_in_context::<ristretto_classloader::value::Value>::{closure#0} ()",
+        "<ristretto_vm::thread::Thread>::execute::<ristretto_classloader::value::Value>::{closure#0} ()",
+        "gc_compare::run::{closure#0} ()"
+      ]
+    }
+  ]
+}

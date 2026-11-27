@@ -323,4 +323,20 @@ mod tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn launcher_rejects_research_heap_options() -> Result<(), clap::Error> {
+        for option in [
+            "--canonical-native=Caller.enter=Target.run",
+            "--canonical-class=Node",
+        ] {
+            assert!(Arguments::try_parse_from(["java", option, "Caller"]).is_err());
+            let cli = Arguments::try_parse_from(["java", "Caller", option])?;
+            assert_eq!(
+                cli.parameters.as_deref(),
+                Some([option.to_owned()].as_slice())
+            );
+        }
+        Ok(())
+    }
 }

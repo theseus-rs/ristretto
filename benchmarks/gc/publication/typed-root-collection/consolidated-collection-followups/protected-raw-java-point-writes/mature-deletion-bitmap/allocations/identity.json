@@ -1,0 +1,19 @@
+{
+  "seed": 251127667,
+  "processes": 120,
+  "visits": 960,
+  "binaries": {
+    "parent-default": "2d69cb99e1c808a61b4df0c0f0264bd934da12fb1d6a0a253fb55389a3867389",
+    "parent-experimental": "6f81b5eca4bb70f6cbe2e18480f2927d8df059b532f2e691858806804092f548",
+    "bitmap-default": "db84bf602e2ae0093adedb2c58fc9534857cec0bc35492376fe6f6e6fa66ea04",
+    "bitmap-experimental": "6bd77de73733449d3cb67a901e567cd5c000b5024f3ae54adcb76c281a8b12ee"
+  },
+  "fixture_sha256": "981d0d413cefa0d81b981a6d3a481c0393f43058991a39345a6fd05e954a5951",
+  "candidate": "f462e61ca477e2b6e6330b563369171f0e23d214",
+  "parent": "3f1b0d00",
+  "cpus": [
+    16,
+    18
+  ],
+  "profile": "cargo test --no-run, debug=0, incremental=0"
+}

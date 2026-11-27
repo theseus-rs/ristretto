@@ -194,10 +194,16 @@ jobs:
           cross build --workspace --target ${{ matrix.target }}
 
       - name: Install wasmtime
-        if: ${{ matrix.platform == 'wasm32-wasi' }}
+        if: ${{ startsWith(matrix.platform, 'wasm32') }}
         uses: taiki-e/install-action@v2
         with:
           tool: wasmtime
+
+      - name: Test bare WebAssembly garbage collection
+        if: ${{ matrix.platform == 'wasm32-unknown' }}
+        run: |
+          cargo build -p ristretto_gc --example wasm_smoke --target wasm32-unknown-unknown
+          wasmtime run --invoke gc_smoke target/wasm32-unknown-unknown/debug/examples/wasm_smoke.wasm
 
       - name: Tests
         if: ${{ matrix.platform == 'wasm32-wasi' }}

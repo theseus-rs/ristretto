@@ -1,0 +1,44 @@
+{
+  "policy": {
+    "parent": "ab7a3000",
+    "candidate": "f7d32751",
+    "rate": 500,
+    "seconds": 120,
+    "warmup": 10,
+    "seed": 251127273,
+    "repeats": 2,
+    "cpu": [
+      8,
+      10
+    ],
+    "quota": 2,
+    "heap_mib": 64,
+    "rss_mib": 512,
+    "workers": 2,
+    "scope": "diagnostic confirmation of an already failed 60,000-completion gate; keep the original four-runtime fork"
+  },
+  "raw_sha256": "364102f8fd46dc74149d748a5f85fac07699445896b5d23e65c81696e5e57ff4",
+  "classes": {
+    "GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "GcBench.class": "43bb33e4d45bd8255bef94901703b0b52e3a6db399f84f0d282e3084839e620c"
+  },
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "artifacts_sha256": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "43bb33e4d45bd8255bef94901703b0b52e3a6db399f84f0d282e3084839e620c",
+    "gc_compare": "657cbca7d5e0ea3fd40a682e5af296c382c0556c30acf0d63bd4648e7bca6e68",
+    "gc_compare.provenance.json": "675cdc2d61653dc520c8f37cd59d2008e2cc9773a3eabbfcfb2d2f3abec68562",
+    "gc_compare.sources.tar.gz": "441aba37c3d67fc8b685f80a6e9d6a97f28726566f559a2247747dfbfe06fec8",
+    "gc_compare-before": "30de0b94a063166569b8e86e63fadbde73c827b26be390249584343bf4de869e",
+    "gc_compare-before.provenance.json": "5e1ad13de8aeb9d06fb70a13910284094ed4c880e2329bf98b72affea1fc081b",
+    "gc_compare-before.sources.tar.gz": "f5ed748813b3fab52b628f4b5805cc2be0c0ce98d2ef5b0541b4411291b085cf"
+  },
+  "inputs_unchanged": true
+}

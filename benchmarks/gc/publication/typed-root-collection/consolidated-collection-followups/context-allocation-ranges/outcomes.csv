@@ -1,0 +1,11 @@
+payload,arm,completed,attempted,allocations_per_second,p9999_us
+256,stock,8,8,384722,94.0
+256,neither,8,8,389688,86.0
+256,credit,8,8,414907,86.5
+256,physical,8,8,299765,334.0
+256,combined,8,8,277728,343.0
+4096,stock,7,8,363049,69
+4096,neither,7,8,388309,57
+4096,credit,8,8,373168,64.5
+4096,physical,8,8,327831,140.0
+4096,combined,7,8,340661,131

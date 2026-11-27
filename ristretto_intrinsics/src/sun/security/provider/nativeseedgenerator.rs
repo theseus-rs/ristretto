@@ -37,10 +37,9 @@ mod tests {
     #[tokio::test]
     async fn test_native_generate_seed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let arr: Box<[i8]> = vec![0i8; 32].into_boxed_slice();
         let value = Value::new_object(
             thread.vm().expect("vm").garbage_collector(),
-            Reference::ByteArray(arr),
+            Reference::from(vec![0i8; 32]),
         );
         let result = native_generate_seed(thread, Parameters::new(vec![value])).expect("seed");
         assert_eq!(Some(Value::Int(1)), result);

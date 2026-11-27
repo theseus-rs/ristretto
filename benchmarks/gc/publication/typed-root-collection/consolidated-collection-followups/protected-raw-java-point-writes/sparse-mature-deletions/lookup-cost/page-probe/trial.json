@@ -1,0 +1,93 @@
+{
+  "seed": 251127703,
+  "processes": 160,
+  "visits": 1280,
+  "binaries": {
+    "before": "809976d565e43a9c17290142af864affbe3170c730e210aed56a9cc633407c30",
+    "after": "3d5d28302bc7826f0c6d35380fb67a4c350e3b753af7483f54c0dfa99af8884c"
+  },
+  "candidate": "406537aa7644d0b450265854bfcaca2fa1031a5c",
+  "control": "c051ed39326913534d8b8b280323970632db077f",
+  "steady": {
+    "sparse-65-counted-False": {
+      "before": 269362.5,
+      "after": 271561.0,
+      "ratio": 1.0081618636595666
+    },
+    "sparse-129-counted-False": {
+      "before": 655020.0,
+      "after": 666534.0,
+      "ratio": 1.01757808921865
+    },
+    "sparse-520-counted-False": {
+      "before": 3816219.0,
+      "after": 3514058.5,
+      "ratio": 0.9208220230547566
+    },
+    "sparse-2048-counted-False": {
+      "before": 18301987.0,
+      "after": 15336164.5,
+      "ratio": 0.8379507919003548
+    },
+    "sparse-65-counted-True": {
+      "before": 268597.5,
+      "after": 283212.5,
+      "ratio": 1.0544122711492103
+    },
+    "sparse-129-counted-True": {
+      "before": 660788.0,
+      "after": 669189.5,
+      "ratio": 1.012714365272977
+    },
+    "sparse-520-counted-True": {
+      "before": 4143281.5,
+      "after": 3427547.0,
+      "ratio": 0.8272541945315567
+    },
+    "sparse-2048-counted-True": {
+      "before": 18367531.5,
+      "after": 15056203.0,
+      "ratio": 0.8197183709743467
+    },
+    "dense-65-counted-False": {
+      "before": 268249.0,
+      "after": 265810.0,
+      "ratio": 0.9909077014266595
+    },
+    "dense-129-counted-False": {
+      "before": 523699.0,
+      "after": 532969.0,
+      "ratio": 1.0177010076398847
+    },
+    "dense-520-counted-False": {
+      "before": 2171904.0,
+      "after": 2138536.5,
+      "ratio": 0.9846367519006365
+    },
+    "dense-2048-counted-False": {
+      "before": 8381033.0,
+      "after": 8301192.5,
+      "ratio": 0.9904736683413607
+    },
+    "dense-65-counted-True": {
+      "before": 263546.5,
+      "after": 275271.5,
+      "ratio": 1.0444893026467814
+    },
+    "dense-129-counted-True": {
+      "before": 523691.5,
+      "after": 553026.0,
+      "ratio": 1.0560148484365317
+    },
+    "dense-520-counted-True": {
+      "before": 2084876.0,
+      "after": 2148490.0,
+      "ratio": 1.0305121263806576
+    },
+    "dense-2048-counted-True": {
+      "before": 8284481.0,
+      "after": 8328528.0,
+      "ratio": 1.0053168086208417
+    }
+  }
+}

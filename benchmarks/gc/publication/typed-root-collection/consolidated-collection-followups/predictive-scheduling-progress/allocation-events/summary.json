@@ -1,0 +1,26 @@
+{
+  "forks_per_arm": 24,
+  "nanoseconds_per_event": {
+    "control": 17.951665249999998,
+    "snapshot": 27.563347,
+    "floor": 18.050341
+  },
+  "paired_elapsed_ratios": {
+    "snapshot/control": {
+      "median": 1.5356121490342678,
+      "low": 1.5062225667988176,
+      "high": 1.5604660671492026
+    },
+    "floor/control": {
+      "median": 1.0053993943116772,
+      "low": 0.9947269165819418,
+      "high": 1.0150821136924784
+    },
+    "floor/snapshot": {
+      "median": 0.6564742488378726,
+      "low": 0.6461352865927228,
+      "high": 0.676880418317373
+    }
+  },
+  "samples_per_batch": 15
+}

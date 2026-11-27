@@ -1,8 +1,5 @@
-use crate::instruction::ThrowContext;
-use crate::instruction::object::{array_load, array_store};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
-use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Result, jit_value};
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{FloatCC, InstBuilder, Value, types};
@@ -195,50 +192,6 @@ pub(crate) fn dstore_3(
     let value = stack.pop_double(function_builder)?;
     locals.set_double(function_builder, 3, value)?;
     Ok(())
-}
-
-/// # References
-///
-/// - [JVMS §6.5.daload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.daload)
-pub(crate) fn daload(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    helpers: &RuntimeHelpers,
-    context_pointer: Value,
-    throw_context: &ThrowContext<'_>,
-) -> Result<()> {
-    let value = array_load(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        helpers.daload,
-    )?;
-    stack.push_double(function_builder, value)?;
-    Ok(())
-}
-
-/// # References
-///
-/// - [JVMS §6.5.dastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dastore)
-pub(crate) fn dastore(
-    function_builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    helpers: &RuntimeHelpers,
-    context_pointer: Value,
-    throw_context: &ThrowContext<'_>,
-) -> Result<()> {
-    let value = stack.pop_double(function_builder)?;
-    array_store(
-        function_builder,
-        stack,
-        helpers,
-        context_pointer,
-        throw_context,
-        helpers.dastore,
-        value,
-    )
 }
 
 /// # References

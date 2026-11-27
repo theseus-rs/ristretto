@@ -10,8 +10,18 @@ use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+/// A read projection retaining the lock on its owning Java reference.
+pub type ReferenceReadProjection<'a, T> = MappedRwLockReadGuard<'a, T, Reference>;
+
+/// A write projection retaining the lock on its owning Java reference.
+pub type ReferenceWriteProjection<'a, T> = MappedRwLockWriteGuard<'a, T, Reference>;
+
+#[cfg(test)]
+#[path = "value_projection_tests.rs"]
+mod projection_tests;
+
 /// Represents a value in the Ristretto VM.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum Value {
     Int(i32),
     Long(i64),
@@ -21,15 +31,118 @@ pub enum Value {
     Unused,
 }
 
+impl Clone for Value {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Int(value) => Self::Int(*value),
+            Self::Long(value) => Self::Long(*value),
+            Self::Float(value) => Self::Float(*value),
+            Self::Double(value) => Self::Double(*value),
+            Self::Object(value) => Self::Object(value.as_ref().map(Gc::rooted_clone)),
+            Self::Unused => Self::Unused,
+        }
+    }
+}
+
+// SAFETY: only Object values carry managed edges, and every ownership/tracing
+// operation forwards to that handle with the actual parent context.
+#[expect(unsafe_code, reason = "audited managed Value ownership and tracing")]
+unsafe impl ristretto_gc::Trace for Value {
+    fn root(&mut self) {
+        self.root();
+    }
+    fn trace(&self, collector: &GarbageCollector) {
+        if let Self::Object(Some(reference)) = self {
+            reference.trace(collector);
+        }
+    }
+
+    unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+        if let Self::Object(Some(reference)) = self {
+            // SAFETY: the handle is embedded in the caller's protected owner.
+            unsafe { ristretto_gc::Trace::unroot(reference, owner) };
+        }
+    }
+}
+
 impl Value {
+    /// Mutable element borrows may move a value out of its traced container.
+    /// Acquire ownership before exposing that borrow; cloning a rooted value
+    /// reuses its registration. The managed write hook demotes values left behind.
+    pub(crate) fn root(&mut self) {
+        if let Self::Object(Some(reference)) = self {
+            ristretto_gc::Trace::root(reference);
+        }
+    }
+
     /// Create a new object value.
     pub fn new_object(collector: &Arc<GarbageCollector>, reference: Reference) -> Self {
-        // VM stacks, class statics, and native Rust locals are not a complete traced root
-        // set yet. A temporary allocation root must not make a live Java value eligible
-        // for sweeping later. Every Java allocation remains owned by its VM until teardown.
+        // Owning handles protect locals, host values, and suspended futures. Managed cells
+        // convert stored values into traced edges when publishing or releasing a write guard.
         Value::Object(Some(
-            Gc::new(collector, RwLock::new(reference)).into_retained(),
+            Gc::new(collector, RwLock::new(reference)).into_rooted(),
         ))
+    }
+
+    /// Fallibly allocates a Java object with an owning root.
+    /// # Errors
+    /// Returns a GC allocation error if the managed budget or allocator is exhausted.
+    pub fn try_new_object(collector: &Arc<GarbageCollector>, reference: Reference) -> Result<Self> {
+        let data = RwLock::new(reference);
+        let size = Gc::allocation_size(&data)?;
+        if !ristretto_gc::cell::has_guards() {
+            collector.make_room(size)?;
+        }
+        let value = Value::Object(Some(Gc::try_new(collector, data)?.into_rooted()));
+        #[cfg(target_family = "wasm")]
+        collector.step();
+        Ok(value)
+    }
+
+    /// Publishes an owning Java value, awaiting recovery instead of collecting inline.
+    /// # Errors
+    /// Returns an allocation or collection error after bounded asynchronous recovery.
+    pub async fn try_new_object_async(
+        collector: &Arc<GarbageCollector>,
+        reference: Reference,
+    ) -> Result<Self> {
+        let value = Value::Object(Some(
+            Gc::try_new_async(collector, RwLock::new(reference))
+                .await?
+                .into_rooted(),
+        ));
+        #[cfg(target_family = "wasm")]
+        collector.step();
+        Ok(value)
+    }
+
+    /// Fallibly allocates an optional Java reference.
+    /// # Errors
+    /// Returns a managed allocation error.
+    pub fn try_new_opt_object(
+        collector: &Arc<GarbageCollector>,
+        reference: Option<Reference>,
+    ) -> Result<Self> {
+        reference.map_or(Ok(Value::Object(None)), |reference| {
+            Self::try_new_object(collector, reference)
+        })
+    }
+
+    /// Fallibly allocates a Java instance.
+    /// # Errors
+    /// Returns a managed allocation error.
+    pub fn try_from_object(collector: &Arc<GarbageCollector>, object: Object) -> Result<Self> {
+        Self::try_new_object(collector, Reference::Object(object))
+    }
+
+    /// Publishes a Java instance, awaiting recovery while retaining its owning fields.
+    /// # Errors
+    /// Returns a managed allocation error, or an error if a managed guard is held.
+    pub async fn try_from_object_async(
+        collector: &Arc<GarbageCollector>,
+        object: Object,
+    ) -> Result<Self> {
+        Self::try_new_object_async(collector, Reference::Object(object)).await
     }
 
     /// Create a new nullable object value.
@@ -288,7 +401,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ByteArray`.
-    pub fn as_byte_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i8]>> {
+    pub fn as_byte_vec_ref(&self) -> Result<ReferenceReadProjection<'_, [i8]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_byte_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected byte array".to_string()))
@@ -299,12 +412,21 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ByteArray`.
-    pub fn as_byte_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i8]>> {
+    #[expect(
+        unsafe_code,
+        reason = "primitive slice preserves the entire empty graph"
+    )]
+    pub fn as_byte_vec_mut(&self) -> Result<ReferenceWriteProjection<'_, [i8]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
-                RwLockWriteGuard::try_map(reference, |r| r.as_byte_vec_mut().ok())
-                    .map_err(|_| InvalidValueType("Expected byte array".to_string()))
+                // SAFETY: a successful projection selects a primitive-array variant.
+                // The entire Reference has no trace actions, and this slice cannot
+                // change its variant or introduce managed references.
+                unsafe {
+                    RwLockWriteGuard::try_map_trace_empty(reference, |r| r.as_byte_vec_mut().ok())
+                }
+                .map_err(|_| InvalidValueType("Expected byte array".to_string()))
             }
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
         }
@@ -315,7 +437,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `CharArray`.
-    pub fn as_char_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [u16]>> {
+    pub fn as_char_vec_ref(&self) -> Result<ReferenceReadProjection<'_, [u16]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_char_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected char array".to_string()))
@@ -326,12 +448,21 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `CharArray`.
-    pub fn as_char_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [u16]>> {
+    #[expect(
+        unsafe_code,
+        reason = "primitive slice preserves the entire empty graph"
+    )]
+    pub fn as_char_vec_mut(&self) -> Result<ReferenceWriteProjection<'_, [u16]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
-                RwLockWriteGuard::try_map(reference, |r| r.as_char_vec_mut().ok())
-                    .map_err(|_| InvalidValueType("Expected char array".to_string()))
+                // SAFETY: a successful projection selects a primitive-array variant.
+                // The entire Reference has no trace actions, and this slice cannot
+                // change its variant or introduce managed references.
+                unsafe {
+                    RwLockWriteGuard::try_map_trace_empty(reference, |r| r.as_char_vec_mut().ok())
+                }
+                .map_err(|_| InvalidValueType("Expected char array".to_string()))
             }
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
         }
@@ -342,7 +473,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ShortArray`.
-    pub fn as_short_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i16]>> {
+    pub fn as_short_vec_ref(&self) -> Result<ReferenceReadProjection<'_, [i16]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_short_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected short array".to_string()))
@@ -353,12 +484,21 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ShortArray`.
-    pub fn as_short_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i16]>> {
+    #[expect(
+        unsafe_code,
+        reason = "primitive slice preserves the entire empty graph"
+    )]
+    pub fn as_short_vec_mut(&self) -> Result<ReferenceWriteProjection<'_, [i16]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
-                RwLockWriteGuard::try_map(reference, |r| r.as_short_vec_mut().ok())
-                    .map_err(|_| InvalidValueType("Expected short array".to_string()))
+                // SAFETY: a successful projection selects a primitive-array variant.
+                // The entire Reference has no trace actions, and this slice cannot
+                // change its variant or introduce managed references.
+                unsafe {
+                    RwLockWriteGuard::try_map_trace_empty(reference, |r| r.as_short_vec_mut().ok())
+                }
+                .map_err(|_| InvalidValueType("Expected short array".to_string()))
             }
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
         }
@@ -369,7 +509,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `IntArray`.
-    pub fn as_int_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i32]>> {
+    pub fn as_int_vec_ref(&self) -> Result<ReferenceReadProjection<'_, [i32]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_int_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected int array".to_string()))
@@ -380,12 +520,21 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `IntArray`.
-    pub fn as_int_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i32]>> {
+    #[expect(
+        unsafe_code,
+        reason = "primitive slice preserves the entire empty graph"
+    )]
+    pub fn as_int_vec_mut(&self) -> Result<ReferenceWriteProjection<'_, [i32]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
-                RwLockWriteGuard::try_map(reference, |r| r.as_int_vec_mut().ok())
-                    .map_err(|_| InvalidValueType("Expected int array".to_string()))
+                // SAFETY: a successful projection selects a primitive-array variant.
+                // The entire Reference has no trace actions, and this slice cannot
+                // change its variant or introduce managed references.
+                unsafe {
+                    RwLockWriteGuard::try_map_trace_empty(reference, |r| r.as_int_vec_mut().ok())
+                }
+                .map_err(|_| InvalidValueType("Expected int array".to_string()))
             }
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
         }
@@ -396,7 +545,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `LongArray`.
-    pub fn as_long_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i64]>> {
+    pub fn as_long_vec_ref(&self) -> Result<ReferenceReadProjection<'_, [i64]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_long_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected long array".to_string()))
@@ -407,12 +556,21 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `LongArray`.
-    pub fn as_long_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i64]>> {
+    #[expect(
+        unsafe_code,
+        reason = "primitive slice preserves the entire empty graph"
+    )]
+    pub fn as_long_vec_mut(&self) -> Result<ReferenceWriteProjection<'_, [i64]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
-                RwLockWriteGuard::try_map(reference, |r| r.as_long_vec_mut().ok())
-                    .map_err(|_| InvalidValueType("Expected long array".to_string()))
+                // SAFETY: a successful projection selects a primitive-array variant.
+                // The entire Reference has no trace actions, and this slice cannot
+                // change its variant or introduce managed references.
+                unsafe {
+                    RwLockWriteGuard::try_map_trace_empty(reference, |r| r.as_long_vec_mut().ok())
+                }
+                .map_err(|_| InvalidValueType("Expected long array".to_string()))
             }
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
         }
@@ -423,7 +581,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `FloatArray`.
-    pub fn as_float_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [f32]>> {
+    pub fn as_float_vec_ref(&self) -> Result<ReferenceReadProjection<'_, [f32]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_float_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected float array".to_string()))
@@ -434,12 +592,21 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `FloatArray`.
-    pub fn as_float_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [f32]>> {
+    #[expect(
+        unsafe_code,
+        reason = "primitive slice preserves the entire empty graph"
+    )]
+    pub fn as_float_vec_mut(&self) -> Result<ReferenceWriteProjection<'_, [f32]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
-                RwLockWriteGuard::try_map(reference, |r| r.as_float_vec_mut().ok())
-                    .map_err(|_| InvalidValueType("Expected float array".to_string()))
+                // SAFETY: a successful projection selects a primitive-array variant.
+                // The entire Reference has no trace actions, and this slice cannot
+                // change its variant or introduce managed references.
+                unsafe {
+                    RwLockWriteGuard::try_map_trace_empty(reference, |r| r.as_float_vec_mut().ok())
+                }
+                .map_err(|_| InvalidValueType("Expected float array".to_string()))
             }
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
         }
@@ -450,7 +617,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `DoubleArray`.
-    pub fn as_double_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [f64]>> {
+    pub fn as_double_vec_ref(&self) -> Result<ReferenceReadProjection<'_, [f64]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_double_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected double array".to_string()))
@@ -461,12 +628,21 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `DoubleArray`.
-    pub fn as_double_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [f64]>> {
+    #[expect(
+        unsafe_code,
+        reason = "primitive slice preserves the entire empty graph"
+    )]
+    pub fn as_double_vec_mut(&self) -> Result<ReferenceWriteProjection<'_, [f64]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
-                RwLockWriteGuard::try_map(reference, |r| r.as_double_vec_mut().ok())
-                    .map_err(|_| InvalidValueType("Expected double array".to_string()))
+                // SAFETY: a successful projection selects a primitive-array variant.
+                // The entire Reference has no trace actions, and this slice cannot
+                // change its variant or introduce managed references.
+                unsafe {
+                    RwLockWriteGuard::try_map_trace_empty(reference, |r| r.as_double_vec_mut().ok())
+                }
+                .map_err(|_| InvalidValueType("Expected double array".to_string()))
             }
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
         }
@@ -477,7 +653,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `Reference::Array`
-    pub fn as_class_vec_ref(&self) -> Result<(Arc<Class>, MappedRwLockReadGuard<'_, [Value]>)> {
+    pub fn as_class_vec_ref(&self) -> Result<(Arc<Class>, ReferenceReadProjection<'_, [Value]>)> {
         let reference = self.as_reference()?;
         let mut class = None;
         let guard = RwLockReadGuard::try_map(reference, |r| {
@@ -499,19 +675,31 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `Reference::Array`
-    pub fn as_class_vec_mut(&self) -> Result<(Arc<Class>, MappedRwLockWriteGuard<'_, [Value]>)> {
+    #[expect(
+        unsafe_code,
+        reason = "array slice preserves independent Value ownership"
+    )]
+    pub fn as_class_vec_mut(&self) -> Result<(Arc<Class>, ReferenceWriteProjection<'_, [Value]>)> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
                 let mut class = None;
-                let guard = RwLockWriteGuard::try_map(reference, |r| {
-                    if let Ok((c, v)) = r.as_class_vec_mut() {
-                        class = Some(c.clone());
-                        Some(v)
-                    } else {
-                        None
-                    }
-                })
+                // SAFETY: mutation preparation roots every current array element.
+                // Safe Value construction/cloning/extraction preserves ownership of
+                // replacement elements. The slice cannot change the Reference
+                // variant or expose its attachment/demotion hooks. This parent has
+                // only strong Value edges; conditional target objects remain in
+                // separately rooted allocations with their own ordinary tracing.
+                let guard = unsafe {
+                    RwLockWriteGuard::try_map_trace_rooted(reference, |r| {
+                        if let Ok((c, v)) = r.as_class_vec_mut() {
+                            class = Some(c.clone());
+                            Some(v)
+                        } else {
+                            None
+                        }
+                    })
+                }
                 .map_err(|_| InvalidValueType("Expected array".to_string()))?;
                 let class = class.ok_or_else(|| InvalidValueType("Expected array".to_string()))?;
                 Ok((class, guard))
@@ -525,7 +713,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not an Object.
-    pub fn as_object_ref(&self) -> Result<MappedRwLockReadGuard<'_, Object>> {
+    pub fn as_object_ref(&self) -> Result<ReferenceReadProjection<'_, Object>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_object_ref().ok())
             .map_err(|_| InvalidValueType("Expected object".to_string()))
@@ -536,7 +724,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not an Object.
-    pub fn as_object_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Object>> {
+    pub fn as_object_mut(&self) -> Result<ReferenceWriteProjection<'_, Object>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -554,7 +742,7 @@ impl Value {
     ///
     /// Returns an error if the value is not an object reference or if the reference
     /// is not a primitive array type (i.e., it's an `Object` or object `Array`).
-    pub fn as_bytes(&self) -> Result<MappedRwLockReadGuard<'_, [u8]>> {
+    pub fn as_bytes(&self) -> Result<ReferenceReadProjection<'_, [u8]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, Reference::as_bytes)
             .map_err(|_| InvalidValueType("Expected primitive array".to_string()))
@@ -567,11 +755,17 @@ impl Value {
     ///
     /// Returns an error if the value is not an object reference or if the reference
     /// is not a primitive array type (i.e., it's an `Object` or object `Array`).
-    pub fn as_bytes_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [u8]>> {
+    #[expect(
+        unsafe_code,
+        reason = "primitive byte view preserves the entire empty graph"
+    )]
+    pub fn as_bytes_mut(&self) -> Result<ReferenceWriteProjection<'_, [u8]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
-                RwLockWriteGuard::try_map(reference, Reference::as_bytes_mut)
+                // SAFETY: as_bytes_mut succeeds only for primitive arrays, and
+                // byte writes cannot change the variant or introduce references.
+                unsafe { RwLockWriteGuard::try_map_trace_empty(reference, Reference::as_bytes_mut) }
                     .map_err(|_| InvalidValueType("Expected primitive array".to_string()))
             }
             _ => Err(InvalidValueType("Expected a reference value".to_string())),
@@ -1180,10 +1374,7 @@ mod tests {
         let collector = GarbageCollector::new();
         let value = test_ref(&collector, Reference::from(vec![true, false]));
         assert_eq!(
-            test_ref(
-                &collector,
-                Reference::BooleanArray(vec![1i8, 0i8].into_boxed_slice())
-            ),
+            test_ref(&collector, Reference::BooleanArray(vec![1i8, 0i8].into())),
             value
         );
     }

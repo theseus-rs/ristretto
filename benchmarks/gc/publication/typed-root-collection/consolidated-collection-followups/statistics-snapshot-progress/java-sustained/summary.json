@@ -1,0 +1,49 @@
+{
+  "500": {
+    "Ristretto": {
+      "forks": 5,
+      "successful": 5,
+      "failed": 0,
+      "completed_in_successful_forks": 300000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 131.71484375,
+      "oom_kills": 0,
+      "max_sampled_backlog": 369,
+      "per_fork_medians": {
+        "ops_per_second": 500.00682122222355,
+        "p999_us": 380928,
+        "p9999_us": 458752
+      }
+    },
+    "G1": {
+      "forks": 5,
+      "successful": 5,
+      "failed": 0,
+      "completed_in_successful_forks": 300000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 64.6328125,
+      "oom_kills": 0,
+      "max_sampled_backlog": 6,
+      "per_fork_medians": {
+        "ops_per_second": 500.0083278637043,
+        "p999_us": 332,
+        "p9999_us": 1408
+      }
+    },
+    "ZGC": {
+      "forks": 5,
+      "successful": 5,
+      "failed": 0,
+      "completed_in_successful_forks": 300000,
+      "unfinished_in_successful_forks": 0,
+      "max_cgroup_peak_mib": 141.015625,
+      "oom_kills": 0,
+      "max_sampled_backlog": 3,
+      "per_fork_medians": {
+        "ops_per_second": 500.0083223968556,
+        "p999_us": 26,
+        "p9999_us": 1000
+      }
+    }
+  }
+}

@@ -18,8 +18,8 @@ enum HprofEventKind {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 struct HprofEvent {
     kind: HprofEventKind,
-    object: usize,
-    related: usize,
+    object: i64,
+    related: i64,
     class_index: i32,
     trace_index: i32,
 }
@@ -38,8 +38,8 @@ fn reference_identity(
     reference: Option<
         ristretto_gc::Gc<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>>,
     >,
-) -> usize {
-    reference.map_or(0, |reference| reference.as_ptr() as usize)
+) -> i64 {
+    reference.map_or(0, |reference| reference.as_handle_i64())
 }
 
 fn record<T: Thread + 'static>(thread: &T, event: HprofEvent) -> Result<()> {

@@ -1,0 +1,128 @@
+{
+  "commit": "31e6f63bfb46100008e8d4499b3d432c1f238d75",
+  "fixture": "911076fd13a6bb3799582e14771337bd791a6a198a5dbce893f6d273638eb6bd",
+  "binary_sha256": "96957531d7d1a74e0803f9787302e2e3b233fcc1a8a2a26b130d9aff0a901656",
+  "seed": 251127679,
+  "results": [
+    {
+      "fork": 11,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 12,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 12,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 9,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 2,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 10,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 8,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 7,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 5,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 10,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 7,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 3,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 4,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 8,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 11,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 1,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 6,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 3,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 1,
+      "sparse_groups": 65,
+      "cancelled": 4
+    },
+    {
+      "fork": 9,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 2,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 6,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 4,
+      "sparse_groups": 129,
+      "cancelled": 4
+    },
+    {
+      "fork": 5,
+      "sparse_groups": 129,
+      "cancelled": 4
+    }
+  ]
+}

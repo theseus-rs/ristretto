@@ -25,9 +25,9 @@ for (const javaVersion of selected.length ? selected : [11, 17, 21, 25]) {
   let events = [];
   const engine = await createEngine(assets, (event) => events.push(event));
   let id = 0;
-  function input(source, operation = 'input', cursor = source.length) {
+  async function input(source, operation = 'input', cursor = source.length) {
     events = [];
-    engine.execute({
+    await engine.execute({
       id: ++id,
       javaVersion,
       action: 'jshell',
@@ -46,37 +46,37 @@ for (const javaVersion of selected.length ? selected : [11, 17, 21, 25]) {
     assert.ok(['ready', 'completions'].includes(result?.type), JSON.stringify(events));
     return { output, result };
   }
-  assert.match(input('').output, /Welcome to JShell/);
-  assert.equal(input('// a Java comment').result.continuation, false);
-  assert.equal(input('/* a multiline').result.continuation, true);
-  assert.equal(input('comment */').result.continuation, false);
-  assert.match(input('int counter = 0;').output, /counter ==> 0/);
-  input('counter++;');
-  assert.match(input('/vars').output, /int counter = 1/);
+  assert.match((await input('')).output, /Welcome to JShell/);
+  assert.equal((await input('// a Java comment')).result.continuation, false);
+  assert.equal((await input('/* a multiline')).result.continuation, true);
+  assert.equal((await input('comment */')).result.continuation, false);
+  assert.match((await input('int counter = 0;')).output, /counter ==> 0/);
+  await input('counter++;');
+  assert.match((await input('/vars')).output, /int counter = 1/);
   // This identity and mutation survive repeated component entry; history is never replayed.
-  input('var values = new ArrayList<String>();');
-  input('values.add("coffee");');
-  assert.match(input('values.toString()').output, /==> "\[coffee\]"/);
-  assert.equal(input('int twice(int value) {').result.continuation, true);
-  assert.equal(input('return value * 2;').result.continuation, true);
-  assert.equal(input('}').result.continuation, false);
-  assert.match(input('twice(counter)').output, /==> 2/);
-  assert.match(input('/methods').output, /twice\(int\)int/);
-  assert.ok(input('coun', 'complete').result.suggestions.includes('counter'));
-  input('int broken = "wrong";');
-  assert.match(input('counter').output, /counter ==> 1/);
-  assert.match(input('/-99999999999999999999').output, /Unknown command or snippet/);
-  input('int kept = 7;');
-  input('int removed = 9;');
-  input('/drop removed');
-  input('/reload');
-  assert.match(input('counter').output, /counter ==> 1/);
-  const variables = input('/vars').output;
+  await input('var values = new ArrayList<String>();');
+  await input('values.add("coffee");');
+  assert.match((await input('values.toString()')).output, /==> "\[coffee\]"/);
+  assert.equal((await input('int twice(int value) {')).result.continuation, true);
+  assert.equal((await input('return value * 2;')).result.continuation, true);
+  assert.equal((await input('}')).result.continuation, false);
+  assert.match((await input('twice(counter)')).output, /==> 2/);
+  assert.match((await input('/methods')).output, /twice\(int\)int/);
+  assert.ok((await input('coun', 'complete')).result.suggestions.includes('counter'));
+  await input('int broken = "wrong";');
+  assert.match((await input('counter')).output, /counter ==> 1/);
+  assert.match((await input('/-99999999999999999999')).output, /Unknown command or snippet/);
+  await input('int kept = 7;');
+  await input('int removed = 9;');
+  await input('/drop removed');
+  await input('/reload');
+  assert.match((await input('counter')).output, /counter ==> 1/);
+  const variables = (await input('/vars')).output;
   assert.match(variables, /int kept = 7/);
   assert.doesNotMatch(variables, /int removed =/);
-  assert.match(input('values.toString()').output, /==> "\[coffee\]"/);
-  input('throw new IllegalArgumentException("test failure");');
-  assert.match(input('counter').output, /counter ==> 1/);
+  assert.match((await input('values.toString()')).output, /==> "\[coffee\]"/);
+  await input('throw new IllegalArgumentException("test failure");');
+  assert.match((await input('counter')).output, /counter ==> 1/);
   // #940: an impossible wasm32 array must throw a catchable Java exception, and
   // both caught and uncaught allocation failures must preserve the session.
   for (const expression of [
@@ -87,22 +87,27 @@ for (const javaVersion of selected.length ? selected : [11, 17, 21, 25]) {
     'java.lang.reflect.Array.newInstance(Object.class, 1, Integer.MAX_VALUE - 8)',
   ]) {
     assert.match(
-      input(
-        `try { Object huge = ${expression}; } catch (OutOfMemoryError e) { System.out.println("caught array allocation failure"); }`,
+      (
+        await input(
+          `try { Object huge = ${expression}; } catch (OutOfMemoryError e) { System.out.println("caught array allocation failure"); }`,
+        )
       ).output,
       /caught array allocation failure/,
     );
   }
-  assert.match(input('new long[Integer.MAX_VALUE - 8]').output, /java.lang.OutOfMemoryError/);
-  assert.match(input('counter').output, /counter ==> 1/);
-  input('int incomplete(');
-  assert.equal(input('', 'cancel').result.continuation, false);
-  assert.match(input('counter').output, /counter ==> 1/);
-  input('/drop counter');
-  assert.match(input('counter').output, /cannot find symbol/);
-  assert.equal(input('/reset').result.reset, true);
-  assert.match(input('/vars').output, /Welcome to JShell/);
-  assert.doesNotMatch(input('/methods').output, /twice/);
-  assert.equal(input('/exit').result.closed, true);
+  assert.match(
+    (await input('new long[Integer.MAX_VALUE - 8]')).output,
+    /java.lang.OutOfMemoryError/,
+  );
+  assert.match((await input('counter')).output, /counter ==> 1/);
+  await input('int incomplete(');
+  assert.equal((await input('', 'cancel')).result.continuation, false);
+  assert.match((await input('counter')).output, /counter ==> 1/);
+  await input('/drop counter');
+  assert.match((await input('counter')).output, /cannot find symbol/);
+  assert.equal((await input('/reset')).result.reset, true);
+  assert.match((await input('/vars')).output, /Welcome to JShell/);
+  assert.doesNotMatch((await input('/methods')).output, /twice/);
+  assert.equal((await input('/exit')).result.closed, true);
   console.log(`Java ${javaVersion} persistent JShell checks passed.`);
 }

@@ -1,42 +1,675 @@
-use crate::Finalize;
-use crate::allocation_budget::{AllocationBudget, Reservation};
-use crate::config::{AUTO_THREADS, Configuration, Statistics};
-use crate::error::{Error, Result};
-use crate::gc::Gc;
-use crate::metadata::ObjectMetadata;
-use crate::pointers::{SafePtr, TracePtr};
-use crate::private_allocation::Allocation;
-use crate::root_guard::GcRootGuard;
-use dashmap::DashMap;
-#[cfg(not(target_family = "wasm"))]
-use rayon::prelude::*;
-#[cfg(not(target_family = "wasm"))]
-use rayon::{ThreadPool, ThreadPoolBuilder};
-use std::collections::{HashMap, HashSet, VecDeque};
+mod barriers;
+mod marking;
+mod phases;
+mod reclamation;
+mod references;
+mod relocation_work;
+mod roots;
+mod statistics;
+mod trace_batch;
+mod trace_impls;
+mod workers;
+
+use crate::config::{Configuration, Statistics};
+use crate::metadata::{MetadataRef, ObjectMetadata, Retention};
+use crate::pointers::SafePtr;
+use crate::work::{MarkItem, MarkQueues};
+use crate::{Finalize, Gc, GcRootGuard, Result};
+use portable_atomic::AtomicU64;
+use statistics::WorkCounters;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex, RwLock, Weak};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 #[cfg(not(target_family = "wasm"))]
 use std::thread;
+
+#[cfg(test)]
+#[path = "storage_tests.rs"]
+#[expect(clippy::panic_in_result_fn)]
+#[cfg_attr(not(target_family = "wasm"), expect(clippy::unwrap_in_result))]
+mod storage_tests;
+
+#[cfg(test)]
+#[path = "metadata_owner_tests.rs"]
+mod metadata_owner_tests;
+
+#[cfg(test)]
+#[path = "relocation_tests.rs"]
+#[expect(clippy::panic_in_result_fn)]
+mod relocation_tests;
+
+#[cfg(test)]
+#[path = "generation_tests.rs"]
+mod generation_tests;
+
+#[cfg(test)]
+#[path = "phase_tests.rs"]
+mod phase_tests;
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+pub(crate) use phase_tests::before_epoch_destruction;
+
+#[cfg(all(test, not(target_family = "wasm")))]
+#[path = "index_progress_tests.rs"]
+mod index_progress_tests;
+
+#[cfg(test)]
+#[path = "barrier_progress_tests.rs"]
+mod barrier_progress_tests;
+
+#[cfg(all(
+    test,
+    feature = "experimental-pause-recorder",
+    target_os = "linux",
+    target_has_atomic = "64"
+))]
+#[path = "pause_recorder_tests.rs"]
+mod pause_recorder_tests;
+
+#[path = "phase_work.rs"]
+mod phase_work;
+use phase_work::Unit;
+#[path = "external_trace.rs"]
+mod external_trace;
+#[path = "weak_publication.rs"]
+mod weak_publication;
+
+#[path = "old_generation.rs"]
+mod old_generation;
+#[cfg(test)]
+#[path = "old_generation_tests.rs"]
+mod old_generation_tests;
+
+#[path = "publication_state.rs"]
+mod publication_state;
+
+pub(crate) struct Publication<'a> {
+    _legacy: Option<crate::sync::RecursiveRwLockReadGuard<'a, ()>>,
+    admission: Option<publication_state::Admission<'a>>,
+}
+
+/// A successful phase try-lock, or the counted policy's intentional gate bypass.
+/// Absence of this token means the caller must yield without changing its phase.
+struct PhasePublication<'a> {
+    // Rust drops fields in declaration order. Release the publication guard
+    // before recording release; never timestamp an unlock that has not happened.
+    _legacy: Option<crate::sync::RecursiveRwLockWriteGuard<'a, ()>>,
+    #[cfg(all(
+        feature = "experimental-pause-recorder",
+        target_os = "linux",
+        target_has_atomic = "64"
+    ))]
+    _pause: Option<crate::pause_recorder::PauseGuard<'a>>,
+}
+
+/// Unwind after index installation must remove the private descriptor before
+/// its construction roots are released. The outer constructor owns the payload.
+struct PendingBirth<'a> {
+    slot: crate::index::Slot<'a>,
+    gc: &'a GarbageCollector,
+    metadata: &'a MetadataRef,
+}
+
+impl Drop for PendingBirth<'_> {
+    fn drop(&mut self) {
+        if !self.slot.reserved {
+            return;
+        }
+        let address = self.metadata.ptr().0;
+        let id = self.metadata.id.to_i64().cast_unsigned();
+        #[cfg(not(feature = "experimental-identity-index"))]
+        self.gc.identities.remove(id, address);
+        #[cfg(feature = "experimental-identity-index")]
+        {
+            let mut cursor = crate::identity_index::Removal::default();
+            while self
+                .gc
+                .identities
+                .remove_step(id, address, &mut cursor)
+                .is_none()
+            {}
+        }
+    }
+}
+
+impl Publication<'_> {
+    fn changed(&self) {
+        if let Some(admission) = &self.admission {
+            admission.changed();
+        }
+    }
+}
+
+/// A collector-bound token only for paths that pass admission into root creation.
+/// Ordinary barrier/allocation guards retain their original compact representation.
+pub(crate) struct RootPublication<'a> {
+    collector: &'a GarbageCollector,
+    _publication: Publication<'a>,
+}
+
+/// Page allocation, writer-lock waiting and cancellation happen before/after
+/// admission. Only a validated nonzero address is committed under admission.
+pub(crate) struct RootReservation<'a> {
+    collector: &'a GarbageCollector,
+    address: usize,
+    context: Option<Arc<crate::context::State>>,
+    slot: Option<crate::roots::PreparedSlot>,
+}
+
+/// Explicit registrations reserve their backing before phase or weak-slot admission.
+pub(crate) struct PreparedRootRegistration<'a> {
+    owned: RootReservation<'a>,
+    tree: Option<crate::roots::VacantRoot<'a>>,
+}
+
+impl PreparedRootRegistration<'_> {
+    pub(crate) fn protects(&self, collector: &GarbageCollector, address: usize) -> bool {
+        self.owned.protects(collector, address)
+    }
+
+    fn publish(&mut self) -> crate::roots::Registration {
+        let collector = self.owned.collector;
+        if let Some(tree) = &mut self.tree {
+            crate::roots::Registration::Tree(
+                collector.publish_reserved_tree_root(tree, self.owned.address),
+            )
+        } else {
+            collector.install_root_registration(&mut self.owned)
+        }
+    }
+}
+
+impl RootReservation<'_> {
+    pub(crate) fn protects(&self, collector: &GarbageCollector, address: usize) -> bool {
+        std::ptr::eq(self.collector, collector) && self.address == address
+    }
+}
+
+impl Drop for RootReservation<'_> {
+    fn drop(&mut self) {
+        if let Some(slot) = self.slot.take() {
+            if let Some(context) = &self.context {
+                if context.roots.cancel_prepared(slot) {
+                    self.collector.wake_context_root_repair(context);
+                }
+            } else if let Some(roots) = self.collector.scanned_slots() {
+                roots.cancel_prepared(slot);
+                self.collector.wake_root_repair(roots);
+            }
+        }
+    }
+}
+
+/// Removing a queue entry transfers ownership of its existing tree root here.
+/// Keep that root through validated acquisition, including error and unwind paths.
+struct PendingReferenceRoot<'a> {
+    collector: &'a GarbageCollector,
+    id: crate::roots::TreeRoot,
+}
+
+impl Drop for PendingReferenceRoot<'_> {
+    fn drop(&mut self) {
+        self.collector.remove_tree_root(self.id);
+    }
+}
+
+impl RootPublication<'_> {
+    pub(crate) fn protects(&self, collector: &GarbageCollector) -> bool {
+        std::ptr::eq(self.collector, collector)
+    }
+
+    pub(crate) fn register_weak(&self, slot: &Arc<crate::weak::WeakSlot>) {
+        self.collector.register_weak(slot);
+    }
+
+    /// Retain the descriptor already validated under this same admission.
+    pub(crate) fn add_conditional_root(
+        &self,
+        metadata: &MetadataRef,
+        reservation: &mut PreparedRootRegistration<'_>,
+    ) -> crate::roots::Registration {
+        let _measurement = self
+            .collector
+            .diagnostics
+            .root_acquire
+            .measure(self.collector.diagnostics_enabled());
+        assert!(
+            reservation.protects(self.collector, metadata.ptr().0),
+            "foreign root reservation"
+        );
+        let registration = reservation.publish();
+        // Both domains clamp strong discovery to their own reference stage.
+        let _retention = TraceRetention::enter(self.collector, Retention::Strong);
+        for index in 0..2 {
+            let _context = Context::enter(self.collector, index);
+            self.collector.shade_known(metadata);
+        }
+        registration
+    }
+}
+
+/// Private logical credits transfer to metadata before it can become visible.
+pub(crate) struct AllocationReservation<'a> {
+    collector: &'a GarbageCollector,
+    pub(crate) size: usize,
+    committed: bool,
+}
+
+impl<'gc> AllocationReservation<'gc> {
+    pub(crate) fn transferred(collector: &'gc GarbageCollector, size: usize) -> Self {
+        Self {
+            collector,
+            size,
+            committed: false,
+        }
+    }
+
+    fn transfer(mut self, metadata: &mut ObjectMetadata) {
+        assert_eq!(
+            self.size,
+            metadata.size(),
+            "descriptor charge differs from reservation"
+        );
+        // No fallible operation separates the ownership transfer and disarming
+        // this guard. The descriptor's existing weak collector link carries the
+        // charge; it adds neither an allocation nor a strong collector cycle.
+        metadata.collector = self.collector.this.clone();
+        self.committed = true;
+    }
+}
+
+impl Drop for AllocationReservation<'_> {
+    fn drop(&mut self) {
+        if !self.committed {
+            self.collector.cancel_allocation(self.size);
+        }
+    }
+}
+
+thread_local! {
+    #[cfg(not(target_family = "wasm"))]
+    static SPARE_FULL_CLEANUP: std::cell::Cell<Option<Arc<AtomicUsize>>> = const { std::cell::Cell::new(None) };
+    static CLEANUP_HEAPS: std::cell::RefCell<Vec<usize>> = const { std::cell::RefCell::new(Vec::new()) };
+    static CONTEXT: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
+    static WORKER: std::cell::Cell<Option<(usize, usize)>> = const { std::cell::Cell::new(None) };
+    static SCAN_YOUNG: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static TRACE_RETENTION: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+// A callback can enter another heap and then try to stop its outer collector.
+struct CleanupScope;
+
+impl CleanupScope {
+    fn enter(gc: &GarbageCollector) -> Self {
+        CLEANUP_HEAPS.with_borrow_mut(|heaps| heaps.push(std::ptr::from_ref(gc).addr()));
+        Self
+    }
+
+    fn contains(gc: &GarbageCollector) -> bool {
+        CLEANUP_HEAPS.with_borrow(|heaps| heaps.contains(&std::ptr::from_ref(gc).addr()))
+    }
+}
+
+impl Drop for CleanupScope {
+    fn drop(&mut self) {
+        CLEANUP_HEAPS.with_borrow_mut(|heaps| {
+            heaps.pop();
+        });
+    }
+}
+
+// A trace callback can step another heap on this thread. Restore the
+// suspended callback's observation when the inner trace returns or unwinds.
+struct ScanYoung(bool);
+
+impl ScanYoung {
+    fn enter(seen: bool) -> Self {
+        Self(SCAN_YOUNG.replace(seen))
+    }
+}
+
+impl Drop for ScanYoung {
+    fn drop(&mut self) {
+        SCAN_YOUNG.set(self.0);
+    }
+}
+
+// Only compare the heap address for identity. No pointer is reconstructed.
+const _: () = assert!(align_of::<GarbageCollector>() >= 8);
+struct TraceRetention(usize);
+impl TraceRetention {
+    const RESERVED: usize = 4;
+
+    fn current(gc: &GarbageCollector) -> Option<(Retention, bool)> {
+        let state = TRACE_RETENTION.get();
+        if state & !7 != std::ptr::from_ref(gc).addr() {
+            return None;
+        }
+        let strength = match state & 3 {
+            0 => Retention::Strong,
+            1 => Retention::Final,
+            _ => Retention::Phantom,
+        };
+        Some((strength, state & Self::RESERVED != 0))
+    }
+
+    fn enter(gc: &GarbageCollector, strength: Retention) -> Self {
+        Self(TRACE_RETENTION.replace(std::ptr::from_ref(gc).addr() | strength as usize))
+    }
+
+    fn callback(gc: &GarbageCollector, strength: Retention) -> Self {
+        Self(
+            TRACE_RETENTION
+                .replace(std::ptr::from_ref(gc).addr() | strength as usize | Self::RESERVED),
+        )
+    }
+}
+impl Drop for TraceRetention {
+    fn drop(&mut self) {
+        TRACE_RETENTION.set(self.0);
+    }
+}
+struct Context(Option<(usize, usize)>);
+impl Context {
+    fn enter(gc: &GarbageCollector, index: usize) -> Self {
+        Self(CONTEXT.replace(Some((std::ptr::from_ref(gc) as usize, index))))
+    }
+}
+impl Drop for Context {
+    fn drop(&mut self) {
+        CONTEXT.set(self.0);
+    }
+}
+
+/// Marking and sweep helpers modify this count for each reserved batch. Keep
+/// those writes off the cache line containing the epoch and reference stage.
+#[cfg_attr(not(target_family = "wasm"), repr(align(64)))]
+#[derive(Debug, Default)]
+struct WorkReservations(AtomicUsize);
+
+impl WorkReservations {
+    fn count(&self) -> usize {
+        self.0.load(Ordering::Acquire)
+    }
+
+    fn reserve(&self, count: usize) {
+        self.0.fetch_add(count, Ordering::AcqRel);
+    }
+
+    fn release(&self, count: usize) {
+        self.0.fetch_sub(count, Ordering::AcqRel);
+    }
+}
+
+#[derive(Debug)]
+struct Domain {
+    cycle: Mutex<Cycle>,
+    publication_clock: Option<(Arc<publication_state::Clock>, usize)>,
+    epoch: AtomicU64,
+    active: AtomicBool,
+    marking: AtomicBool,
+    requested: AtomicBool,
+    mark_queue: MarkQueues,
+    relocations: Option<crate::relocation::Queues>,
+    relocation_ready: AtomicBool,
+    in_flight: WorkReservations,
+    trace_ready: AtomicBool,
+    weak_phase: AtomicUsize,
+    late_references: crate::weak_registry::LateReferences,
+    #[cfg(not(target_family = "wasm"))]
+    pending_full_cleanup: arc_swap::ArcSwapOption<AtomicUsize>,
+    request_ticket: AtomicU64,
+    completed_ticket: AtomicU64,
+}
+
+impl Domain {
+    fn issue_ticket(&self) -> u64 {
+        self.request_ticket.fetch_add(1, Ordering::AcqRel) + 1
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn enroll_full_cleanup(&self) -> Arc<AtomicUsize> {
+        if let Some(pending) = self.pending_full_cleanup.load_full() {
+            return pending;
+        }
+        // The initial reservation belongs to the full cycle. An already
+        // completed numerical ticket cannot satisfy an enrolment still pending.
+        let fresh = SPARE_FULL_CLEANUP
+            .try_with(std::cell::Cell::take)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| Arc::new(AtomicUsize::new(1)));
+        let previous = self
+            .pending_full_cleanup
+            .compare_and_swap(std::ptr::null::<AtomicUsize>(), Some(fresh.clone()));
+        previous.as_ref().cloned().unwrap_or(fresh)
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn capture_full_cleanup(&self, cycle: &mut Cycle) {
+        if self.pending_full_cleanup.load().is_none() {
+            return;
+        }
+        if cycle.active_full_cleanup.is_some() {
+            // A failed phase commit retained its original group. Leave a full
+            // request for the callers who enrolled since the unsuccessful cut.
+            self.publish_request();
+        } else {
+            cycle.active_full_cleanup = self.pending_full_cleanup.swap(None).map(FullCleanup);
+        }
+    }
+
+    /// Returns true when a newly published request needs a worker wakeup.
+    fn publish_request(&self) -> bool {
+        // A repeated request can carry a newer ticket. Keep every publisher
+        // in the release chain consumed by the cycle starter's swap(false).
+        !self.requested.swap(true, Ordering::AcqRel)
+    }
+
+    fn active(&self) -> bool {
+        self.publication_clock.as_ref().map_or_else(
+            || self.active.load(Ordering::Acquire),
+            |(clock, index)| clock.flags(*index) & 1 != 0,
+        )
+    }
+    fn marking(&self) -> bool {
+        self.publication_clock.as_ref().map_or_else(
+            || self.marking.load(Ordering::Acquire),
+            |(clock, index)| clock.flags(*index) & 2 != 0,
+        )
+    }
+    fn weak_phase(&self) -> usize {
+        self.publication_clock.as_ref().map_or_else(
+            || self.weak_phase.load(Ordering::Acquire),
+            |(clock, index)| usize::from((clock.flags(*index) >> 2).to_le_bytes()[0]),
+        )
+    }
+
+    fn new(
+        configuration: &Configuration,
+        index: usize,
+        clock: Option<Arc<publication_state::Clock>>,
+    ) -> Self {
+        let workers = if configuration.work_stealing && !cfg!(target_family = "wasm") {
+            configuration.threads.clamp(1, 16)
+        } else {
+            0
+        };
+        Self {
+            cycle: Mutex::new(Cycle::default()),
+            publication_clock: clock.map(|clock| (clock, index)),
+            epoch: AtomicU64::new(0),
+            active: AtomicBool::new(false),
+            marking: AtomicBool::new(false),
+            requested: AtomicBool::new(false),
+            mark_queue: MarkQueues::new(workers, configuration.metadata_shards),
+            relocations: configuration
+                .independent_relocation
+                .then(|| crate::relocation::Queues::new(workers)),
+            relocation_ready: AtomicBool::new(false),
+            in_flight: WorkReservations::default(),
+            trace_ready: AtomicBool::new(false),
+            weak_phase: AtomicUsize::new(0),
+            late_references: crate::weak_registry::LateReferences::default(),
+            #[cfg(not(target_family = "wasm"))]
+            pending_full_cleanup: arc_swap::ArcSwapOption::empty(),
+            request_ticket: AtomicU64::new(0),
+            completed_ticket: AtomicU64::new(0),
+        }
+    }
+}
+
+struct WorkerContext(Option<(usize, usize)>);
+impl WorkerContext {
+    fn enter(gc: &GarbageCollector, worker: usize) -> Self {
+        Self(WORKER.replace(Some((std::ptr::from_ref(gc) as usize, worker))))
+    }
+}
+impl Drop for WorkerContext {
+    fn drop(&mut self) {
+        WORKER.set(self.0);
+    }
+}
+
+/// Progress of one resumable object scan.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TraceProgress {
+    /// All outgoing references have been visited.
+    Complete,
+    /// Continue scanning at this offset on a subsequent step.
+    Continue(usize),
+    /// A mutator owns the object; retry without blocking the collector.
+    Busy,
+}
+
+#[cfg(test)]
+#[derive(Debug)]
+struct ClaimPause {
+    entered: std::sync::mpsc::Sender<()>,
+    resume: std::sync::mpsc::Receiver<()>,
+}
+
+/// Constructed only by the batch executor while it owns an in-flight
+/// reservation for the non-overlapping full epoch.
+pub(crate) struct ReservedFullScan {
+    epoch: u64,
+    mature: usize,
+}
+
+impl ReservedFullScan {
+    pub(crate) fn covers(&self, gc: &GarbageCollector, metadata: &ObjectMetadata) -> bool {
+        std::ptr::eq(metadata.collector.as_ptr(), gc)
+            && metadata.age.load(Ordering::Acquire) >= self.mature
+            && metadata.retention(1, self.epoch) == Some(Retention::Strong)
+            && metadata.birth.is_live()
+    }
+}
+
+/// Exclusive ownership of an unregistered descriptor, including clear progress.
+/// Moving this task out of a cycle allows that cycle to finish during a callback.
+#[derive(Debug)]
+struct ReclaimTask {
+    metadata: MetadataRef,
+    stage: ReclaimStage,
+    #[cfg(not(target_family = "wasm"))]
+    full_cleanup: Option<FullCleanup>,
+}
+
+/// A synchronous full caller owns a count of cleanup tasks admitted by its snapshot.
+/// Moving a task to another helper transfers the same obligation.
 #[cfg(not(target_family = "wasm"))]
-use sysinfo::System;
-use tracing::{debug, error, info, trace, warn};
+#[derive(Debug)]
+struct FullCleanup(Arc<AtomicUsize>);
 
 #[cfg(not(target_family = "wasm"))]
-const CORES_PER_GC_THREAD: usize = 2;
+impl FullCleanup {
+    fn reserve(&self) -> Self {
+        self.0.fetch_add(1, Ordering::Relaxed);
+        Self(self.0.clone())
+    }
 
-/// Host state that owns managed roots outside an ordinary traced graph.
-/// The canonical payload adapter rejects values reporting such an owner.
+    fn recycle(mut completed: Arc<AtomicUsize>) {
+        // Other callers can still be observing this group's terminal zero.
+        // Only its final owner may prepare it for another request, possibly on another heap.
+        if let Some(unique) = Arc::get_mut(&mut completed) {
+            debug_assert_eq!(*unique.get_mut(), 0);
+            *unique.get_mut() = 1;
+            let _ = SPARE_FULL_CLEANUP.try_with(|spare| spare.set(Some(completed)));
+        }
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl Drop for FullCleanup {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
+#[derive(Debug)]
+enum ReclaimStage {
+    Clear { offset: usize, finalized: bool },
+    Return(Box<crate::metadata::RegionalReturn>),
+}
+
+enum RetirementStep {
+    Progress(bool),
+    Contended,
+}
+
+impl ReclaimTask {
+    fn new(metadata: MetadataRef) -> Self {
+        Self {
+            metadata,
+            #[cfg(not(target_family = "wasm"))]
+            full_cleanup: None,
+            stage: ReclaimStage::Clear {
+                offset: 0,
+                finalized: false,
+            },
+        }
+    }
+
+    fn advance(&mut self, progress: TraceProgress) {
+        if let ReclaimStage::Clear { offset, finalized } = &mut self.stage {
+            *finalized = true;
+            if let TraceProgress::Continue(next) = progress {
+                *offset = next;
+            }
+        }
+    }
+}
+
+/// Metadata that owns VM roots outside the traced object graph.
 pub trait HeapOwner: Send + Sync {
-    /// Releases owner-held roots during the embedding's shutdown procedure.
+    /// Releases VM-owned roots during shutdown. Escaped owning handles remain valid.
     fn release_heap_roots(&self);
 }
 
-/// Trait for objects that can be traced by the garbage collector.
+/// Visit outgoing managed references. Implementations must not allocate Java objects.
 ///
-/// Objects that contain `Gc<T>` pointers must implement this trait to enable the garbage
-/// collector to traverse object references during the marking phase.
-pub trait Trace {
-    /// Conservative hint; this alone never authorizes canonical payload admission.
+/// # Safety
+/// Implementations must report every managed edge that is not independently
+/// rooted, and must not claim a completed scan while required edges are hidden.
+/// Capability queries must uphold their documented tracing/barrier exclusions.
+/// Strong fields demoted by attachment or `unroot` must regain owning protection
+/// in `root` before unrestricted movement. Embedded cells must receive the actual
+/// owner's context and detach from it when rooted for movement. Foreign-heap
+/// strong edges must retain independent ownership because this heap cannot trace them.
+/// Hooks must preserve initialized storage and the lifetime of outstanding
+/// borrows during preparation, relocation, clearing and destruction.
+///
+/// ```compile_fail,E0200
+/// use ristretto_gc::{GarbageCollector, Trace};
+/// struct Unchecked;
+/// impl Trace for Unchecked {
+///     fn trace(&self, _: &GarbageCollector) {}
+/// }
+/// ```
+pub unsafe trait Trace {
+    /// Whether values of this type can contain managed or conditional edges.
+    /// Returning false lets containers omit element tracing. The default preserves
+    /// custom tracing hooks; only opt out when no tracing action is required.
+    /// This does not permit skipping element destructors.
     #[must_use]
     fn may_contain_gc_references() -> bool
     where
@@ -45,1145 +678,2666 @@ pub trait Trace {
         true
     }
 
-    /// The explicit audited certificate for exactly this payload type.
-    #[must_use]
-    fn canonical_payload() -> Option<crate::CanonicalPayload<Self>>
-    where
-        Self: Sized,
-    {
-        None
-    }
-
-    /// Whether writes can require managed-edge maintenance. Default is conservative.
+    /// Whether the current value requires an owner-mutation notification after a
+    /// managed write. False is valid only when this value has no managed or
+    /// conditional edges, and no custom tracing action requires that notification.
+    ///
+    /// Managed write guards query this after `unroot`, while exclusively borrowed.
+    /// The query must take constant time and must not allocate, acquire payload
+    /// locks, or call the collector. It does not suppress unroot hooks, deletion
+    /// barriers, tracing, or relocation bookkeeping. The default is conservative.
     fn needs_write_barrier(&self) -> bool {
         true
     }
 
-    /// Owned external backing included by canonical payload allocation accounting.
+    /// Whether releasing a managed write guard can omit both `unroot` and the
+    /// owner notification for the current value. The guard holds exclusive access.
+    /// Returning true requires an empty strong and conditional graph, a no-op
+    /// `unroot` (including custom, nested and relocation hooks), and a false
+    /// `needs_write_barrier` result after that demotion. These guarantees
+    /// describe the current payload, including after replacing a different value.
+    /// The collector still revokes trace coverage, unlocks and accounts for the
+    /// payload pin. The query must not allocate, lock or call the collector.
+    fn can_skip_unroot_after_write(&self) -> bool {
+        false
+    }
+
+    /// Whether all outgoing edges currently carry owning strong registrations and
+    /// demotion only converts those same edges using ordinary deletion barriers.
+    /// Returning true permits a write guard to publish remembered membership
+    /// while those registrations still protect the graph. Conditional edges and
+    /// custom trace actions must return false. The query runs under exclusive
+    /// access and must not allocate, lock or call into the collector.
+    fn edges_rooted_before_unroot(&self) -> bool {
+        false
+    }
+
+    /// Whether this value is still attached to the supplied owner, every slot
+    /// changed since its last demotion carries only owning roots or no edges,
+    /// and the remaining slots still contain that owner's original traced edges.
+    /// Demotion must operate only on the recorded slots and use ordinary root
+    /// deletion barriers. Conditional edges and other custom actions must
+    /// decline. The check runs under the write guard and must not allocate,
+    /// lock or call into the collector.
+    fn changed_edges_rooted_before_unroot(&self, _owner: crate::TraceOwner<'_>) -> bool {
+        false
+    }
+
+    /// Maximum useful slots per scan, sampled before allocation publication.
+    /// A small value still traces correctly if the payload later changes shape.
+    fn trace_work(&self) -> usize {
+        32
+    }
+
+    /// Moves exclusively owned payload storage into a region heap before publication.
+    /// # Errors
+    /// Returns an allocation error without publishing partially initialized storage.
+    fn prepare(&mut self, _heap: &crate::region::RegionHeap) -> Result<()> {
+        Ok(())
+    }
+
+    /// Prepares a bounded part of an unpublished payload. Existing custom values
+    /// retain their synchronous prepare hook unless they override this method.
+    /// # Errors
+    /// Returns an allocation error while retaining ownership of the source.
+    fn prepare_step(
+        &mut self,
+        heap: &crate::region::RegionHeap,
+        _bytes: usize,
+    ) -> Result<TraceProgress> {
+        self.prepare(heap)?;
+        Ok(TraceProgress::Complete)
+    }
+
+    /// Relocates a bounded part of an exclusively borrowed payload.
+    fn compact_step(&mut self, _heap: &crate::region::RegionHeap, _bytes: usize) -> TraceProgress {
+        TraceProgress::Complete
+    }
+
+    /// Acquires exclusive payload access without blocking. Ordinary Rust values stay pinned.
+    fn compact_guarded(&self, _heap: &crate::region::RegionHeap, _bytes: usize) -> TraceProgress {
+        TraceProgress::Complete
+    }
+
+    /// Advisory identity of a relocatable payload's region. This creates no borrow
+    /// or root; guarded implementations must inspect it without blocking.
+    fn relocation_region(&self, _heap: &crate::region::RegionHeap) -> Option<u64> {
+        None
+    }
+
+    /// Visit outgoing references using `Gc::trace`.
+    fn trace(&self, collector: &GarbageCollector);
+
+    /// Visits consecutive elements, with the same edge and retention obligations
+    /// as calling each element's trace hook in order.
+    fn trace_slice(items: &[Self], collector: &GarbageCollector)
+    where
+        Self: Sized,
+    {
+        for item in items {
+            item.trace(collector);
+        }
+    }
+
+    /// Visit a bounded part of an object. Custom implementations default to one whole scan.
+    fn trace_step(
+        &self,
+        collector: &GarbageCollector,
+        _offset: usize,
+        _budget: usize,
+    ) -> TraceProgress {
+        self.trace(collector);
+        TraceProgress::Complete
+    }
+
+    /// Whether retirement must invoke this type's clearing hook.
+    /// Only return false if skipping every call to `clear_step` preserves
+    /// all edge, resource and callback obligations for every value of this type.
+    /// Finalization and ordinary Rust destruction are independent.
+    #[must_use]
+    fn needs_clear() -> bool
+    where
+        Self: Sized,
+    {
+        true
+    }
+
+    /// Whether each retirement clearing step and destruction after clearing completes
+    /// can run on a collector worker without calling user code, waiting on another
+    /// thread, or doing work proportional to payload size, assuming allocator progress.
+    /// Returning true only affects scheduling.
+    /// The collector still runs both cleanup operations. Separately registered
+    /// finalizers and heap owners retain their own callback requirements.
+    #[must_use]
+    fn has_bounded_cleanup() -> bool
+    where
+        Self: Sized,
+    {
+        false
+    }
+
+    /// Whether dropping any initialized value directly, without calling
+    /// `clear_step` first, can finish in bounded work without invoking user
+    /// callbacks or waiting on another thread, assuming allocator progress.
+    /// Containers use this when truncation runs their elements' Rust destructors.
+    #[must_use]
+    fn has_bounded_drop() -> bool
+    where
+        Self: Sized,
+    {
+        !std::mem::needs_drop::<Self>()
+    }
+
+    /// Releases outgoing edges in bounded batches before destruction of unreachable values.
+    fn clear_step(&mut self, _offset: usize, _budget: usize) -> TraceProgress {
+        TraceProgress::Complete
+    }
+
+    /// Bytes of separately allocated storage owned exclusively by this value.
     fn external_size(&self) -> usize {
         0
     }
 
-    /// Optional VM owner; canonical payloads reject this independent root authority.
+    /// Total separately owned storage for the initialized elements of a slice.
+    /// An unrepresentable sum saturates so allocation admission reports exhaustion.
+    #[must_use]
+    fn slice_external_size(items: &[Self]) -> usize
+    where
+        Self: Sized,
+    {
+        items
+            .iter()
+            .map(Self::external_size)
+            .fold(0, usize::saturating_add)
+    }
+
+    /// Returns metadata that holds roots with the VM's lifetime.
     fn heap_owner(&self) -> Option<Arc<dyn HeapOwner>> {
         None
     }
 
-    /// Trace all `Gc<T>` references contained within this object.
+    /// Binds embedded values to their owner and demotes same-heap strong handles.
+    /// Foreign-heap strong handles retain independent owning protection.
     ///
-    /// This method should call `trace()` on all `Gc<T>` fields contained within the object.
-    /// The implementation should be careful not to trace non-`Gc` references or perform
-    /// any allocation during tracing.
-    fn trace(&self, collector: &GarbageCollector);
+    /// # Safety
+    /// `owner` must describe this value's actual traced owner. Its graph must
+    /// remain protected during conversion, and required mutation barriers must
+    /// be published before exposure. No demoted value may escape without `root`.
+    ///
+    /// ```compile_fail,E0133
+    /// use ristretto_gc::{Gc, Trace, TraceOwner};
+    /// fn demote(value: &mut Option<Gc<u64>>, owner: TraceOwner<'_>) {
+    ///     value.unroot(owner);
+    /// }
+    /// ```
+    unsafe fn unroot(&mut self, _owner: crate::TraceOwner<'_>) {}
+
+    /// Restores owning strong handles before a managed value is exposed through
+    /// an unrestricted mutable borrow. Such a borrow may move the whole value,
+    /// so ownership must travel with its fields, not only with the write guard.
+    /// Implementations which demote strong handles in `unroot` must restore them
+    /// here. Conditional/weak references retain their existing semantics. This
+    /// hook does not authorize skipping tracing while the payload is locked.
+    fn root(&mut self) {}
+
+    /// Associates a value and its embedded cells with their actual traced owner.
+    ///
+    /// # Safety
+    /// The owner and graph must satisfy `unroot`'s contract. Initial attachment
+    /// requires construction protection until publication or destruction completes.
+    ///
+    /// ```compile_fail,E0133
+    /// use ristretto_gc::{Gc, Trace, TraceOwner};
+    /// fn attach(value: &mut Option<Gc<u64>>, owner: TraceOwner<'_>) {
+    ///     value.attach(owner);
+    /// }
+    /// ```
+    unsafe fn attach(&mut self, owner: crate::TraceOwner<'_>) {
+        // SAFETY: the caller supplies the allocation's protected ownership context.
+        unsafe { self.unroot(owner) };
+    }
+}
+
+// Each allocation has a non-reusable positive identity and is promoted and
+// retired at most once. A Strong transition on a LIVE mature descriptor is
+// unique in a pinned full epoch, including after a weaker discovery.
+#[derive(Default, Debug)]
+struct MatureCensus {
+    promotions: AtomicU64,
+    retirements: AtomicU64,
+    strong: AtomicU64,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum MatureCoverage {
+    Unchecked,
+    Incomplete,
+    Complete(u64),
+}
+
+impl MatureCensus {
+    fn coverage(&self, marked_edges: u64) -> MatureCoverage {
+        let promotions = self.promotions.load(Ordering::Acquire);
+        let retired = self.retirements.load(Ordering::Acquire);
+        if promotions != 0
+            && promotions.checked_sub(retired)
+                == Some(self.strong.load(Ordering::Acquire) + marked_edges)
+        {
+            MatureCoverage::Complete(promotions)
+        } else {
+            MatureCoverage::Incomplete
+        }
+    }
+
+    fn current(&self, proof: MatureCoverage) -> bool {
+        matches!(proof, MatureCoverage::Complete(p) if p == self.promotions.load(Ordering::Acquire))
+    }
+}
+
+/// A collection can reclaim either the young generation or the entire heap.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CollectionKind {
+    Young,
+    Full,
+    /// Conservative old-only pass; explicit full collections retain precise semantics.
+    Old,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum GcPhase {
+enum Phase {
     Idle,
-    InitialMark,
-    ConcurrentMark,
-    FinalMark,
-    ConcurrentSweep,
+    ResetMarks,
+    ResetReferences,
+    ContextRoots,
+    RootSlots,
+    Roots,
+    CrossRoots,
+    OldHandoff,
+    OldReferences,
+    Remembered,
+    Mark,
+    References,
+    Sweep,
+    SelectRegions,
+    Compact,
 }
 
-/// A low-pause, parallel, concurrent garbage collector using reachability analysis.
+#[derive(Debug)]
+struct Cycle {
+    phase: Phase,
+    kind: CollectionKind,
+    cursor: usize,
+    young_cursor: crate::index::YoungCursor,
+    remembered_cursor: crate::index::RememberedCursor,
+    remembered_overflow: crate::index::RememberedOverflow,
+    sweep_young_cursor: crate::index::YoungCursor,
+    object_cursor: crate::index::Cursor,
+    sweep_object_cursor: crate::index::Cursor,
+    mature_coverage: MatureCoverage,
+    packet_cleanup: Option<usize>,
+    young_retirement: crate::index::YoungRetirement,
+    #[cfg(not(feature = "experimental-identity-index"))]
+    identity_cursor: crate::identity_pages::RetireCursor,
+    #[cfg(feature = "experimental-identity-index")]
+    identity_removals: [crate::identity_index::Removal; 16],
+    #[cfg(feature = "experimental-identity-index")]
+    identity_cleanup: crate::identity_index::Cleanup,
+    epoch: u64,
+    started: Option<std::time::Instant>,
+    reference_stage: usize,
+    late_reference_turn: bool,
+    retry_reference: Option<crate::weak_registry::Entry>,
+    pending_notice: Option<Arc<references::PendingNotice>>,
+    preparing_notice: Option<(references::NoticeRequest, bool)>,
+    ticket: u64,
+    #[cfg(not(target_family = "wasm"))]
+    active_full_cleanup: Option<FullCleanup>,
+    relocations: VecDeque<(MetadataRef, usize)>,
+    relocation_scan_done: bool,
+    phantom_retained: BTreeSet<usize>,
+    reclaim: VecDeque<ReclaimTask>,
+    refund_selection: Option<crate::retirement_grants::Selection>,
+    reclaimed_bytes: usize,
+    payload_trim: crate::region::TrimCursor,
+    descriptor_trim: crate::region::TrimCursor,
+    handoff: Option<(MetadataRef, usize)>,
+    root_cursor: crate::roots::Cursor,
+    context_cursor: crate::context::RootCursor,
+}
+
+impl Default for Cycle {
+    fn default() -> Self {
+        Self {
+            phase: Phase::Idle,
+            kind: CollectionKind::Full,
+            cursor: 0,
+            young_cursor: crate::index::YoungCursor::default(),
+            remembered_cursor: crate::index::RememberedCursor::default(),
+            remembered_overflow: crate::index::RememberedOverflow::default(),
+            sweep_young_cursor: crate::index::YoungCursor::default(),
+            object_cursor: crate::index::Cursor::default(),
+            sweep_object_cursor: crate::index::Cursor::default(),
+            mature_coverage: MatureCoverage::Unchecked,
+            packet_cleanup: None,
+            young_retirement: crate::index::YoungRetirement::default(),
+            #[cfg(not(feature = "experimental-identity-index"))]
+            identity_cursor: crate::identity_pages::RetireCursor::default(),
+            #[cfg(feature = "experimental-identity-index")]
+            identity_removals: std::array::from_fn(|_| crate::identity_index::Removal::default()),
+            #[cfg(feature = "experimental-identity-index")]
+            identity_cleanup: crate::identity_index::Cleanup::default(),
+            epoch: 0,
+            started: None,
+            reference_stage: 0,
+            late_reference_turn: false,
+            retry_reference: None,
+            pending_notice: None,
+            preparing_notice: None,
+            ticket: 0,
+            #[cfg(not(target_family = "wasm"))]
+            active_full_cleanup: None,
+            relocations: VecDeque::new(),
+            relocation_scan_done: false,
+            phantom_retained: BTreeSet::new(),
+            reclaim: VecDeque::with_capacity(phase_work::SWEEP_BATCH),
+            refund_selection: None,
+            reclaimed_bytes: 0,
+            payload_trim: crate::region::TrimCursor::default(),
+            descriptor_trim: crate::region::TrimCursor::default(),
+            handoff: None,
+            root_cursor: crate::roots::Cursor::default(),
+            context_cursor: crate::context::RootCursor::default(),
+        }
+    }
+}
+
+fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    mutex
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+pub(crate) fn try_lock<T>(mutex: &Mutex<T>) -> Option<std::sync::MutexGuard<'_, T>> {
+    match mutex.try_lock() {
+        Ok(guard) => Some(guard),
+        Err(std::sync::TryLockError::Poisoned(error)) => Some(error.into_inner()),
+        Err(std::sync::TryLockError::WouldBlock) => None,
+    }
+}
+
+#[cfg_attr(
+    not(all(target_family = "wasm", target_os = "unknown")),
+    expect(clippy::unnecessary_wraps, reason = "bare wasm has no host clock")
+)]
+fn now() -> Option<std::time::Instant> {
+    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
+    {
+        None
+    }
+    #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+    {
+        Some(std::time::Instant::now())
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[path = "native_callbacks.rs"]
+mod native_callbacks;
+#[cfg(not(target_family = "wasm"))]
+pub(crate) use native_callbacks::Turn as CallbackTurn;
+#[cfg(not(target_family = "wasm"))]
+#[path = "worker_signals.rs"]
+mod worker_signals;
+#[cfg(not(target_family = "wasm"))]
+use worker_signals::WorkerSignals;
+
+/// A collector with stable descriptors, resumable tracing and optional payload compaction.
 ///
-/// This collector implements a concurrent mark and sweep algorithm with the following phases:
-/// 1. Initial Mark: Brief pause to mark root objects
-/// 2. Concurrent Mark: Mark reachable objects concurrently with mutator
-/// 3. Final Mark: Brief pause to handle objects modified during concurrent marking
-/// 4. Concurrent Sweep: Reclaim unmarked objects concurrently
-///
-/// # Shutdown Behavior
-///
-/// When the collector is dropped, it stops the background thread and runs destructors
-/// for all remaining tracked objects via a two-phase cleanup: finalizers run first
-/// (while all objects are still alive), then drop closures deallocate memory. This ensures
-/// `Drop` and `Finalize` implementations execute during shutdown. Callers that embed
-/// the collector (e.g. a VM) must ensure the collector field is declared **last** so
-/// all other resources drop before the collector runs its cleanup.
+/// Native workers and cooperative callers drive the same state machine. Publication uses
+/// either the default recursive gate or counted admission with atomic phase transitions.
+/// User tracing never runs with the legacy publication writer held.
+/// Generational mutation must call `remember` on the owner and shade overwritten references.
 #[derive(Debug)]
 pub struct GarbageCollector {
     this: Weak<Self>,
     configuration: Configuration,
+    regions: Option<Arc<crate::region::RegionHeap>>,
+    descriptor_regions: Option<Arc<crate::region::RegionHeap>>,
+    small_allocations: crate::allocation::SmallAllocations,
+    statistics: arc_swap::ArcSwap<Statistics>,
+    leaves_marked_at_birth: AtomicUsize,
+    scheduler: Option<crate::scheduling::Scheduler>,
     #[cfg(not(target_family = "wasm"))]
-    thread_pool: Option<ThreadPool>,
-    statistics: Arc<RwLock<Statistics>>,
-    roots: Arc<DashMap<usize, TracePtr>>,
+    pacing: Option<crate::pacing::Controller>,
+    pub(crate) diagnostics: Arc<crate::diagnostics::Counters>,
+    pub(crate) recovery: crate::recovery::Recovery,
+    pub(crate) grant_registry: crate::retirement_grants::Registry,
+    roots: crate::roots::TreeRoots,
+    #[cfg(test)]
+    tree_root_insert_probe: Mutex<Option<fn(&GarbageCollector)>>,
+    pub(crate) contexts: crate::context::Registry,
+    root_slots: Option<Box<crate::roots::RootSlots>>,
+    typed_slots: once_cell::race::OnceBox<crate::roots::RootSlots>,
     next_root_id: AtomicUsize,
-
-    // Object registry for reachability analysis
-    objects: Arc<DashMap<SafePtr, ObjectMetadata>>,
-
-    // Concurrent collection state
-    phase: Arc<RwLock<GcPhase>>,
-    collection_active: Arc<AtomicBool>,
-    mark_queue: Arc<Mutex<VecDeque<TracePtr>>>,
-
-    // Allocation pressure since the last collection, independent of live memory.
-    bytes_allocated: Arc<AtomicUsize>,
-    // Bytes in allocations that have not been freed.
-    bytes_live: Arc<AtomicUsize>,
-    payload_budget: Arc<AllocationBudget>,
-
-    // Background thread coordination
+    objects: crate::index::Objects,
+    mature_census: MatureCensus,
+    #[cfg(feature = "experimental-identity-index")]
+    identities: crate::identity_index::Index,
+    #[cfg(not(feature = "experimental-identity-index"))]
+    identities: crate::identity_pages::Index,
+    heap_owners: Mutex<BTreeMap<usize, Weak<dyn HeapOwner>>>,
+    remembered: crate::index::Remembered,
+    publication: crate::sync::RecursiveRwLock<()>,
+    domains: [Domain; 2],
+    old_requested: AtomicBool,
+    old_active: AtomicBool,
+    // Phase commits also certify private births with no traversal obligation
+    // in the legacy policy. Its other mutators still use the publication lock.
+    phase_clock: Arc<publication_state::Clock>,
+    publication_clock: Option<Arc<publication_state::Clock>>,
+    coordinator: Mutex<()>,
+    retired: arc_swap::ArcSwapOption<crate::publication_queue::Queue<ReclaimTask>>,
+    retired_objects: AtomicUsize,
+    retired_bytes: AtomicUsize,
+    retired_ready: AtomicUsize,
     #[cfg(not(target_family = "wasm"))]
-    collector_thread: Arc<RwLock<Option<thread::JoinHandle<()>>>>,
-    shutdown: Arc<AtomicBool>,
-    collection_trigger: Arc<(Mutex<bool>, Condvar)>,
+    callback_jobs: AtomicUsize,
+    stale_epochs: crate::stale_epochs::StaleEpochs,
+    retirement_turn: AtomicBool,
+    released_donors: crate::retirement_grants::ReleasedDonors,
+    released_turn: AtomicBool,
+    barrier_turn: AtomicBool,
+    #[cfg(test)]
+    barrier_claim_observer: Mutex<Option<std::sync::mpsc::Sender<()>>>,
+    #[cfg(test)]
+    barrier_prepare_pause: Mutex<Option<ClaimPause>>,
+    // Claims hold a reader only while reserving tasks; mark closure takes the writer.
+    mark_claims: Option<Box<RwLock<()>>>,
+    #[cfg(test)]
+    mark_claim_pause: Mutex<Option<ClaimPause>>,
+    #[cfg(test)]
+    metadata_prepare_pause: Mutex<Option<ClaimPause>>,
+    #[cfg(test)]
+    metadata_publish_failure: Mutex<Option<Arc<AtomicUsize>>>,
+    #[cfg(test)]
+    metadata_registration_observer:
+        Mutex<Option<std::sync::mpsc::Sender<(usize, crate::ObjectId)>>>,
+    #[cfg(test)]
+    identity_resolution_pause: Mutex<Option<ClaimPause>>,
+    #[cfg(test)]
+    pending_transfer_pause: Mutex<Option<ClaimPause>>,
+    #[cfg(test)]
+    edge_certificate_pause: Mutex<Option<ClaimPause>>,
+    relocation_claims: Option<Box<RwLock<()>>>,
+    next_domain: AtomicUsize,
+    weak_slots: crate::weak_registry::WeakRegistry,
+    next_weak_id: AtomicUsize,
+    pending_references: once_cell::race::OnceBox<
+        crate::publication_queue::Queue<(crate::ObjectId, crate::roots::TreeRoot)>,
+    >,
+    managed_budget: Arc<crate::allocation_budget::AllocationBudget>,
+    allocation_debt: AtomicUsize,
+    published_bytes: AtomicUsize,
+    published_debt: AtomicUsize,
+
+    #[cfg(not(target_family = "wasm"))]
+    worker_signals: arc_swap::ArcSwapOption<WorkerSignals>,
+    #[cfg(not(target_family = "wasm"))]
+    collector_thread: Mutex<Vec<thread::JoinHandle<()>>>,
+    #[cfg(not(target_family = "wasm"))]
+    refund_notifier: arc_swap::ArcSwapOption<crate::recovery::RefundNotifier>,
 }
 
 impl GarbageCollector {
+    fn domain_index(&self) -> usize {
+        CONTEXT
+            .get()
+            .filter(|(address, _)| *address == std::ptr::from_ref(self) as usize)
+            .map_or(1, |(_, index)| index)
+    }
+    fn domain_at(&self, index: usize) -> &Domain {
+        if index == 0 {
+            &self.domains[0]
+        } else {
+            &self.domains[1]
+        }
+    }
+    fn domain(&self) -> &Domain {
+        self.domain_at(self.domain_index())
+    }
+    fn local_queue(&self) -> usize {
+        if !self.configuration.work_stealing {
+            return 0;
+        }
+        WORKER
+            .get()
+            .filter(|(address, _)| *address == std::ptr::from_ref(self) as usize)
+            .map_or(0, |(_, worker)| {
+                self.domain().mark_queue.worker_queue(worker)
+            })
+    }
+    fn in_flight(&self) -> usize {
+        // Preserve the conservative cross-generation interlock. Reservations stay
+        // charged until callbacks, continuation publication and counter merging finish.
+        self.domains
+            .iter()
+            .map(|domain| domain.in_flight.count())
+            .sum()
+    }
+
+    fn closure_in_flight(&self) -> usize {
+        if (self.old_collection_active() && self.domain_index() == 0)
+            || (self.configuration.overlapping_generations && self.domains[1].weak_phase() == 5)
+        {
+            // Full tracing and reference decisions are closed. Full copy tasks
+            // are restricted to its traced snapshot (never post-trace births),
+            // whose graphs remain roots for young cycles. Leases alone would
+            // protect descriptors, not callback access to their outgoing graph.
+            self.domain().in_flight.count()
+        } else {
+            self.in_flight()
+        }
+    }
+
+    fn terminal_priority(&self, index: usize) -> bool {
+        !(self.configuration.overlapping_generations
+            && index == 1
+            && self.domains[1].weak_phase() == 5)
+    }
+
+    /// Marks a private birth before registry visibility. True assigns this
+    /// attempt one traversal in the observed strong epoch.
+    fn mark_registration_birth(
+        &self,
+        metadata: &ObjectMetadata,
+        index: usize,
+        stage: usize,
+    ) -> bool {
+        let epoch = self.domain_at(index).epoch.load(Ordering::Acquire);
+        if index == 1
+            && self.configuration.old_collection_interval != 0
+            && self.old_active.load(Ordering::Acquire)
+        {
+            metadata.old_birth.store(epoch, Ordering::Release);
+            metadata.mark_born(index, epoch);
+            return false;
+        }
+        if self.configuration.overlapping_generations && index == 1 && stage == 5 {
+            metadata.mark_born(index, epoch);
+        } else {
+            metadata.mark_black(index, epoch);
+        }
+        stage == 0
+    }
+    fn promotion_snapshot(&self, metadata: &MetadataRef) {
+        if self.domain_index() == 0 && self.old_collection_active() {
+            // Promotion is admitted before publishing the new age. The old pass
+            // must own its outgoing old edges, or blacken it after closure.
+            let epoch = self.domains[1].epoch.load(Ordering::Acquire);
+            if self.domains[1].weak_phase() == 0 {
+                metadata.mark(1, epoch, Retention::Strong);
+                // Queue publication follows the age store under the same
+                // admission; a handoff mark alone is not an old-core traversal.
+            } else {
+                metadata.mark_black(1, epoch);
+            }
+            return;
+        }
+        if self.domain_index() == 0 && self.domains[1].active() {
+            let retention = metadata
+                .retention(0, self.domains[0].epoch.load(Ordering::Acquire))
+                .unwrap_or(Retention::Phantom);
+            let _retention = TraceRetention::enter(self, retention);
+            let _context = Context::enter(self, 1);
+            self.shade_metadata(metadata);
+        }
+    }
+    fn domain_has_work(&self, index: usize) -> bool {
+        let domain = self.domain_at(index);
+        domain.active()
+            || domain.requested.load(Ordering::Acquire)
+            || (index == 1 && self.old_requested.load(Ordering::Acquire))
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn worker_pending(&self) -> bool {
+        if self.callback_jobs.load(Ordering::Acquire) == 0 {
+            return self.pending();
+        }
+        // A callback can retain its physical charge indefinitely. A worker
+        // still sees every published retirement while that private job sleeps.
+        self.pending_with_retirement(self.retired.load().as_ref().is_some_and(|q| !q.is_empty()))
+    }
+
+    pub(crate) fn schedule_stale_epoch(&self, epoch: &Arc<crate::work::BirthEpoch>) {
+        self.stale_epochs.signal(epoch);
+        self.wake();
+    }
+
+    fn pending(&self) -> bool {
+        self.pending_with_retirement(self.retired_ready.load(Ordering::Acquire) != 0)
+    }
+
+    fn pending_with_retirement(&self, ready: bool) -> bool {
+        self.stale_epochs.pending()
+            || self.remembered.dirty.cleanup_pending()
+            || ready
+            || self.released_donors.has_jobs()
+            || self
+                .scanned_slots()
+                .is_some_and(crate::roots::RootSlots::repair_pending)
+            || self.contexts.repairs.pending()
+            || self.old_requested.load(Ordering::Acquire)
+            || self
+                .domains
+                .iter()
+                .any(|domain| domain.active() || domain.requested.load(Ordering::Acquire))
+    }
+
+    /// Physical payload storage, when the compactable backend is enabled.
+    #[must_use]
+    pub fn region_heap(&self) -> Option<&Arc<crate::region::RegionHeap>> {
+        self.regions.as_ref()
+    }
+
+    pub(crate) fn prepare_payload(&self, data: &mut impl Trace) -> Result<()> {
+        if let Some(heap) = &self.regions {
+            data.prepare(heap)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) async fn prepare_payload_async(&self, data: &mut impl Trace) -> Result<()> {
+        if let Some(heap) = &self.regions {
+            while data.prepare_step(heap, 64 * 1024)? != TraceProgress::Complete {
+                crate::recovery::yield_once().await;
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn address_for_identity(&self, id: crate::ObjectId) -> Option<usize> {
+        let address = self.identities.get(id.to_i64().cast_unsigned());
+        #[cfg(test)]
+        {
+            let pause = lock(&self.identity_resolution_pause).take();
+            if let Some(pause) = pause {
+                pause.entered.send(()).expect("identity address resolved");
+                pause
+                    .resume
+                    .recv_timeout(std::time::Duration::from_secs(10))
+                    .expect("resume identity resolution");
+            }
+        }
+        address
+    }
+
+    #[cfg(test)]
+    fn set_identity_hint(&self, id: u64, address: Option<usize>) {
+        self.identities.test_set(id, address);
+    }
+
+    pub(crate) fn identity_for_address(&self, address: usize) -> Option<crate::ObjectId> {
+        (address != 0)
+            .then(|| self.objects.lookup(address))
+            .flatten()
+            .map(|m| m.id)
+    }
+    pub(crate) fn allocation_guard(&self) -> Publication<'_> {
+        if let Some(clock) = &self.publication_clock {
+            return Publication {
+                admission: Some(clock.enter()),
+                _legacy: None,
+            };
+        }
+        let guard = if !self.diagnostics_enabled() {
+            self.publication.read()
+        } else if let Some(guard) = self.publication.try_read() {
+            guard
+        } else {
+            let _measurement = self.diagnostics.publication_read_wait.measure(true);
+            self.publication.read()
+        };
+        Publication {
+            admission: None,
+            _legacy: Some(guard),
+        }
+    }
+
+    pub(crate) fn root_publication_guard(&self) -> RootPublication<'_> {
+        RootPublication {
+            collector: self,
+            _publication: self.allocation_guard(),
+        }
+    }
+
+    fn barrier_guard(&self) -> Publication<'_> {
+        if let Some(clock) = &self.publication_clock {
+            Publication {
+                admission: Some(clock.enter_barrier()),
+                _legacy: None,
+            }
+        } else {
+            self.allocation_guard()
+        }
+    }
+
+    fn try_publication_write(&self) -> Option<PhasePublication<'_>> {
+        if self.publication_clock.is_some() {
+            return Some(PhasePublication {
+                _legacy: None,
+                #[cfg(all(
+                    feature = "experimental-pause-recorder",
+                    target_os = "linux",
+                    target_has_atomic = "64"
+                ))]
+                _pause: None,
+            });
+        }
+        #[cfg(all(
+            feature = "experimental-pause-recorder",
+            target_os = "linux",
+            target_has_atomic = "64"
+        ))]
+        let requested = self
+            .configuration
+            .pause_recorder
+            .as_ref()
+            .map(|recorder| recorder.request());
+        if let Some(guard) = self.publication.try_write() {
+            return Some(PhasePublication {
+                #[cfg(all(
+                    feature = "experimental-pause-recorder",
+                    target_os = "linux",
+                    target_has_atomic = "64"
+                ))]
+                _pause: self
+                    .configuration
+                    .pause_recorder
+                    .as_ref()
+                    .zip(requested)
+                    .and_then(|(recorder, requested)| recorder.acquired(requested)),
+                _legacy: Some(guard),
+            });
+        }
+        #[cfg(all(
+            feature = "experimental-pause-recorder",
+            target_os = "linux",
+            target_has_atomic = "64"
+        ))]
+        if let Some(recorder) = &self.configuration.pause_recorder {
+            recorder.failed_attempt();
+        }
+        // Waiting for a stalled reader would retain this step's coordinator and
+        // cursor. Leave the admission untouched and release those locks instead.
+        if self.diagnostics_enabled() {
+            self.diagnostics
+                .publication_retries
+                .fetch_add(1, Ordering::Relaxed);
+        }
+        None
+    }
+
+    fn observe_phase(&self) -> Option<publication_state::Observation> {
+        let observed = self.phase_clock.observe();
+        if observed.is_none() && self.diagnostics_enabled() {
+            self.diagnostics
+                .publication_retries
+                .fetch_add(1, Ordering::Relaxed);
+        }
+        observed
+    }
+
+    fn commit_phase(
+        &self,
+        observed: publication_state::Observation,
+        active: bool,
+        marking: bool,
+        stage: usize,
+    ) -> bool {
+        let flags = u64::from(active)
+            | (u64::from(marking) << 1)
+            | (u64::from(stage.to_le_bytes()[0]) << 2);
+        let committed = self
+            .phase_clock
+            .transition(observed, self.domain_index(), flags);
+        if self.publication_clock.is_some() && self.diagnostics_enabled() {
+            let counter = if committed {
+                &self.diagnostics.publication_transitions
+            } else {
+                &self.diagnostics.publication_retries
+            };
+            counter.fetch_add(1, Ordering::Relaxed);
+        }
+        committed
+    }
+
+    /// Explicit diagnostic recorder associated before collector construction.
+    #[cfg(all(
+        feature = "experimental-pause-recorder",
+        target_os = "linux",
+        target_has_atomic = "64"
+    ))]
+    #[must_use]
+    pub fn pause_recorder(&self) -> Option<&crate::pause_recorder::PauseRecorder> {
+        self.configuration.pause_recorder.as_deref()
+    }
+
+    pub(crate) fn diagnostics_enabled(&self) -> bool {
+        self.configuration.diagnostics
+    }
+
+    pub(crate) fn pin_diagnostics(&self) -> Option<Arc<crate::diagnostics::Counters>> {
+        (self.diagnostics_enabled()
+            && self.configuration.cost_aware_relocation
+            && self.regions.is_some())
+        .then(|| self.diagnostics.clone())
+    }
+
+    /// Returns optional stall and work counters; durations are not global pauses.
+    #[must_use]
+    pub fn diagnostics(&self) -> crate::Diagnostics {
+        let mut snapshot = self.diagnostics.snapshot(self.diagnostics_enabled());
+        if snapshot.enabled {
+            snapshot.active_publications = self
+                .publication_clock
+                .as_ref()
+                .map_or(0, |clock| clock.active());
+            snapshot.allocation_waiters = self.recovery.waiter_count();
+            snapshot.execution_contexts = self.contexts.statistics().0;
+            snapshot.context_storage_bytes = snapshot
+                .execution_contexts
+                .saturating_mul(size_of::<crate::context::State>());
+            snapshot.pending_barrier_records = self.contexts.pending.load(Ordering::Acquire);
+            snapshot.retired_bytes = self.retired_bytes.load(Ordering::Acquire);
+            snapshot.retired_objects = self.retired_objects.load(Ordering::Acquire);
+            snapshot.retired_ready = self.retired_ready.load(Ordering::Acquire);
+            #[cfg(not(target_family = "wasm"))]
+            if let Some(pacing) = &self.pacing {
+                snapshot.worker_target = pacing.target();
+                snapshot.worker_pacing_us = pacing.delay();
+            }
+            self.contexts.for_each(|context| {
+                let cache = lock(&context.allocation);
+                snapshot.cached_allocation_bytes += cache.retained_bytes();
+                snapshot.cached_allocation_credit += context.available_credit();
+                snapshot.local_allocation_hits += cache.hits;
+                snapshot.local_allocation_refills += cache.refills;
+            });
+            if let Some(heap) = &self.descriptor_regions {
+                snapshot.descriptor_committed_bytes = heap.statistics().committed_bytes;
+                snapshot.descriptor_occupied_bytes = heap.statistics().occupied_bytes;
+            }
+            for (index, domain) in self.domains.iter().enumerate() {
+                let (queued, capacity) = domain.mark_queue.statistics();
+                if let Some(value) = snapshot.queued_mark_tasks.get_mut(index) {
+                    *value = queued;
+                }
+                if let Some(value) = snapshot.mark_queue_capacity.get_mut(index) {
+                    *value = capacity;
+                }
+                if let Some(value) = snapshot.in_flight_work.get_mut(index) {
+                    *value = domain.in_flight.count();
+                }
+                if let Some(queues) = &domain.relocations {
+                    if let Some(value) = snapshot.queued_relocation_tasks.get_mut(index) {
+                        *value = queues.len();
+                    }
+                    if let Some(value) = snapshot.relocation_queue_capacity.get_mut(index) {
+                        *value = queues.capacity();
+                    }
+                }
+            }
+        }
+        snapshot
+    }
+
+    pub(crate) fn recover_allocation(&self) {
+        let _measurement = self
+            .diagnostics
+            .allocation_recovery
+            .measure(self.diagnostics_enabled());
+        self.wait_full_cycle();
+    }
+
+    pub(crate) fn recover_physical(&self, layout: std::alloc::Layout) {
+        let _measurement = self
+            .diagnostics
+            .allocation_recovery
+            .measure(self.diagnostics_enabled());
+        let Some(heap) = &self.regions else {
+            self.wait_full_cycle();
+            return;
+        };
+        let ticket = self.request_recovery_cycle();
+        while self.completed_full_ticket() < ticket {
+            // An available range is advisory. Advance at least one batch on each
+            // retry so a host allocation failure cannot spin on a false positive.
+            self.step();
+            if heap.can_allocate(layout) {
+                break;
+            }
+        }
+    }
+
+    pub(crate) async fn recover_allocation_async(&self) -> Result<()> {
+        if crate::cell::has_guards() {
+            return Err(crate::Error::CollectionPhaseError(
+                "asynchronous recovery requires released managed guards".into(),
+            ));
+        }
+        let _measurement = self
+            .diagnostics
+            .async_allocation_recovery
+            .measure(self.diagnostics_enabled());
+        // A failed retry may follow completion of a previous cycle in this poll.
+        // Yield before starting another so one allocation poll cannot run two batches.
+        crate::recovery::yield_once().await;
+        self.collect_full_async().await
+    }
+
+    pub(crate) async fn recover_physical_async(&self, layout: std::alloc::Layout) -> Result<()> {
+        if self.regions.is_none() {
+            return self.recover_allocation_async().await;
+        }
+        if crate::cell::has_guards() {
+            return Err(crate::Error::CollectionPhaseError(
+                "asynchronous recovery requires released managed guards".into(),
+            ));
+        }
+        let _measurement = self
+            .diagnostics
+            .async_allocation_recovery
+            .measure(self.diagnostics_enabled());
+        // Each retry yields before it can assist again, including after an
+        // early physical offer is consumed by a competing allocator.
+        crate::recovery::yield_once().await;
+        let ticket = self.request_recovery_cycle();
+        crate::recovery::CollectionWait::for_physical(self, ticket, layout).await?;
+        Ok(())
+    }
+
+    pub(crate) fn acquire_typed_root<T: 'static>(
+        &self,
+        address: usize,
+        expected: Option<crate::ObjectId>,
+    ) -> Result<(
+        std::ptr::NonNull<T>,
+        crate::ObjectId,
+        crate::roots::Registration,
+    )> {
+        self.acquire_checked_root(address, expected, ObjectMetadata::is_type::<T>)
+    }
+
+    /// An armed slot or its one-shot replacement keeps root acceptance ordered
+    /// with scanning. The caller supplies the type proof for its handle source.
+    #[expect(
+        clippy::expect_used,
+        reason = "typed lookup owns a prepared slot until activation"
+    )]
+    fn acquire_checked_root<T>(
+        &self,
+        address: usize,
+        expected: Option<crate::ObjectId>,
+        accepts: impl FnOnce(&ObjectMetadata) -> bool,
+    ) -> Result<(
+        std::ptr::NonNull<T>,
+        crate::ObjectId,
+        crate::roots::Registration,
+    )> {
+        let invalid = || {
+            crate::Error::InvalidPointer(
+                "unknown, logically dead, or incorrectly typed allocation".into(),
+            )
+        };
+        let _measurement = self
+            .diagnostics
+            .root_acquire
+            .measure(self.diagnostics_enabled());
+        let mut reservation = self.reserve_owned_root(address);
+        let slot = reservation.slot.get_or_insert_with(|| {
+            self.typed_slots
+                .get_or_init(|| Box::new(crate::roots::RootSlots::default()))
+                .prepare(address)
+        });
+        slot.arm();
+        let observation = self.phase_clock.indexed_root();
+        let metadata = self
+            .objects
+            .lookup(address)
+            .filter(|m| expected.is_none_or(|id| m.id == id) && accepts(m))
+            .ok_or_else(invalid)?;
+        let ptr = std::ptr::NonNull::new(metadata.trace.ptr.cast_mut().cast::<T>())
+            .ok_or_else(invalid)?;
+        let covered = self.typed_root_covered(observation, &metadata);
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_after_typed_lookup();
+        if covered && slot.activate(address) {
+            let registration = reservation
+                .slot
+                .take()
+                .expect("activated typed root")
+                .finish(reservation.context.take());
+            if self.diagnostics_enabled() {
+                self.diagnostics
+                    .root_registrations
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            publication_tests::pause_after_typed_activation();
+            return Ok((ptr, metadata.id, registration));
+        }
+
+        // The one-shot record is both the registry's decision and the identity
+        // retained by epoch-bound traversal proposals. Releasing this original
+        // reservation cannot affect a subsequent attempt.
+        let context = reservation.context.clone();
+        drop(reservation);
+        let slots = context.as_ref().map_or_else(
+            || self.scanned_slots().expect("typed root slots installed"),
+            |context| &context.roots,
+        );
+        loop {
+            let record = slots.prepare_typed_attempt(address);
+            let mut attempt = RootReservation {
+                collector: self,
+                address,
+                context: context.clone(),
+                slot: Some(crate::roots::PreparedSlot::Overflow(record.clone())),
+            };
+            let phases = self.phase_clock.indexed_root();
+            if !self
+                .objects
+                .lookup(address)
+                .is_some_and(|m| MetadataRef::ptr_eq(&m, &metadata))
+            {
+                return Err(invalid());
+            }
+            match self.certify_root_attempt(phases, &metadata, |_, _| Some(record.clone())) {
+                Some(false) => return Err(invalid()),
+                None => continue,
+                Some(true) => {}
+            }
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            publication_tests::pause_after_typed_proposals();
+            if record.commit_typed() {
+                let registration = attempt
+                    .slot
+                    .take()
+                    .expect("typed attempt registered")
+                    .finish(attempt.context.take());
+                if self.diagnostics_enabled() {
+                    self.diagnostics
+                        .root_registrations
+                        .fetch_add(1, Ordering::Relaxed);
+                }
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                publication_tests::pause_after_typed_activation();
+                return Ok((ptr, metadata.id, registration));
+            }
+        }
+    }
+
+    fn certify_root_attempt(
+        &self,
+        phases: publication_state::Birth,
+        metadata: &MetadataRef,
+        mut proposal_record: impl FnMut(
+            usize,
+            &Arc<crate::work::BirthEpoch>,
+        ) -> Option<Arc<crate::roots::Record>>,
+    ) -> Option<bool> {
+        let snapshot = match phases {
+            publication_state::Birth::Idle => return Some(true),
+            publication_state::Birth::Inline(s) | publication_state::Birth::Epochs(s) => s,
+        };
+        let epochs = [0, 1].map(|i| {
+            snapshot
+                .stage(i)
+                .and_then(|_| self.domain_at(i).mark_queue.birth_epoch())
+        });
+        // The same phase flags can recur in a later cycle. Bind them to the
+        // captured queue owners before sampling marks; the final validation
+        // then covers both the mark reads and any root proposals.
+        if !self.phase_clock.same_phases(&snapshot) {
+            return None;
+        }
+        let mut eligible = true;
+        let mut linked = false;
+        let mature = self.configuration.promotion_age.max(1);
+        for (index, epoch) in epochs.iter().enumerate() {
+            let Some(stage) = snapshot.stage(index) else {
+                continue;
+            };
+            let epoch = epoch.as_ref()?;
+            let young = metadata.age.load(Ordering::Acquire) < mature;
+            if index == 0 && !young {
+                continue;
+            }
+            let exempt = epoch.old_only && young;
+            let marked = self.visible_mark(metadata, index, epoch.number);
+            if stage != 0 && !exempt && !marked {
+                #[cfg(test)]
+                publication_tests::inspect_rejected_root(self);
+                eligible = false;
+                break;
+            }
+            let strength = Retention::at_phase(stage);
+            let retention = self.visible_retention(metadata, index, epoch.number);
+            if stage < 5
+                && retention.is_none_or(|previous| previous > strength)
+                && !(exempt && marked && retention.is_none())
+            {
+                if !self.domain_at(index).mark_queue.propose_root(
+                    epoch,
+                    crate::work::RootProposal {
+                        metadata: metadata.clone(),
+                        record: proposal_record(index, epoch)?,
+                        index,
+                        strength,
+                        promotion_age: mature,
+                    },
+                ) {
+                    return None;
+                }
+                linked = true;
+            }
+        }
+        // A consumer that passed a pending ticket cancelled this exact record.
+        // The stamp invalidates an earlier empty observation even when all
+        // participating domains otherwise retained their current epoch identity.
+        if self.phase_clock.certify_epochs(snapshot, linked)
+            && epochs.iter().enumerate().all(|(i, e)| {
+                e.as_ref()
+                    .is_none_or(|epoch| self.domain_at(i).mark_queue.current_birth_epoch(epoch))
+            })
+        {
+            Some(eligible)
+        } else {
+            None
+        }
+    }
+
+    fn typed_root_covered(
+        &self,
+        observation: publication_state::Birth,
+        metadata: &ObjectMetadata,
+    ) -> bool {
+        let (snapshot, bind_epochs) = match observation {
+            publication_state::Birth::Idle => return true,
+            publication_state::Birth::Inline(snapshot) => (snapshot, false),
+            publication_state::Birth::Epochs(snapshot) => (snapshot, true),
+        };
+        // An owning inbox identity survives numeric epoch/revision reuse. Take
+        // it before reading marks, then check it again after phase validation.
+        let epochs = [0, 1].map(|i| {
+            if bind_epochs && snapshot.stage(i).is_some() {
+                self.domain_at(i).mark_queue.birth_epoch()
+            } else {
+                None
+            }
+        });
+        let covered = epochs.iter().enumerate().all(|(i, epoch)| {
+            snapshot.stage(i).is_none()
+                || ((!bind_epochs || epoch.is_some())
+                    && self.visible_retention(
+                        metadata,
+                        i,
+                        self.domain_at(i).epoch.load(Ordering::Acquire),
+                    ) == Some(Retention::Strong))
+        });
+        covered
+            && if bind_epochs {
+                self.phase_clock.certify_epochs(snapshot, false)
+                    && epochs.iter().enumerate().all(|(i, epoch)| {
+                        epoch
+                            .as_ref()
+                            .is_none_or(|e| self.domain_at(i).mark_queue.current_birth_epoch(e))
+                    })
+            } else {
+                self.phase_clock.unchanged(snapshot)
+            }
+    }
+
+    pub(crate) fn resolve_address<T: 'static>(
+        &self,
+        address: usize,
+        retaining: bool,
+        expected: Option<crate::ObjectId>,
+    ) -> Option<MetadataRef> {
+        self.objects.lookup(address).filter(|metadata| {
+            metadata.is_type::<T>()
+                && expected.is_none_or(|id| metadata.id == id)
+                && self.can_root(metadata, retaining)
+        })
+    }
+
+    fn can_root(&self, metadata: &ObjectMetadata, retaining: bool) -> bool {
+        self.domains.iter().enumerate().all(|(index, domain)| {
+            let phase = domain.weak_phase();
+            phase == 0
+                || self.old_excludes_young(index, metadata)
+                || (index == 0
+                    && metadata.age.load(Ordering::Acquire)
+                        >= self.configuration.promotion_age.max(1))
+                || self.visible_mark(metadata, index, domain.epoch.load(Ordering::Acquire))
+                || (retaining && phase < 5)
+        })
+    }
+
     pub(crate) fn weak(&self) -> Weak<Self> {
         self.this.clone()
     }
 
-    /// Creates a new low-pause, parallel, concurrent garbage collector.
+    /// Borrows the collector's stable weak reference for an ownership hook.
+    ///
+    /// # Safety
+    /// The address and graph protection must satisfy `TraceOwner::new_unchecked`.
+    /// The returned context cannot outlive this collector borrow; retained hooks
+    /// still clone their own weak reference.
+    pub(crate) unsafe fn trace_owner(&self, address: usize) -> crate::TraceOwner<'_> {
+        // SAFETY: the caller supplies the actual protected allocation address.
+        unsafe { crate::TraceOwner::new_unchecked(&self.this, address) }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn metadata_for_address(&self, address: usize) -> Option<MetadataRef> {
+        self.objects.lock(address).get(&address).cloned()
+    }
+
+    fn weak_target_metadata(
+        &self,
+        slot: &crate::weak::WeakSlot,
+        address: usize,
+    ) -> Option<MetadataRef> {
+        if address == 0 {
+            return None;
+        }
+        self.objects.lookup_identity(address, slot.target_identity)
+    }
+
+    pub(crate) fn snapshot_edge<T>(&self, target: &Gc<T>) {
+        if self.phase_clock.any_marking() {
+            self.edge_barrier(target);
+        }
+    }
+
+    /// The caller pins the exact managed owner and retains every incoming edge
+    /// until this returns. Root deletion covers a young scan that already passed
+    /// this owner. Later scans see membership before the last root can disappear.
+    pub(crate) fn remember_before_unroot(&self, address: usize) -> bool {
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        barrier_progress_tests::pause_before_remembering();
+        let remembered = self.remembered.try_lock(address);
+        self.enroll_remembered_owner(address, remembered.as_ref())
+            .is_some()
+    }
+
+    fn enroll_remembered_owner(
+        &self,
+        address: usize,
+        remembered: Option<&crate::index::RememberedGuard<'_>>,
+    ) -> Option<MetadataRef> {
+        let _measurement = self
+            .diagnostics
+            .barrier_record
+            .measure(self.diagnostics_enabled());
+        // A pinned owner can outlive registry unlink. Enrollment and removal
+        // use the never-recycled birth, including if unlink wins this race.
+        let metadata = self.objects.lookup(address)?;
+        let version = metadata.record_mutation();
+        let id = metadata.id.to_i64().cast_unsigned();
+        if let Some(remembered) = remembered {
+            remembered.insert(address, metadata.id);
+        } else {
+            // A stale primary prune can remove its entry after our version
+            // increment. The independently versioned overflow retains the write.
+            self.remembered.dirty.publish(id, address, version);
+        }
+        if self.objects.lookup_identity(address, metadata.id).is_none() {
+            if remembered.is_some() {
+                self.remembered.remove(address, metadata.id);
+            } else {
+                self.remembered.dirty.retire(id);
+            }
+            return None;
+        }
+        Some(metadata)
+    }
+
+    pub(crate) fn remember_address(&self, address: usize) {
+        let _publication = self.allocation_guard();
+        if self.configuration.barrier_buffer_size == 0 {
+            if let Some(remembered) = self.remembered.try_lock(address) {
+                if let Some(metadata) = self.enroll_remembered_owner(address, Some(&remembered)) {
+                    self.rescan_dirty_owner(&metadata);
+                }
+            } else if let Some(metadata) = self.objects.lookup(address) {
+                self.remember_contended_owner(&metadata, None);
+            }
+            return;
+        }
+        // The managed writer pins this owner throughout the hook. Its address
+        // cannot be reused, and the snapshot owns the exact visible descriptor.
+        if let Some(metadata) = self.objects.lookup(address) {
+            let version = metadata.record_mutation();
+            self.barrier(address, Some((&metadata, version)));
+        }
+    }
+
+    /// Called under publication admission. A future young cycle sees the
+    /// directory; an already-started strong snapshot may have passed the owner.
+    fn remember_contended_owner(&self, metadata: &MetadataRef, version: Option<usize>) {
+        let _measurement = self
+            .diagnostics
+            .barrier_record
+            .measure(self.diagnostics_enabled());
+        let id = metadata.id.to_i64().cast_unsigned();
+        let address = metadata.ptr().0;
+        // Admission pins phase transitions. A terminal white identity can
+        // never publish a new version after sweep has removed its membership.
+        if self
+            .objects
+            .lookup(address)
+            .is_none_or(|current| current.id != metadata.id)
+            || self.logically_retired(metadata)
+        {
+            return;
+        }
+        let version = version.unwrap_or_else(|| metadata.record_mutation());
+        self.remembered.dirty.publish(id, address, version);
+        self.rescan_dirty_owner(metadata);
+    }
+
+    /// Ordinary stores can reach either index on consecutive writes. Publish
+    /// their active snapshot debt under the same admission as enrollment.
+    fn rescan_dirty_owner(&self, metadata: &MetadataRef) {
+        let young = &self.domains[0];
+        if young.active() && young.weak_phase() == 0 && !self.logically_retired(metadata) {
+            self.enqueue_dirty_owner(metadata);
+        }
+    }
+
+    fn enqueue_dirty_owner(&self, metadata: &MetadataRef) {
+        let _context = Context::enter(self, 0);
+        // The owner may already have been scanned with its previous fields.
+        // Its outstanding mark alone does not cover this new traversal.
+        metadata.mark(
+            0,
+            self.domains[0].epoch.load(Ordering::Acquire),
+            Retention::Strong,
+        );
+        if metadata.request_dirty_scan() {
+            self.domains[0]
+                .mark_queue
+                .push(self.local_queue(), MarkItem::dirty(metadata.clone()));
+        }
+    }
+
+    /// Creates a collector with default configuration.
     #[must_use]
     pub fn new() -> Arc<Self> {
         Self::with_config(Configuration::default())
     }
 
-    /// Creates a new garbage collector with custom configuration.
+    /// Creates a collector with an explicit allocation and scheduling policy.
     #[must_use]
-    pub fn with_config(configuration: Configuration) -> Arc<Self> {
-        #[cfg(not(target_family = "wasm"))]
-        let threads = if configuration.threads == AUTO_THREADS {
-            let cpus = System::physical_core_count().unwrap_or(1);
-            // Default to 50% of available CPU cores, but at least 1 thread
-            (cpus / CORES_PER_GC_THREAD).max(1)
-        } else {
-            configuration.threads
-        };
-        #[cfg(target_family = "wasm")]
-        let threads = if configuration.threads == AUTO_THREADS {
-            1
-        } else {
-            configuration.threads
-        };
-        info!("garbage collector configured with {threads} threads");
-        #[cfg(not(target_family = "wasm"))]
-        let thread_pool = match ThreadPoolBuilder::new()
-            .num_threads(threads)
-            .thread_name(|thread_index| format!("gc-{thread_index}"))
-            .build()
-        {
-            Ok(thread_pool) => Some(thread_pool),
-            Err(error) => {
-                warn!(
-                    "failed to create private GC thread pool; parallel GC work will run sequentially: {error}"
-                );
-                None
-            }
-        };
+    #[expect(
+        clippy::too_many_lines,
+        reason = "initialize related collector-owned state together"
+    )]
+    pub fn with_config(mut configuration: Configuration) -> Arc<Self> {
+        if configuration.old_collection_interval != 0 {
+            configuration.independent_phases = true;
+            configuration.overlapping_generations = true;
+        }
+        configuration.barrier_buffer_size = configuration
+            .barrier_buffer_size
+            .min(crate::context::MAX_RECORDS);
+        configuration.metadata_shards = crate::index::shard_count(configuration.metadata_shards);
+        configuration.region_shards = crate::index::shard_count(configuration.region_shards);
+        configuration.relocation_reserve_bytes =
+            if configuration.compact_heap && configuration.cost_aware_relocation {
+                configuration
+                    .relocation_reserve_bytes
+                    .min(configuration.max_heap_bytes / 2)
+            } else {
+                0
+            };
+        let phase_clock = Arc::new(publication_state::Clock::new(
+            publication_state::MAX_REVISION,
+        ));
+        let publication_clock = configuration
+            .concurrent_publication
+            .then(|| phase_clock.clone());
+        Arc::new_cyclic(|this| {
+            let budget = crate::region::Budget::with_reserve(
+                configuration.max_heap_bytes,
+                configuration.relocation_reserve_bytes,
+            );
+            let regions = configuration.compact_heap.then(|| {
+                crate::region::RegionHeap::with_shards(
+                    configuration.region_size,
+                    configuration.max_heap_bytes,
+                    configuration.relocation_reserve_bytes,
+                    budget.clone(),
+                    configuration.cost_aware_relocation,
+                    configuration.region_shards,
+                )
+            });
+            let descriptor_regions = configuration.local_allocation_buffers.then(|| {
+                crate::region::RegionHeap::with_shards(
+                    crate::allocation::CHUNK,
+                    configuration.max_heap_bytes,
+                    0,
+                    budget.clone(),
+                    false,
+                    configuration.region_shards,
+                )
+            });
+            Self {
+                this: this.clone(),
+                regions,
+                descriptor_regions,
+                small_allocations: crate::allocation::SmallAllocations::new(budget),
+                #[cfg(not(target_family = "wasm"))]
+                pacing: configuration.adaptive_workers.then(|| {
+                    crate::pacing::Controller::new(
+                        configuration.threads,
+                        thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get),
+                        configuration.max_heap_bytes,
+                        configuration.mark_batch_size,
+                        configuration.worker_yield_time_us,
+                    )
+                }),
+                typed_slots: once_cell::race::OnceBox::new(),
+                root_slots: (configuration.root_storage != crate::RootStorage::Tree)
+                    .then(|| Box::new(crate::roots::RootSlots::default())),
+                scheduler: (configuration.predictive_collection
+                    && configuration.max_heap_bytes != usize::MAX
+                    && configuration.max_heap_bytes != 0)
+                    .then(|| crate::scheduling::Scheduler::new(configuration.max_heap_bytes)),
+                mark_claims: configuration
+                    .independent_marking
+                    .then(|| Box::new(RwLock::new(()))),
+                #[cfg(test)]
+                mark_claim_pause: Mutex::new(None),
+                #[cfg(test)]
+                metadata_prepare_pause: Mutex::new(None),
+                #[cfg(test)]
+                metadata_publish_failure: Mutex::new(None),
+                #[cfg(test)]
+                metadata_registration_observer: Mutex::new(None),
+                #[cfg(test)]
+                identity_resolution_pause: Mutex::new(None),
+                #[cfg(test)]
+                pending_transfer_pause: Mutex::new(None),
+                #[cfg(test)]
+                edge_certificate_pause: Mutex::new(None),
+                relocation_claims: configuration
+                    .independent_relocation
+                    .then(|| Box::new(RwLock::new(()))),
+                mature_census: MatureCensus::default(),
+                // Batched sweeps traverse consecutive cells. Deadline-limited
+                // single-entry visits can use smaller leaves for sparse heaps.
+                objects: crate::index::Objects::with_sparse_cells(
+                    configuration.metadata_shards,
+                    configuration.max_pause_time_us != 0,
+                ),
+                #[cfg(feature = "experimental-identity-index")]
+                identities: crate::identity_index::Index::new(4096),
+                #[cfg(not(feature = "experimental-identity-index"))]
+                identities: crate::identity_pages::Index::new(configuration.metadata_shards),
+                remembered: crate::index::Remembered::new(configuration.metadata_shards),
+                domains: std::array::from_fn(|index| {
+                    Domain::new(&configuration, index, publication_clock.clone())
+                }),
+                phase_clock: phase_clock.clone(),
+                publication_clock: publication_clock.clone(),
+                old_requested: AtomicBool::new(false),
+                old_active: AtomicBool::new(false),
+                managed_budget: Arc::new(crate::allocation_budget::AllocationBudget::new(
+                    configuration.max_heap_bytes,
+                )),
+                configuration,
+                statistics: arc_swap::ArcSwap::from_pointee(Statistics::default()),
+                leaves_marked_at_birth: AtomicUsize::new(0),
+                diagnostics: Arc::new(crate::diagnostics::Counters::default()),
+                recovery: crate::recovery::Recovery::default(),
+                grant_registry: crate::retirement_grants::Registry::default(),
+                roots: crate::roots::TreeRoots::default(),
+                #[cfg(test)]
+                tree_root_insert_probe: Mutex::new(None),
+                contexts: crate::context::Registry::default(),
+                next_root_id: AtomicUsize::new(1),
+                heap_owners: Mutex::new(BTreeMap::new()),
 
-        Arc::new_cyclic(|this| Self {
-            this: this.clone(),
-            payload_budget: Arc::new(AllocationBudget::new(configuration.max_heap_bytes)),
-            configuration,
-            #[cfg(not(target_family = "wasm"))]
-            thread_pool,
-            statistics: Arc::new(RwLock::new(Statistics::default())),
-            roots: Arc::new(DashMap::new()),
-            next_root_id: AtomicUsize::new(0),
-            objects: Arc::new(DashMap::new()),
-            phase: Arc::new(RwLock::new(GcPhase::Idle)),
-            collection_active: Arc::new(AtomicBool::new(false)),
-            mark_queue: Arc::new(Mutex::new(VecDeque::new())),
-            bytes_allocated: Arc::new(AtomicUsize::new(0)),
-            bytes_live: Arc::new(AtomicUsize::new(0)),
-            #[cfg(not(target_family = "wasm"))]
-            collector_thread: Arc::new(RwLock::new(None)),
-            shutdown: Arc::new(AtomicBool::new(false)),
-            collection_trigger: Arc::new((Mutex::new(false), Condvar::new())),
+                publication: crate::sync::RecursiveRwLock::new(()),
+                coordinator: Mutex::new(()),
+                retired: arc_swap::ArcSwapOption::default(),
+                retired_objects: AtomicUsize::new(0),
+                retired_bytes: AtomicUsize::new(0),
+                retired_ready: AtomicUsize::new(0),
+                #[cfg(not(target_family = "wasm"))]
+                callback_jobs: AtomicUsize::new(0),
+                stale_epochs: crate::stale_epochs::StaleEpochs::default(),
+                retirement_turn: AtomicBool::new(false),
+                released_donors: crate::retirement_grants::ReleasedDonors::default(),
+                released_turn: AtomicBool::new(false),
+                barrier_turn: AtomicBool::new(false),
+                #[cfg(test)]
+                barrier_claim_observer: Mutex::new(None),
+                #[cfg(test)]
+                barrier_prepare_pause: Mutex::new(None),
+                next_domain: AtomicUsize::new(0),
+                weak_slots: crate::weak_registry::WeakRegistry::default(),
+                next_weak_id: AtomicUsize::new(1),
+                pending_references: once_cell::race::OnceBox::new(),
+                allocation_debt: AtomicUsize::new(0),
+                published_bytes: AtomicUsize::new(0),
+                published_debt: AtomicUsize::new(0),
+                #[cfg(not(target_family = "wasm"))]
+                worker_signals: arc_swap::ArcSwapOption::empty(),
+                #[cfg(not(target_family = "wasm"))]
+                collector_thread: Mutex::new(Vec::new()),
+                #[cfg(not(target_family = "wasm"))]
+                refund_notifier: arc_swap::ArcSwapOption::empty(),
+            }
         })
     }
 
-    /// Transfers the unique private payload owner to the ordinary registry.
-    pub(crate) fn register_object(&self, mut allocation: Allocation) {
-        allocation.attach_live_counter(&self.bytes_live);
-        let size = allocation.size();
-        let metadata = ObjectMetadata::new_for_gc(allocation);
-        self.objects.insert(*metadata.ptr(), metadata);
-        self.record_allocation_debt(size);
-    }
-
-    /// # Safety
-    /// The allocation must contain the T used by the typed caller.
-    pub(crate) unsafe fn register_object_with_finalizer<T: Send + Sync + Finalize>(
+    pub(crate) fn prepare_allocated_object<T: Send + Sync + Trace + 'static>(
         &self,
-        mut allocation: Allocation,
-    ) {
-        allocation.attach_live_counter(&self.bytes_live);
-        let size = allocation.size();
-        // SAFETY: Gc's typed constructor pairs this allocation with the same T.
-        let metadata = unsafe { ObjectMetadata::new_for_gc_with_finalizer::<T>(allocation) };
-        self.objects.insert(*metadata.ptr(), metadata);
-        self.record_allocation_debt(size);
+        allocation: crate::allocation::Initialized<crate::gc::Allocation<T>>,
+        reservation: AllocationReservation<'_>,
+        id: crate::ObjectId,
+    ) -> MetadataRef {
+        let metadata = ObjectMetadata::new_for_gc::<T>(allocation, reservation.size, id);
+        self.prepare_typed::<T>(metadata, reservation)
     }
 
-    /// Starts the background collector thread.
-    #[cfg(not(target_family = "wasm"))]
-    pub fn start(&self) {
-        let Ok(mut collector_thread) = self.collector_thread.write() else {
-            return;
+    pub(crate) fn allocate_descriptor(
+        &self,
+        layout: std::alloc::Layout,
+    ) -> Result<crate::allocation::Storage> {
+        if let Some(heap) = &self.descriptor_regions
+            && layout.size() <= crate::allocation::SMALL
+            && layout.align() <= 64
+            && let Some(Ok(block)) = crate::context::try_with_allocation(self, |cache| {
+                cache.allocate(heap, layout, true)
+            })
+        {
+            return Ok(crate::allocation::Storage::Region(block));
+        }
+        // Pooling is optional: an exhausted/fragmented arena must not make
+        // an otherwise valid descriptor allocation fail prematurely.
+        self.default_descriptor(layout)
+    }
+
+    pub(crate) fn default_descriptor(
+        &self,
+        layout: std::alloc::Layout,
+    ) -> Result<crate::allocation::Storage> {
+        if self.regions.is_none()
+            && self.descriptor_regions.is_none()
+            && let Some(storage) = self.small_allocations.allocate(layout)
+        {
+            return Ok(storage);
+        }
+        crate::allocation::Storage::global(layout)
+    }
+
+    pub(crate) fn poll_payload(
+        &self,
+        layout: std::alloc::Layout,
+        probe: &mut crate::allocation::PayloadProbe,
+    ) -> std::task::Poll<Result<Option<crate::region::Block>>> {
+        let Some(heap) = self.regions.as_ref().filter(|_| layout.size() != 0) else {
+            return std::task::Poll::Ready(Ok(None));
         };
-        if collector_thread.is_some() {
-            return;
+        if self.configuration.local_allocation_buffers
+            && let Some(result) = crate::context::try_with_allocation(self, |cache| {
+                cache.poll_payload(heap, layout, probe)
+            })
+        {
+            return result.map_ok(Some);
         }
-
-        // Use a Weak reference to avoid a reference cycle: if the thread held
-        // Arc<GarbageCollector>, Drop::drop() could never fire because the
-        // thread's Arc would keep the refcount above zero.
-        let weak_collector = self.this.clone();
-        let stats = Arc::clone(&self.statistics);
-        let roots = Arc::clone(&self.roots);
-        let objects = Arc::clone(&self.objects);
-        let phase = Arc::clone(&self.phase);
-        let collection_active = Arc::clone(&self.collection_active);
-        let mark_queue = Arc::clone(&self.mark_queue);
-        let shutdown = Arc::clone(&self.shutdown);
-        let collection_trigger = Arc::clone(&self.collection_trigger);
-        let bytes_allocated = Arc::clone(&self.bytes_allocated);
-
-        let handle = thread::spawn(move || {
-            Self::collector_thread_main(
-                &weak_collector,
-                &stats,
-                &roots,
-                &phase,
-                &collection_active,
-                &mark_queue,
-                &shutdown,
-                &collection_trigger,
-                &objects,
-                &bytes_allocated,
-            );
-        });
-
-        *collector_thread = Some(handle);
-        debug!("collector started");
+        probe.exact.poll(heap, layout).map_ok(Some)
     }
 
-    /// Starts the background collector thread (no-op on wasm).
-    #[cfg(target_family = "wasm")]
-    pub fn start(&self) {}
-
-    /// Stops the background collector thread.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the thread fails to join or if the shutdown signal fails.
-    #[cfg(not(target_family = "wasm"))]
-    pub fn stop(&self) -> Result<()> {
-        let Ok(mut collector_thread) = self.collector_thread.write() else {
-            return Ok(());
+    pub(crate) fn allocate_payload(
+        &self,
+        layout: std::alloc::Layout,
+    ) -> Result<Option<crate::region::Block>> {
+        let Some(heap) = &self.regions else {
+            return Ok(None);
         };
-        let Some(handle) = collector_thread.take() else {
-            return Ok(());
-        };
-        self.shutdown.store(true, Ordering::Release);
-
-        // Wake up the collector thread
-        let (lock, cvar) = &*self.collection_trigger;
-        let mut triggered = lock.lock().map_err(|error| {
-            Error::LockError(format!(
-                "Failed to acquire collection trigger lock: {error}"
-            ))
-        })?;
-        *triggered = true;
-        cvar.notify_one();
-        drop(triggered);
-
-        // Wait for thread to finish, unless we ARE the collector thread.
-        // This can happen when the collector thread holds the last Arc<GarbageCollector>
-        // (from upgrading a Weak during a collection cycle) and drops it, triggering
-        // Drop::drop() on the collector thread itself. In that case, the thread will
-        // exit naturally once this function returns and the remaining stack unwinds;
-        // the detached JoinHandle is dropped without joining.
-        if handle.thread().id() != thread::current().id() {
-            handle
-                .join()
-                .map_err(|_| Error::SyncError("Failed to join collector thread".to_string()))?;
+        if self.configuration.local_allocation_buffers
+            && let Some(result) = crate::context::try_with_allocation(self, |cache| {
+                cache.allocate(heap, layout, false)
+            })
+        {
+            return result.map(Some);
         }
-
-        self.cleanup_remaining_objects();
-        debug!("collector stopped");
-        Ok(())
+        heap.allocate(layout, None).map(Some)
     }
 
-    /// Stops the background collector thread (no-op on wasm).
-    ///
-    /// # Errors
-    ///
-    /// This implementation never returns an error; the result type matches the
-    /// non-wasm signature for API consistency.
-    #[cfg(target_family = "wasm")]
-    pub fn stop(&self) -> Result<()> {
-        self.cleanup_remaining_objects();
-        Ok(())
+    pub(crate) fn prepare_allocated_object_with_finalizer<
+        T: Send + Sync + Finalize + Trace + 'static,
+    >(
+        &self,
+        allocation: crate::allocation::Initialized<crate::gc::Allocation<T>>,
+        reservation: AllocationReservation<'_>,
+        id: crate::ObjectId,
+    ) -> MetadataRef {
+        let metadata =
+            ObjectMetadata::new_for_gc_with_finalizer::<T>(allocation, reservation.size, id);
+        self.prepare_typed::<T>(metadata, reservation)
     }
 
-    /// Removes all remaining objects from tracking, runs their destructors, and frees memory.
-    /// Must only be called after the collector thread has been stopped.
-    ///
-    /// Uses a two-phase approach to ensure safe destructor ordering:
-    /// 1. **Remove + Finalizer phase**: removes all objects from the tracking map (releasing
-    ///    `DashMap` shard locks), then runs all finalizers while every object's memory is still
-    ///    valid so finalizers may safely read other GC-managed data.
-    /// 2. **Drop phase**: runs drop closures to deallocate memory.
-    ///
-    /// Objects are removed from the map before any destructors run so that finalizers cannot
-    /// deadlock on `DashMap` shard locks.
-    ///
-    /// Safe to call multiple times: both `run_finalizer()` and `run_drop_fn()` use
-    /// `Option::take()` guards, so closures run at most once.
-    fn cleanup_remaining_objects(&self) {
-        // Fail-fast in debug builds to catch bugs during development.
-        debug_assert!(
-            !self.collection_active.load(Ordering::Acquire),
-            "cleanup_remaining_objects called while a collection cycle is still active"
-        );
-        // Fail-safe in release builds: warn and skip rather than risk double-free / UB.
-        if self.collection_active.load(Ordering::Acquire) {
-            warn!(
-                "cleanup_remaining_objects called while a collection cycle is still active; \
-                 skipping to avoid double-free"
-            );
-            return;
-        }
-        let keys: Vec<SafePtr> = self.objects.iter().map(|entry| *entry.key()).collect();
-
-        // Remove all objects from the tracking map first so no DashMap shard locks are
-        // held while destructors execute. This prevents deadlocks if a finalizer
-        // interacts with the collector (e.g. looking up other objects).
-        let mut removed: Vec<ObjectMetadata> = Vec::with_capacity(keys.len());
-        for key in keys {
-            if let Some((_, metadata)) = self.objects.remove(&key) {
-                removed.push(metadata);
-            }
-        }
-
-        // Phase 1: Run all finalizers while every object's memory is still valid.
-        // Finalizers may safely read other GC managed objects because no drop
-        // closures have executed yet.
-        for metadata in &removed {
-            metadata.run_finalizer();
-        }
-
-        // Phase 2: Run drop closures to deallocate memory.
-        let mut bytes_freed = 0;
-        let mut objects_freed = 0;
-        for metadata in removed {
-            bytes_freed += metadata.size();
-            objects_freed += 1;
-            metadata.run_drop_fn();
-        }
-        if objects_freed > 0 {
-            debug!(
-                "cleanup freed {} remaining objects ({} bytes)",
-                objects_freed, bytes_freed
-            );
-        }
-    }
-
-    /// Triggers a garbage collection cycle. This is non-blocking and will wake up the background
-    /// collector.
-    pub fn collect(&self) {
-        let (lock, cvar) = &*self.collection_trigger;
-        match lock.lock() {
-            Ok(mut triggered) => {
-                *triggered = true;
-                cvar.notify_one();
-            }
-            Err(error) => {
-                error!("Failed to acquire collection trigger lock: {error}");
-            }
-        }
-    }
-
-    pub(crate) fn reserve_exact_bytes(&self, size: usize) -> Result<Reservation> {
-        self.payload_budget.reserve(size)
-    }
-
-    /// Bytes reserved for managed payloads, including private unpublished allocations.
-    /// Credit is returned only after the payload destructor and deallocation finish.
-    /// This excludes collector metadata and allocator overhead.
-    #[must_use]
-    pub fn managed_bytes(&self) -> usize {
-        self.payload_budget.used()
-    }
-
-    /// Records an allocation for live memory accounting and GC threshold tracking.
-    pub fn record_allocation(&self, size: usize) {
-        self.bytes_live.fetch_add(size, Ordering::Relaxed);
-        self.record_allocation_debt(size);
-    }
-
-    fn record_allocation_debt(&self, size: usize) {
-        let old_size = self.bytes_allocated.fetch_add(size, Ordering::Relaxed);
-
-        // Trigger collection if threshold exceeded (use saturating arithmetic to prevent overflow)
-        if old_size.saturating_add(size) >= self.configuration.allocation_threshold {
-            self.collect();
-        }
-    }
-
-    /// Gets current garbage collection statistics.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the stats lock acquisition fails.
-    pub fn statistics(&self) -> Result<Statistics> {
-        let mut statistics = self
-            .statistics
-            .read()
-            .map_err(|error| Error::StatsError(format!("Failed to read stats: {error}")))?
-            .clone();
-
-        // Read allocation counters independently of collection scheduling statistics.
-        statistics.bytes_allocated = self.bytes_allocated.load(Ordering::Relaxed);
-        statistics.bytes_live = self.bytes_live.load(Ordering::Relaxed);
-
-        Ok(statistics)
-    }
-
-    /// Adds a `Gc<T>` root object for garbage collection and returns its ID.
-    pub fn add_root<T: Trace>(&self, root: &Gc<T>) -> usize {
-        let root_id = self.next_root_id.fetch_add(1, Ordering::Relaxed);
-        // Instead of storing a TracePtr to the Gc<T> struct, store the Gc<T> pointer directly
-        let gc_ptr = root.ptr.as_ptr();
-        let gc_trace_ptr = TracePtr::new_from_ptr(gc_ptr);
-
-        self.roots.insert(root_id, gc_trace_ptr);
-
-        // Ensure the root insertion is globally visible before register_object() adds
-        // the object to the tracking map. Without this fence, the compiler or CPU could
-        // reorder the `roots.insert` past the subsequent `objects.insert`, allowing the
-        // GC thread to observe the object (eligible for sweep) before seeing the root
-        // that keeps it alive.
-        //
-        // Synchronization chain: roots.insert -> this fence -> objects.insert (releases
-        // DashMap shard lock) -> GC thread acquires DashMap shard lock on objects (Acquire)
-        // -> GC thread sees both the object and all prior writes, including the root.
-        //
-        // We use SeqCst for defense-in-depth: this path is infrequent (only during
-        // allocation) and the stronger ordering removes any doubt about cross-map
-        // visibility on weakly-ordered architectures.
-        std::sync::atomic::fence(Ordering::SeqCst);
-
-        trace!("adding root {:#x} with id {root_id}", gc_ptr as usize);
-        root_id
-    }
-
-    /// Retains an allocation while its root guard still prevents concurrent reclamation.
-    pub(crate) fn retain<T>(&self, root: &Gc<T>) {
-        let pointer = SafePtr::from_ptr(root.as_ptr());
-        if let Some(metadata) = self.objects.get(&pointer) {
-            metadata.retain();
-        }
-    }
-
-    /// Creates a new root guard that automatically manages the lifetime of a `Gc<T>` root.
-    /// The returned guard will automatically remove the root when dropped.fm
-    pub fn create_root_guard<T: Trace>(self: &Arc<Self>, root: Gc<T>) -> GcRootGuard<T> {
-        let root_id = self.add_root(&root);
-        GcRootGuard::new(Arc::clone(self), root_id, root)
-    }
-
-    /// Internal method to remove a root by its ID.
-    /// Used by `GcRootGuard` to clean up when dropped.
-    pub fn remove_root_by_id(&self, root_id: usize) {
-        if let Some((_id, gc_trace_ptr)) = self.roots.remove(&root_id) {
-            // Ensure root removal is visible to other threads before any dependent
-            // operations (symmetric with the SeqCst fence in add_root).
-            std::sync::atomic::fence(Ordering::Release);
-            let ptr = gc_trace_ptr.as_raw_ptr() as usize;
-            trace!("removed root {ptr:#x} with id {root_id}");
-        }
-    }
-
-    /// Internal method to remove a root by its index.
-    /// Used by `GcRootGuard` to clean up when dropped.
-    pub fn remove_root<T: Trace>(&self, root: &T) {
-        let root_ptr = std::ptr::from_ref::<T>(root).cast::<()>();
-        // Remove a root object from the roots hashmap
-        self.roots.retain(|_, gc_trace_ptr| {
-            // Use pointer equality to check if the root matches
-            if std::ptr::eq(gc_trace_ptr.as_raw_ptr(), root_ptr) {
-                trace!("removed root {:#x}", root_ptr as usize);
-                false // Remove this entry
-            } else {
-                true // Keep this entry
-            }
-        });
-    }
-
-    /// Checks if the garbage collector is currently in the concurrent marking phase. This is used
-    /// by the write barrier to determine if marking is needed.
-    pub(crate) fn is_concurrent_marking(&self) -> Result<bool> {
-        let phase = self.phase.read().map_err(|error| {
-            Error::CollectionPhaseError(format!("Failed to read phase: {error}"))
-        })?;
-        Ok(matches!(*phase, GcPhase::ConcurrentMark))
-    }
-
-    /// Adds an object to the mark queue for concurrent marking. This is used by the write barrier
-    /// when a reference is stored during concurrent marking.
-    pub(crate) fn add_to_mark_queue<T: Trace>(&self, obj: &T) {
-        if let Ok(mut queue) = self.mark_queue.try_lock() {
-            queue.push_back(TracePtr::new(obj));
-        }
-        // If we can't acquire the lock immediately, the object is skipped for *this* cycle.
-        // This is a liveness property, not a safety property: the object won't be prematurely
-        // collected (allocation-color-black keeps new objects alive), but its reachable
-        // subgraph may remain unmarked until the next collection cycle, increasing floating
-        // garbage temporarily.
-    }
-
-    /// Checks if an object is already marked to avoid infinite loops during tracing. Used by
-    /// the `Trace` implementations for cycle detection.
-    pub(crate) fn is_object_marked(&self, ptr: SafePtr) -> bool {
-        if let Some(metadata) = self.objects.get(&ptr) {
-            return metadata.is_marked();
-        }
-        false
-    }
-
-    /// Adds an object to the mark queue for processing during collection. Used by the `Trace`
-    /// implementations to queue objects for reachability analysis.
-    pub(crate) fn add_gc_to_mark_queue<T: Trace>(&self, ptr: *const Gc<T>) {
-        if let Ok(mut queue) = self.mark_queue.try_lock() {
-            queue.push_back(TracePtr::new_from_ptr(ptr));
-        }
-    }
-
-    /// Marks an object as reachable in the object registry. Used during garbage collection to mark
-    /// objects that are reachable from roots.
-    pub(crate) fn mark_object(&self, ptr: SafePtr) {
-        if let Some(metadata) = self.objects.get(&ptr) {
-            trace!("object: {:#x} marked reachable", ptr.0);
-            metadata.mark();
-        }
-    }
-
-    /// Attempts to mark an object as reachable. Returns `true` if this is the first time marking
-    /// the object, `false` if already marked. This is used for cycle detection during tracing to
-    /// prevent infinite recursion.
-    pub(crate) fn try_mark_object(&self, ptr: SafePtr) -> bool {
-        if let Some(metadata) = self.objects.get(&ptr) {
-            let was_unmarked = metadata.mark();
-            if was_unmarked {
-                trace!("object: {:#x} marked reachable (first time)", ptr.0);
-            } else {
-                trace!("object: {:#x} already marked, skipping trace", ptr.0);
-            }
-            return was_unmarked;
-        }
-        false
-    }
-
-    /// Returns this collector as a raw pointer suitable for passing to JIT-compiled code.
-    #[must_use]
-    pub fn as_context_ptr(&self) -> *const u8 {
-        let ptr: *const Self = self;
-        ptr.cast::<u8>()
-    }
-
-    /// Reconstructs a `&GarbageCollector` from a raw pointer.
-    ///
-    /// This is intended for JIT interop where the GC pointer is passed through compiled
-    /// code as a raw pointer. The caller must ensure the pointer was obtained from a valid
-    /// `&GarbageCollector` reference that is still alive.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the pointer is null.
-    #[must_use]
-    #[expect(clippy::cast_ptr_alignment)]
-    pub fn from_raw_ptr<'a>(ptr: *const u8) -> &'a Self {
+    fn prepare_typed<T: Trace>(
+        &self,
+        mut metadata: ObjectMetadata,
+        reservation: AllocationReservation<'_>,
+    ) -> MetadataRef {
         assert!(
-            !ptr.is_null(),
-            "GarbageCollector::from_raw_ptr: null pointer"
+            std::ptr::eq(self, reservation.collector),
+            "foreign allocation reservation"
         );
-        let gc_ptr = ptr.cast::<Self>();
-        // Safety: The caller guarantees this pointer was obtained from a live &GarbageCollector.
-        unsafe { &*gc_ptr }
-    }
-
-    /// Reconstructs a `&GarbageCollector` from a pointer to a `#[repr(C)]` context struct
-    /// whose first field is `*const u8` pointing to the `GarbageCollector`.
-    ///
-    /// This is intended for JIT interop where a `RuntimeContext` struct is passed to compiled
-    /// code and the GC pointer is the first field.
-    ///
-    /// # Panics
-    ///
-    /// Panics if either the context pointer or the contained GC pointer is null.
-    #[must_use]
-    #[expect(clippy::cast_ptr_alignment)]
-    pub fn from_context_struct_ptr<'a>(context_ptr: *const u8) -> &'a Self {
-        assert!(
-            !context_ptr.is_null(),
-            "GarbageCollector::from_context_struct_ptr: null context pointer"
-        );
-        // Safety: The caller guarantees context_ptr points to a #[repr(C)] struct
-        // whose first field is *const u8 (the GC pointer).
-        let gc_ptr_ptr = context_ptr.cast::<*const u8>();
-        let gc_ptr = unsafe { *gc_ptr_ptr };
-        Self::from_raw_ptr(gc_ptr)
-    }
-
-    /// Write barrier to be called when a `Gc` reference is modified. This ensures that the target
-    /// object is marked if the collector is in the concurrent marking phase.
-    pub fn write_barrier<T: Trace>(&self, obj: &Gc<T>) {
-        if self.is_concurrent_marking().unwrap_or(false) {
-            self.add_to_mark_queue(obj.inner());
+        reservation.transfer(&mut metadata);
+        if self.configuration.cost_aware_relocation
+            && let Some(heap) = &self.regions
+        {
+            // SAFETY: the typed constructor owns this initialized, unpublished T.
+            // No region identity lookup escapes a payload borrow or dereferences an ID.
+            let value = unsafe { &*metadata.trace.ptr.cast::<T>() };
+            metadata.relocation =
+                crate::relocation_history::History::new(value, heap).map(Box::new);
         }
+        MetadataRef::allocate(
+            metadata,
+            (self.regions.is_none() && self.descriptor_regions.is_none())
+                .then_some(&self.small_allocations),
+        )
     }
 
-    /// Main loop for the background collector thread.
-    #[cfg(not(target_family = "wasm"))]
-    #[expect(clippy::too_many_arguments)]
-    fn collector_thread_main(
-        weak_collector: &Weak<GarbageCollector>,
-        stats: &Arc<RwLock<Statistics>>,
-        roots: &Arc<DashMap<usize, TracePtr>>,
-        phase: &Arc<RwLock<GcPhase>>,
-        collection_active: &Arc<AtomicBool>,
-        mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        shutdown: &Arc<AtomicBool>,
-        collection_trigger: &Arc<(Mutex<bool>, Condvar)>,
-        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
-        bytes_allocated: &Arc<AtomicUsize>,
+    /// The constructor keeps an owner outside this call so private storage cannot
+    /// be destroyed by callee unwind before its initial root is removed. Call once
+    /// for freshly prepared metadata with construction protection still active.
+    /// Borrowing the owner does not make replaying the admitted effects safe.
+    pub(crate) fn register_prepared(
+        &self,
+        metadata: &MetadataRef,
+        construction: &crate::construction::Detached<'_>,
     ) {
-        debug!(
-            "collector thread {:?}:{:?} started",
-            thread::current().id(),
-            thread::current().name()
+        assert_eq!(
+            self.register_prepared_checked(metadata, construction),
+            Ok(()),
+            "registration requires a vacant exact write set"
         );
+    }
 
-        while !shutdown.load(Ordering::Acquire) {
-            // Wait for collection trigger or shutdown
-            let wait_result = {
-                let (lock, cvar) = &**collection_trigger;
-                let Ok(mut triggered) = lock.lock() else {
-                    error!("Failed to acquire collection trigger lock");
-                    continue;
-                };
-
-                // Wait until triggered or shutdown
-                while !*triggered && !shutdown.load(Ordering::Acquire) {
-                    triggered = if let Ok(guard) = cvar.wait(triggered) {
-                        guard
-                    } else {
-                        error!("Collection trigger condition variable wait failed");
-                        return; // Exit the thread on condition variable error
-                    };
+    fn register_prepared_checked(
+        &self,
+        metadata: &MetadataRef,
+        construction: &crate::construction::Detached<'_>,
+    ) -> std::result::Result<(), crate::registration_key::Conflict> {
+        if !construction.belongs_to(self) || !std::ptr::eq(metadata.collector.as_ptr(), self) {
+            return Err(crate::registration_key::Conflict::ForeignCollector);
+        }
+        let mut rollback = self.index_birth(metadata)?;
+        #[cfg(test)]
+        publication_tests::inspect_pending_birth(self, metadata);
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_pending_birth();
+        loop {
+            let published = match self
+                .phase_clock
+                .indexed_birth(metadata.trace.step_fn.is_none())
+            {
+                publication_state::Birth::Idle => {
+                    #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                    publication_tests::pause_at_idle_birth();
+                    metadata.birth.publish_if_unobserved()
                 }
-
-                // Check if we should collect before resetting the trigger
-                let should_collect = *triggered && !shutdown.load(Ordering::Acquire);
-                if should_collect {
-                    *triggered = false;
+                publication_state::Birth::Inline(snapshot) => {
+                    self.publish_observed_birth(metadata, snapshot, false)
                 }
-                should_collect
+                publication_state::Birth::Epochs(snapshot) => {
+                    self.publish_observed_birth(metadata, snapshot, true)
+                }
             };
-
-            if shutdown.load(Ordering::Acquire) {
+            if published {
                 break;
             }
+            metadata.birth.retry();
+        }
+        rollback.slot.reserved = false;
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_after_birth_decision();
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_after_registration_indexes();
+        #[cfg(test)]
+        self.fail_metadata_publication();
+        // Construction roots and each slot's pending-owner count survive activation.
+        // Binding can wait for a slot without holding phase closure;
+        // the owner is already indexed so concurrent set_owner sees its identity.
+        construction.publish_reference_owner(metadata);
+        Ok(())
+    }
 
-            if wait_result {
-                // If the collector has been dropped, exit the thread.
-                let Some(collector) = weak_collector.upgrade() else {
-                    debug!("collector dropped, exiting collector thread");
-                    break;
-                };
-                Self::perform_collection_cycle(
-                    &collector,
-                    stats,
-                    roots,
-                    phase,
-                    collection_active,
-                    mark_queue,
-                    objects,
-                    bytes_allocated,
+    /// Marks remain private until activation. Strong graph births link their
+    /// exact traversal in every affected domain before certifying the clock.
+    fn publish_observed_birth(
+        &self,
+        metadata: &MetadataRef,
+        snapshot: publication_state::Snapshot,
+        bind_epochs: bool,
+    ) -> bool {
+        let stages = [0, 1].map(|index| snapshot.stage(index));
+        let epochs = [0, 1].map(|index| {
+            if bind_epochs && snapshot.stage(index).is_some() {
+                self.domain_at(index).mark_queue.birth_epoch()
+            } else {
+                None
+            }
+        });
+        if bind_epochs
+            && stages
+                .iter()
+                .zip(&epochs)
+                .any(|(stage, epoch)| stage.is_some() && epoch.is_none())
+        {
+            return false;
+        }
+        let trace = [0, 1].map(|index| {
+            snapshot
+                .stage(index)
+                .is_some_and(|stage| self.mark_registration_birth(metadata, index, stage))
+        });
+        let graph = (trace != [false; 2] && metadata.trace.step_fn.is_some())
+            .then(|| crate::work::GraphBirth::new(metadata));
+        let mut accepted = true;
+        if let Some(graph) = &graph {
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            publication_tests::pause_before_graph_link();
+            for (index, (epoch, required)) in epochs.iter().zip(trace).enumerate() {
+                if required && let Some(epoch) = epoch {
+                    accepted &= self.domain_at(index).mark_queue.propose_graph(epoch, graph);
+                }
+            }
+        }
+        #[cfg(test)]
+        if graph.is_some() {
+            publication_tests::inspect_linked_graph(self);
+        }
+        let valid = if bind_epochs {
+            self.phase_clock.certify_epochs(snapshot, graph.is_some())
+                && epochs.iter().enumerate().all(|(index, epoch)| {
+                    epoch
+                        .as_ref()
+                        .is_none_or(|e| self.domain_at(index).mark_queue.current_birth_epoch(e))
+                })
+        } else {
+            self.phase_clock.unchanged(snapshot)
+        };
+        #[cfg(test)]
+        publication_tests::inspect_before_activation(self, metadata);
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_before_observed_activation();
+        if accepted && valid && metadata.birth.publish_if_unobserved() {
+            if graph.is_none() && trace != [false; 2] {
+                self.leaves_marked_at_birth.fetch_add(
+                    usize::from(trace[0]) + usize::from(trace[1]),
+                    Ordering::Relaxed,
                 );
             }
+            return true;
         }
-
-        debug!(
-            "collector thread {:?} shutting down",
-            thread::current().id()
-        );
+        if let Some(graph) = graph {
+            graph.cancel();
+        }
+        // A revision change or a scanner that passed the private record
+        // invalidates this attempt. Erase *both* epochs and the cohort tag:
+        // the next observation may see idle domains, even after a wrap.
+        for index in 0..2 {
+            metadata.reset_mark(index);
+        }
+        metadata.old_birth.store(0, Ordering::Release);
+        false
     }
 
-    /// Performs a complete garbage collection cycle
-    #[expect(clippy::too_many_arguments)]
-    fn perform_collection_cycle(
-        collector: &GarbageCollector,
-        stats: &Arc<RwLock<Statistics>>,
-        roots: &Arc<DashMap<usize, TracePtr>>,
-        phase: &Arc<RwLock<GcPhase>>,
-        collection_active: &Arc<AtomicBool>,
-        mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
-        bytes_allocated: &Arc<AtomicUsize>,
-    ) {
-        let start_time = std::time::Instant::now();
-        collection_active.store(true, Ordering::Release);
-
-        if let Ok(mut stats_guard) = stats.write() {
-            stats_guard.collections_started += 1;
-            stats_guard.last_collection_start = Some(start_time);
+    fn index_birth<'a>(
+        &'a self,
+        metadata: &'a MetadataRef,
+    ) -> std::result::Result<PendingBirth<'a>, crate::registration_key::Conflict> {
+        let address = metadata.ptr().0;
+        #[cfg(feature = "experimental-identity-index")]
+        let identity = self
+            .identities
+            .prepare(metadata.id.to_i64().cast_unsigned(), address);
+        #[cfg(not(feature = "experimental-identity-index"))]
+        let identity = self
+            .identities
+            .prepare(metadata.id.to_i64().cast_unsigned());
+        #[cfg(test)]
+        self.pause_metadata_preparation();
+        // Reserve the exact address before installing any shared effect. A
+        // pending reservation holds no live-object or phase guard. Even another
+        // constructor in this page can proceed while this one is parked.
+        let slot = self
+            .objects
+            .reserve(address)
+            .ok_or(crate::registration_key::Conflict::Address)?;
+        #[cfg(test)]
+        if let Some(observer) = lock(&self.metadata_registration_observer).take() {
+            let _ = observer.send((address, metadata.id));
         }
-
-        debug!("starting garbage collection cycle");
-
-        // Phase 1: Initial Mark; mark all root objects
-        Self::initial_mark_phase(collector, phase, roots, mark_queue, objects);
-
-        // Phase 2: Concurrent Mark; mark all reachable objects
-        Self::concurrent_mark_phase(collector, phase, mark_queue, objects);
-
-        // Phase 3: Final Mark; handle any objects modified during concurrent marking
-        Self::final_mark_phase(collector, phase, roots, mark_queue, objects);
-
-        // Phase 4: Concurrent Sweep; free unmarked objects
-        Self::concurrent_sweep_phase(phase, objects, bytes_allocated, stats);
-
-        // Update phase back to idle
-        if let Ok(mut phase_guard) = phase.write() {
-            *phase_guard = GcPhase::Idle;
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_inside_registration_commit();
+        #[cfg(feature = "experimental-identity-index")]
+        let previous_identity = self.identities.get(metadata.id.to_i64().cast_unsigned());
+        #[cfg(not(feature = "experimental-identity-index"))]
+        let previous_identity = identity.as_ref().err().copied().flatten();
+        crate::registration_key::validate(address, metadata.id, previous_identity)?;
+        if metadata.birth.indexed() {
+            return Err(crate::registration_key::Conflict::AlreadyPresent);
         }
-
-        collection_active.store(false, Ordering::Release);
-
-        let duration = start_time.elapsed();
-        if let Ok(mut stats_guard) = stats.write() {
-            stats_guard.collections_completed += 1;
-            stats_guard.last_collection_duration = Some(duration);
-            stats_guard.total_collection_time += duration;
-        }
-
-        debug!("garbage collection cycle completed in {duration:?}");
+        // The young scan may encounter this exact slot before its descriptor.
+        // The following phase-clock RMW covers scans that passed it early.
+        slot.mark_young();
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        publication_tests::pause_after_young_slot();
+        #[cfg(not(feature = "experimental-identity-index"))]
+        identity
+            .map_err(|_| crate::registration_key::Conflict::Identity)?
+            .install(address);
+        #[cfg(feature = "experimental-identity-index")]
+        self.identities.insert(identity);
+        let pending = PendingBirth {
+            slot,
+            gc: self,
+            metadata,
+        };
+        metadata.record_publication(self);
+        pending.slot.install(metadata.clone());
+        Ok(pending)
     }
 
-    /// Phase 1: Initial mark; mark all root objects
-    fn initial_mark_phase(
-        collector: &GarbageCollector,
-        phase: &Arc<RwLock<GcPhase>>,
-        roots: &Arc<DashMap<usize, TracePtr>>,
-        mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
-    ) {
-        #[cfg(target_family = "wasm")]
-        let _ = &collector;
-        if let Ok(mut phase_guard) = phase.write() {
-            *phase_guard = GcPhase::InitialMark;
+    #[cfg(test)]
+    fn pause_metadata_preparation(&self) {
+        let pause = lock(&self.metadata_prepare_pause).take();
+        if let Some(pause) = pause {
+            pause.entered.send(()).expect("metadata prepared");
+            pause
+                .resume
+                .recv_timeout(std::time::Duration::from_secs(if cfg!(miri) {
+                    120
+                } else {
+                    10
+                }))
+                .expect("resume metadata registration");
         }
+    }
 
-        trace!("Initial mark phase started");
-
-        if let Ok(mut queue) = mark_queue.lock() {
-            queue.clear();
+    #[cfg(test)]
+    fn fail_metadata_publication(&self) {
+        let observer = lock(&self.metadata_publish_failure).take();
+        if let Some(observer) = observer {
+            observer.store(self.managed_budget.used(), Ordering::Release);
+            panic!("injected unwind after descriptor publication");
         }
+    }
 
-        // Unmark all objects first
-        let number_of_objects = objects.len();
+    /// Requests a full collection. On cooperative targets, call `step` at safe boundaries.
+    pub fn collect(&self) {
+        self.request_full_cycle();
+    }
 
+    fn request_full_cycle(&self) -> u64 {
+        let ticket = self.domains[1].issue_ticket();
+        self.publish_full_request();
+        ticket
+    }
+
+    fn publish_full_request(&self) {
+        self.domains[1].publish_request();
+        self.wake();
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn request_full_cleanup(&self) -> (u64, Arc<AtomicUsize>) {
+        let domain = &self.domains[1];
+        let ticket = domain.issue_ticket();
+        let cleanup = domain.enroll_full_cleanup();
+        self.publish_full_request();
+        (ticket, cleanup)
+    }
+
+    pub(crate) fn completed_full_ticket(&self) -> u64 {
+        self.domains[1].completed_ticket.load(Ordering::Acquire)
+    }
+
+    // Recovery can share an outstanding full request. Explicit collection still
+    // requests a fresh ticket. No coordinator lock is taken on the allocating task.
+    pub(crate) fn request_recovery_cycle(&self) -> u64 {
+        let domain = &self.domains[1];
+        let requested = domain.request_ticket.load(Ordering::Acquire);
+        if requested > domain.completed_ticket.load(Ordering::Acquire) {
+            // Help publish a request whose creator was preempted between allocating
+            // its ticket and setting the flag. A race with cycle start can request
+            // one redundant pass, but cannot strand a waiter or lose a request.
+            if !domain.active() {
+                domain.publish_request();
+            }
+            self.wake();
+            return requested;
+        }
+        self.request_full_cycle()
+    }
+
+    /// Requests a full collection and suspends only this future until it completes.
+    /// Native workers perform collection; without workers each poll performs at most
+    /// one configured step. Cancelling the future removes its waiter but leaves the
+    /// collection request available to other callers and workers.
+    /// # Errors
+    /// Returns an error for a failed worker or polling under managed guards.
+    pub async fn collect_full_async(&self) -> Result<()> {
+        if crate::cell::has_guards() {
+            return Err(crate::Error::CollectionPhaseError(
+                "asynchronous collection requires released managed guards".into(),
+            ));
+        }
+        if self.diagnostics_enabled() {
+            self.diagnostics
+                .async_collection_calls
+                .fetch_add(1, Ordering::Relaxed);
+        }
+        let ticket = self.request_full_cycle();
+        crate::recovery::CollectionWait::new(self, ticket).await?;
+        Ok(())
+    }
+
+    /// Runs a full collection to completion on the calling thread.
+    /// Native callers help finish ready host cleanup retired by their snapshot.
+    /// A storage lease or a contended cleanup can keep its charge until a later step.
+    ///
+    /// # Errors
+    /// Reserved for collection errors; currently collection itself is infallible.
+    pub fn collect_full(&self) -> Result<()> {
         #[cfg(not(target_family = "wasm"))]
+        if !CleanupScope::contains(self) {
+            let (ticket, cleanup) = self.request_full_cleanup();
+            self.wait_full_ticket(ticket);
+            loop {
+                let jobs = self.callback_jobs.load(Ordering::Acquire);
+                if jobs != 0
+                    && let Some(pool) = self.worker_signals.load_full()
+                {
+                    pool.callbacks.help_ready(jobs);
+                }
+                if cleanup.load(Ordering::Acquire) == 0 {
+                    FullCleanup::recycle(cleanup);
+                    return Ok(());
+                }
+                self.step_inner(false);
+                thread::yield_now();
+            }
+        }
+        self.wait_full_cycle();
+        Ok(())
+    }
+
+    fn wait_full_cycle(&self) {
+        self.wait_full_ticket(self.request_full_cycle());
+    }
+
+    fn wait_full_ticket(&self, ticket: u64) {
+        if self.diagnostics_enabled() {
+            self.diagnostics
+                .full_collection_calls
+                .fetch_add(1, Ordering::Relaxed);
+        }
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        phase_tests::after_full_request();
+        let mut misses = 1;
+        while self.domains[1].completed_ticket.load(Ordering::Acquire) < ticket {
+            if self.step_inner(false).is_none() {
+                for _ in 0..misses {
+                    std::hint::spin_loop();
+                }
+                misses = (misses * 2).min(512);
+            } else {
+                misses = 1;
+            }
+        }
+    }
+
+    /// Requests a young collection without requiring a native worker.
+    pub fn collect_young(&self) {
+        if !self.domains[0].publish_request() {
+            return;
+        }
+        self.wake();
+    }
+
+    pub(crate) fn reserve_allocation(&self, size: usize) -> Result<()> {
+        self.managed_budget.try_charge(size)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reserve_private_bytes(
+        &self,
+        bytes: usize,
+    ) -> Result<crate::allocation_budget::Reservation> {
+        self.managed_budget.reserve(bytes, self.this.clone())
+    }
+
+    pub(crate) fn signal_grants(&self) {
+        // Pair with the same-word RMW after a terminal sleeper installed delivery.
+        self.managed_budget.used_after_registration();
+        self.recovery.grants_released();
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(notifier) = self.refund_notifier.load().as_ref() {
+            notifier.signal();
+        }
+    }
+
+    pub(crate) fn cancel_allocation(&self, size: usize) {
+        let previous = self.managed_budget.release(size);
+        let available = self
+            .configuration
+            .max_heap_bytes
+            .saturating_sub(previous - size);
+        self.recovery.record_headroom(available);
+        #[cfg(not(target_family = "wasm"))]
+        if self.recovery.has_fitting_waiter(available)
+            && let Some(notifier) = self.refund_notifier.load().as_ref()
         {
-            let configuration = &collector.configuration;
-            if number_of_objects > configuration.parallel_threshold
-                && let Some(thread_pool) = &collector.thread_pool
-            {
-                debug!("unmarking {number_of_objects} objects (parallel)");
-                thread_pool.install(|| {
-                    objects.par_iter().for_each(|entry| {
-                        entry.value().unmark();
-                    });
-                });
-            } else if number_of_objects > 0 {
-                debug!("unmarking {number_of_objects} objects (sequential)");
-                for entry in objects.iter() {
-                    entry.value().unmark();
-                }
-            }
+            notifier.signal();
         }
-        #[cfg(target_family = "wasm")]
-        if number_of_objects > 0 {
-            debug!("unmarking {number_of_objects} objects (sequential)");
-            for entry in objects.iter() {
-                entry.value().unmark();
-            }
-        }
-
-        // Add all root objects to the mark queue
-        for root_entry in roots.iter() {
-            let gc_trace_ptr = root_entry.value();
-            if let Ok(mut queue) = mark_queue.lock() {
-                queue.push_back(gc_trace_ptr.clone());
-            }
-        }
-
-        trace!("Initial mark phase completed, {} roots queued", roots.len());
     }
 
-    /// Phase 2: Concurrent mark; mark all reachable objects
-    fn concurrent_mark_phase(
-        collector: &GarbageCollector,
-        phase: &Arc<RwLock<GcPhase>>,
-        mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
-    ) {
-        if let Ok(mut phase_guard) = phase.write() {
-            *phase_guard = GcPhase::ConcurrentMark;
-        }
-
-        trace!("Concurrent mark phase started");
-
-        let mut processed_count = 0;
-
-        loop {
-            let next_object = {
-                if let Ok(mut queue) = mark_queue.lock() {
-                    queue.pop_front()
-                } else {
-                    break;
-                }
-            };
-
-            let Some(gc_trace_ptr) = next_object else {
-                break;
-            };
-
-            // Mark this object and trace its references
-            let ptr = SafePtr::from_ptr(gc_trace_ptr.as_raw_ptr());
-
-            // Check if object exists and mark it
-            let should_trace = {
-                if let Some(metadata) = objects.get(&ptr) {
-                    metadata.mark() // Returns true if this is first time marking
-                } else {
-                    false
-                }
-            };
-
-            if should_trace {
-                // First time marking this object; trace its contents
-                processed_count += 1;
-
-                // Safely trace the object by calling its trace method
-                // This will add any referenced objects to the mark queue
-                // Safety: This is safe because:
-                // 1. The TracePtr was created from a valid object reference
-                // 2. We're in the concurrent marking phase where objects are stable
-                // 3. The trace method is designed to be called during GC
-                // 4. TracePtr includes null pointer checks internally
-                unsafe {
-                    gc_trace_ptr.trace(collector);
-                }
-            }
-        }
-
-        trace!(
-            "Concurrent mark phase completed, processed {} objects",
-            processed_count
-        );
+    pub(crate) fn headroom_after_registration(&self) -> usize {
+        self.configuration
+            .max_heap_bytes
+            .saturating_sub(self.managed_budget.used_after_registration())
     }
 
-    /// Phase 3: Final mark; handle objects modified during concurrent marking
-    ///
-    /// Re-scans roots to catch any roots registered after the initial mark phase
-    /// (e.g. objects allocated during concurrent marking). Then processes remaining
-    /// mark queue items.
-    fn final_mark_phase(
-        collector: &GarbageCollector,
-        phase: &Arc<RwLock<GcPhase>>,
-        roots: &Arc<DashMap<usize, TracePtr>>,
-        mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
-    ) {
-        // Set phase to final mark
-        if let Ok(mut phase_guard) = phase.write() {
-            *phase_guard = GcPhase::FinalMark;
-        }
-
-        trace!("Final mark phase started");
-
-        let mut final_processed = 0;
-
-        // Re-scan roots to catch any roots added after the initial mark phase queued
-        // the original root set. If a new object was allocated and rooted during
-        // concurrent marking, its root won't have been in the initial mark's snapshot.
-        // Without this re-scan, such objects survive (allocation-color-black) but their
-        // children might not be traced, potentially leaving a reachable subgraph unmarked.
-        //
-        // Snapshot root TracePtr values first so we don't hold DashMap shard locks
-        // during `trace()`.  Holding a shard read lock while `trace()` acquires a
-        // `RwLock<Reference>` read lock can deadlock with a mutator thread that holds
-        // the same `RwLock` write lock and tries to insert into the same DashMap shard.
-        let root_snapshot: Vec<TracePtr> =
-            roots.iter().map(|entry| entry.value().clone()).collect();
-        for gc_trace_ptr in &root_snapshot {
-            let ptr = SafePtr::from_ptr(gc_trace_ptr.as_raw_ptr());
-            let should_trace = objects.get(&ptr).is_some_and(|metadata| metadata.mark());
-            if should_trace {
-                final_processed += 1;
-                unsafe {
-                    gc_trace_ptr.trace(collector);
-                }
-            }
-        }
-
-        // Process any remaining objects in the mark queue that were added during
-        // concurrent marking or from the root re-scan above
-        loop {
-            let next_object = {
-                if let Ok(mut queue) = mark_queue.lock() {
-                    queue.pop_front()
-                } else {
-                    break;
-                }
-            };
-
-            let Some(gc_trace_ptr) = next_object else {
-                break;
-            };
-
-            let ptr = SafePtr::from_ptr(gc_trace_ptr.as_raw_ptr());
-            // Release the objects shard lock before calling trace() to avoid
-            // the same lock-ordering deadlock as in the root re-scan above.
-            let should_trace = objects.get(&ptr).is_some_and(|metadata| metadata.mark());
-            if should_trace {
-                final_processed += 1;
-                unsafe {
-                    gc_trace_ptr.trace(collector);
-                }
-            }
-        }
-
-        trace!(
-            "Final mark phase completed, processed {} additional objects",
-            final_processed
-        );
+    pub(crate) fn allocation_headroom(&self) -> usize {
+        self.configuration
+            .max_heap_bytes
+            .saturating_sub(self.managed_budget.used())
     }
 
-    /// Phase 4: Concurrent sweep; reclaim unmarked objects.
-    ///
-    /// Objects that were not marked during the mark phases are unreachable and safe to free.
-    /// Objects start with `marked = true` (allocation-color-black), so any object allocated
-    /// during this cycle will survive. Only objects that existed before the cycle began and
-    /// were not reached from any root are swept.
-    ///
-    /// Sweep proceeds in two steps per object:
-    /// 1. Remove from the tracking map (releases `DashMap` shard locks)
-    /// 2. Run finalizer then drop closure
-    fn concurrent_sweep_phase(
-        phase: &Arc<RwLock<GcPhase>>,
-        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
-        bytes_allocated: &Arc<AtomicUsize>,
-        stats: &Arc<RwLock<Statistics>>,
-    ) {
-        if let Ok(mut phase_guard) = phase.write() {
-            *phase_guard = GcPhase::ConcurrentSweep;
-        }
-
-        trace!("Concurrent sweep phase started");
-
-        // Explicitly retained allocations belong to untraced host containers. Their
-        // lifetime must not depend on whether a temporary root was observed in an
-        // earlier collection. Other allocations follow normal reachability rules.
-        // Collect keys of objects that are unmarked AND were previously reachable.
-        // Objects that were never marked as reachable during any GC mark phase are
-        // owned by non-GC containers (e.g., ClassLoader, StringPool) and must not
-        // be swept; their lifetime is managed by Rust ownership, not GC tracing.
-        let unmarked_keys: Vec<SafePtr> = objects
-            .iter()
-            .filter(|entry| {
-                let metadata = entry.value();
-                !metadata.is_retained() && !metadata.is_marked() && metadata.was_ever_marked()
+    pub(crate) fn refresh_allocation_interest(
+        &self,
+        interest: &mut Option<crate::context::AllocationInterest>,
+    ) -> Result<()> {
+        if self.configuration.local_allocation_buffers {
+            let matches = crate::context::with_state(self, |state| {
+                interest
+                    .as_ref()
+                    .is_some_and(|guard| guard.belongs_to(state))
             })
-            .map(|entry| *entry.key())
-            .collect();
-
-        let mut swept_objects = 0;
-        let mut swept_bytes = 0;
-
-        // Remove unmarked objects from the map and collect them for destruction
-        let mut to_destroy: Vec<ObjectMetadata> = Vec::with_capacity(unmarked_keys.len());
-        for key in &unmarked_keys {
-            if let Some((_, metadata)) = objects.remove(key) {
-                // Double-check the object is still unmarked after removal.
-                // A concurrent mutator could have rooted/marked it between our
-                // snapshot and removal, but this is impossible because:
-                // 1. We're in the sweep phase (after final mark)
-                // 2. New allocations start marked=true and won't appear in unmarked_keys
-                // 3. Existing objects can't become marked after final mark
-                swept_bytes += metadata.size();
-                swept_objects += 1;
-                to_destroy.push(metadata);
+            .unwrap_or(interest.is_none());
+            if !matches {
+                // Establish the new interest before releasing the prior context.
+                // Moving between threads with the same context needs no update.
+                *interest = crate::context::current(self)
+                    .map(|state| state.observe_allocations(self))
+                    .transpose()?;
             }
         }
+        Ok(())
+    }
 
-        // Run finalizers first (while all other objects' memory is still valid)
-        for metadata in &to_destroy {
-            metadata.run_finalizer();
+    fn context_credit(&self, size: usize) -> usize {
+        if self.configuration.local_allocation_buffers && size <= crate::allocation::SMALL {
+            crate::context::with_state(self, crate::context::State::available_credit).unwrap_or(0)
+        } else {
+            0
         }
+    }
 
-        // Then run drop closures to deallocate memory
-        for metadata in to_destroy {
-            metadata.run_drop_fn();
+    fn context_headroom(&self, size: usize) -> usize {
+        self.allocation_headroom()
+            .saturating_add(self.context_credit(size))
+    }
+
+    pub(crate) fn reserve_exact_bytes(&self, size: usize) -> Result<AllocationReservation<'_>> {
+        self.reserve_allocation(size)?;
+        Ok(AllocationReservation {
+            collector: self,
+            size,
+            committed: false,
+        })
+    }
+
+    pub(crate) fn reserve_bytes(&self, size: usize) -> Result<AllocationReservation<'_>> {
+        if self.configuration.local_allocation_buffers
+            && size <= crate::allocation::SMALL
+            && let Some(result) =
+                crate::context::with_state(self, |state| state.reserve_cached(self, size))
+        {
+            match result {
+                Ok(unused) => {
+                    if unused != 0 {
+                        self.cancel_allocation(unused);
+                    }
+                    return Ok(AllocationReservation {
+                        collector: self,
+                        size,
+                        committed: false,
+                    });
+                }
+                Err(unused) if unused != 0 => self.cancel_allocation(unused),
+                Err(_) => {}
+            }
         }
+        self.reserve_exact_bytes(size)
+    }
 
-        if swept_objects > 0 {
-            debug!("swept {swept_objects} objects ({swept_bytes} bytes)");
+    pub(crate) fn may_recover_bytes(&self, size: usize) -> bool {
+        size <= self.configuration.max_heap_bytes && !crate::cell::has_guards()
+    }
+
+    // A shared ticket can already be in sweep when observation starts. Before
+    // declaring exhaustion require a full snapshot requested after registration.
+    fn request_space_cycle(&self, consecutive_empty: usize) -> u64 {
+        if consecutive_empty == 0 {
+            self.request_recovery_cycle()
+        } else {
+            self.request_full_cycle()
         }
+    }
 
-        if let Ok(mut stats_guard) = stats.write() {
-            stats_guard.objects_swept += swept_objects;
-            stats_guard.bytes_freed += swept_bytes;
+    // Capture one generation of publicly released donors. Later arrivals must not
+    // extend exhaustion. Capture and help are separate units so an async caller
+    // can yield after its deciding collection step and recheck credit and guards.
+    fn help_terminal_releases(
+        &self,
+        released: &mut Option<crate::retirement_grants::ReleasedCheck>,
+    ) -> bool {
+        let Some(check) = released else {
+            *released = Some(self.released_donors.snapshot());
+            #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+            crate::refund_tests::terminal_snapshot_captured();
+            return true;
+        };
+        if !check.pending() {
+            return false;
         }
+        self.reap_retired(false, Some(check));
+        true
+    }
 
-        // Reset the allocation counter so the threshold isn't hit on every subsequent
-        // allocation. The counter only drives heuristic scheduling of the next cycle.
-        bytes_allocated.store(0, Ordering::Relaxed);
+    /// Reserve as soon as reclamation makes room, without awaiting the rest of a cycle.
+    /// Failed races for headroom do not spend the two completed-cycle recovery budget.
+    pub(crate) async fn reserve_bytes_async(
+        &self,
+        size: usize,
+    ) -> Result<AllocationReservation<'_>> {
+        self.reserve_bytes_with_assistance(size, false).await
+    }
 
-        trace!("Concurrent sweep phase completed, swept {swept_objects} objects");
+    #[cfg(not(target_family = "wasm"))]
+    fn terminal_callback_turn(&self) -> Option<Arc<CallbackTurn>> {
+        if self.callback_jobs.load(Ordering::Acquire) == 0 {
+            return None;
+        }
+        let pool = self.worker_signals.load();
+        let pool = pool.as_ref()?;
+        pool.callbacks.terminal_turn(pool)
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    async fn wait_for_dispatch<'a>(
+        &'a self,
+        dispatch: Arc<CallbackTurn>,
+        demand: &crate::retirement_grants::Demand<'a>,
+        size: usize,
+    ) -> Result<Option<AllocationReservation<'a>>> {
+        self.ensure_refund_notifier(false)?;
+        if let Some(notifier) = self.refund_notifier.load_full() {
+            return notifier.wait_for_turn(self, dispatch, demand, size).await;
+        }
+        Ok(None)
+    }
+
+    pub(crate) fn reserve_bytes_blocking(&self, size: usize) -> Result<AllocationReservation<'_>> {
+        crate::recovery::finish_allocation(self.reserve_bytes_with_assistance(size, true))
+    }
+
+    async fn reserve_bytes_with_assistance(
+        &self,
+        size: usize,
+        caller_assists: bool,
+    ) -> Result<AllocationReservation<'_>> {
+        if size > self.configuration.max_heap_bytes {
+            return Err(crate::Error::OutOfMemory);
+        }
+        if let Ok(reservation) = self.reserve_bytes(size) {
+            return Ok(reservation);
+        }
+        if crate::cell::has_guards() {
+            return Err(crate::Error::OutOfMemory);
+        }
+        let demand = self.grant_registry.register(self, size)?;
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(pool) = self.worker_signals.load().as_ref() {
+            pool.callbacks.wake_pressure();
+        }
+        #[cfg(not(target_family = "wasm"))]
+        let mut terminal_service = None;
+        let mut retry = crate::recovery::SpaceRetry::new(self);
+        let mut released = None;
+        loop {
+            if let Some(reservation) = demand.take() {
+                return Ok(reservation);
+            }
+            if let Ok(reservation) = self.reserve_bytes(size) {
+                return Ok(reservation);
+            }
+            if crate::cell::has_guards() {
+                return Err(crate::Error::OutOfMemory);
+            }
+            if retry.empty_cycles == 2 {
+                if self.help_terminal_releases(&mut released) {
+                    crate::recovery::yield_once().await;
+                    continue;
+                }
+                #[cfg(not(target_family = "wasm"))]
+                {
+                    // Enroll once per demand and keep checking real funds on each
+                    // poll. A running destructor, unavailable worker or empty
+                    // queue cannot extend the wait for the user callback to return.
+                    let turn =
+                        terminal_service.get_or_insert_with(|| self.terminal_callback_turn());
+                    if let Some(dispatch) = turn.take() {
+                        if dispatch.pending()
+                            && let Some(reservation) =
+                                self.wait_for_dispatch(dispatch, &demand, size).await?
+                        {
+                            return Ok(reservation);
+                        }
+                        retry.empty_cycles = 1;
+                        continue;
+                    }
+                }
+                #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+                crate::refund_tests::before_terminal_close();
+                if demand.finish_uncovered() {
+                    // Closing the grant demand and reserving general headroom are
+                    // separate operations. An unrelated owner can physically refund
+                    // storage after our last probe and before this close.
+                    return self.reserve_bytes(size);
+                }
+                // This donor was selected while publicly owned. Its charge is
+                // still unavailable until the backing storage is actually freed.
+                let mut opportunity = self.observe_space(size)?;
+                crate::recovery::CollectionWait::for_space(self, u64::MAX, &mut opportunity)
+                    .with_grant(&demand, true, caller_assists)
+                    .await?;
+                continue;
+            }
+            let _measurement = self
+                .diagnostics
+                .async_allocation_recovery
+                .measure(self.diagnostics_enabled());
+            // Register before yielding so a refund taken by a competitor
+            // during that suspension counts as an allocation opportunity.
+            let mut opportunity = self.observe_space(size)?;
+            crate::recovery::yield_once().await;
+            if let Some(reservation) = demand.take() {
+                return Ok(reservation);
+            }
+            if let Ok(reservation) = self.reserve_bytes(size) {
+                return Ok(reservation);
+            }
+            let ticket = self.request_space_cycle(retry.empty_cycles);
+            let mut observed_space = false;
+            loop {
+                observed_space |=
+                    crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity)
+                        .with_grant(&demand, false, caller_assists)
+                        .await?;
+                if let Some(reservation) = demand.take() {
+                    return Ok(reservation);
+                }
+                if let Ok(reservation) = self.reserve_bytes(size) {
+                    return Ok(reservation);
+                }
+                if self.completed_full_ticket() >= ticket {
+                    retry.completed(self, observed_space || opportunity.was_offered());
+                    break;
+                }
+                // Another allocator took the advertised space. Re-register for
+                // this same cycle; no credits were reserved by its notification.
+                crate::recovery::yield_once().await;
+            }
+        }
+    }
+
+    /// Checks headroom before publication, assisting one batch at a time until
+    /// space is available or two consecutive cycles fail to offer space or
+    /// advance a bounded allowance for partially returned array storage.
+    /// A caller holding a managed guard can use available space but cannot assist.
+    /// # Errors
+    /// Returns a collection error, or `OutOfMemory` if the live heap cannot accommodate the request.
+    pub fn make_room(&self, size: usize) -> Result<()> {
+        if size <= self.context_headroom(size) {
+            return Ok(());
+        }
+        if !self.may_recover_bytes(size) {
+            return Err(crate::Error::OutOfMemory);
+        }
+        let mut retry = crate::recovery::SpaceRetry::new(self);
+        while retry.empty_cycles < 2 {
+            let _measurement = self
+                .diagnostics
+                .allocation_recovery
+                .measure(self.diagnostics_enabled());
+            let opportunity = self.observe_space(size)?;
+            let ticket = self.request_space_cycle(retry.empty_cycles);
+            loop {
+                if size <= self.context_headroom(size) {
+                    return Ok(());
+                }
+                if self.completed_full_ticket() >= ticket {
+                    break;
+                }
+                self.step();
+            }
+            retry.completed(self, opportunity.was_offered());
+        }
+        let mut released = None;
+        while size > self.context_headroom(size) {
+            if crate::cell::has_guards() || !self.help_terminal_releases(&mut released) {
+                return Err(crate::Error::OutOfMemory);
+            }
+        }
+        Ok(())
+    }
+
+    /// Checks headroom, returning as soon as enough space is available. Two empty cycles end recovery. Actual returned
+    /// array suffixes may extend retries up to one starting heap footprint.
+    /// This is an advisory check, not a reservation; publication must still reserve
+    /// its bytes atomically. No collection work runs while holding managed guards.
+    /// # Errors
+    /// Returns `OutOfMemory` for an unsatisfiable request, or a collection error.
+    pub async fn make_room_async(&self, size: usize) -> Result<()> {
+        if size > self.configuration.max_heap_bytes {
+            return Err(crate::Error::OutOfMemory);
+        }
+        if size <= self.context_headroom(size) {
+            return Ok(());
+        }
+        let mut retry = crate::recovery::SpaceRetry::new(self);
+        let mut released = None;
+        loop {
+            if size <= self.context_headroom(size) {
+                return Ok(());
+            }
+            if crate::cell::has_guards() {
+                return Err(crate::Error::OutOfMemory);
+            }
+            if retry.empty_cycles == 2 {
+                if self.help_terminal_releases(&mut released) {
+                    crate::recovery::yield_once().await;
+                    continue;
+                }
+                return Err(crate::Error::OutOfMemory);
+            }
+            let _measurement = self
+                .diagnostics
+                .async_allocation_recovery
+                .measure(self.diagnostics_enabled());
+            let mut opportunity = self.observe_space(size)?;
+            crate::recovery::yield_once().await;
+            if size <= self.context_headroom(size) {
+                return Ok(());
+            }
+            let ticket = self.request_space_cycle(retry.empty_cycles);
+            let offered =
+                crate::recovery::CollectionWait::for_space(self, ticket, &mut opportunity).await?;
+            retry.completed(self, offered || opportunity.was_offered());
+        }
+    }
+
+    /// Records a published allocation's logical live bytes and allocation debt.
+    /// Private reservations are charged to the managed budget before publication.
+    pub fn record_allocation(&self, size: usize) {
+        self.record_published_bytes(size);
+        self.record_allocation_debt(size);
+    }
+
+    pub(crate) fn record_published_bytes(&self, size: usize) {
+        self.published_bytes.fetch_add(size, Ordering::AcqRel);
+        self.published_debt.fetch_add(size, Ordering::AcqRel);
+    }
+
+    pub(crate) fn release_published_bytes(&self, size: usize) {
+        let previous = self.published_bytes.fetch_sub(size, Ordering::AcqRel);
+        debug_assert!(previous >= size, "duplicate published-byte refund");
+    }
+
+    pub(crate) fn record_allocation_debt(&self, size: usize) {
+        let debt = self.allocation_debt.fetch_add(size, Ordering::AcqRel);
+        if debt.saturating_add(size) >= self.configuration.allocation_threshold {
+            self.collect_young();
+        }
+        if let Some(scheduler) = &self.scheduler
+            && scheduler.allocated(size, self.managed_budget.used(), self.regions.as_deref())
+        {
+            self.request_recovery_cycle();
+        }
+    }
+
+    /// Returns the latest advisory pressure model; disabled by default.
+    #[must_use]
+    pub fn scheduling_statistics(&self) -> crate::SchedulingStatistics {
+        self.scheduler.as_ref().map_or_else(
+            crate::SchedulingStatistics::default,
+            crate::scheduling::Scheduler::statistics,
+        )
+    }
+
+    /// Atomically samples charged managed bytes, including pending reservations.
+    ///
+    /// This is the same Acquire load used by [`Self::statistics`], without taking
+    /// statistics or object-index mutexes. A zero snapshot does not certify
+    /// quiescence, completed collection, absence of roots, or that another actor
+    /// cannot reserve bytes immediately afterward. Callers must establish their
+    /// own ownership/lifecycle conditions before treating it as cleanup evidence.
+    /// The value excludes host allocator overhead and JVM storage outside the managed budget.
+    #[must_use]
+    pub fn managed_bytes(&self) -> usize {
+        self.managed_budget.used()
+    }
+
+    /// Returns root occupancy and retained slot-page storage, separately from managed bytes.
+    #[must_use]
+    pub fn root_statistics(&self) -> crate::RootStatistics {
+        let mut result = self.scanned_slots().map_or_else(
+            crate::RootStatistics::default,
+            crate::roots::RootSlots::statistics,
+        );
+        result.merge(self.contexts.statistics().1);
+        result.compatibility_roots = self.roots.len();
+        result
+    }
+
+    pub(crate) fn traced_edge(
+        &self,
+        address: usize,
+        identity: crate::ObjectId,
+    ) -> Option<MetadataRef> {
+        // Old-only callbacks have an additional cross-generation handoff.
+        if self.configuration.old_collection_interval != 0 {
+            return None;
+        }
+        self.objects.lookup(address).filter(|m| m.id == identity)
+    }
+
+    /// A traced edge owns inert descriptor metadata only. Retirement invalidates
+    /// it before address reuse. Each trace callback still acquires a storage lease.
+    pub(crate) fn mark_traced_edge(&self, metadata: &MetadataRef) {
+        if std::ptr::eq(metadata.collector.as_ptr(), self) && metadata.birth.is_live() {
+            if self.trace_needs_epoch_proposal() {
+                self.publish_external_trace(metadata);
+            } else {
+                self.shade_known(metadata);
+            }
+        }
+    }
+
+    /// Called only with a bounded slice of exact handles. A reserved full scan
+    /// pins its epoch. Mature targets have no young-domain marking obligation.
+    pub(crate) fn try_mark_mature_slice<'a>(
+        &self,
+        count: usize,
+        edges: impl Iterator<Item = Option<&'a MetadataRef>>,
+    ) -> usize {
+        let Some((retention, true)) = TraceRetention::current(self) else {
+            return 0;
+        };
+        if self.domain_index() != 1 {
+            return 0;
+        }
+        let full = &self.domains[1];
+        let phase = full.weak_phase();
+        if phase >= 5 || !full.active() {
+            return 0;
+        }
+        let mature = self.configuration.promotion_age.max(1);
+        let epoch = full.epoch.load(Ordering::Acquire);
+        let strength = retention.max(Retention::at_phase(phase));
+        full.mark_queue.append_mature(
+            self.local_queue(),
+            count,
+            if strength == Retention::Strong {
+                epoch
+            } else {
+                0
+            },
+            edges,
+            |m, known_mature| {
+                // A cached group owns the exact eight immutable descriptors and
+                // was first admitted by this heap after their last promotion.
+                if !known_mature
+                    && (!std::ptr::eq(m.collector.as_ptr(), self)
+                        || m.age.load(Ordering::Acquire) < mature)
+                {
+                    return None;
+                }
+                Some(m.birth.is_live() && m.mark(1, epoch, strength))
+            },
+        )
+    }
+
+    pub(crate) fn mark_object(&self, ptr: SafePtr, identity: crate::ObjectId) {
+        // Old-only collection needs publication admission across the handoff
+        // to young marking. An ordinary callback already pins its source epoch.
+        let old_handoff = self.configuration.old_collection_interval != 0;
+        let _admission = old_handoff.then(|| self.allocation_guard());
+        if !self.domain().active() {
+            return;
+        }
+        let metadata = if identity.to_i64() == 0 {
+            // from_raw requires its caller to keep the original allocation live.
+            self.objects.lookup(ptr.0)
+        } else {
+            self.objects.lookup_identity(ptr.0, identity)
+        };
+        if let Some(metadata) = metadata {
+            if old_handoff && self.domain_index() == 1 {
+                self.retain_old_callback_edge(&metadata);
+            }
+            self.mark_traced_edge(&metadata);
+        }
+    }
+
+    fn notify_progress(&self) {
+        self.recovery.notify_gc_progress(self);
+    }
+
+    /// Pointer used by the compiled runtime context.
+    #[must_use]
+    pub fn as_context_ptr(&self) -> *const u8 {
+        std::ptr::from_ref(self).cast()
+    }
+
+    /// Reconstructs a collector from the compiled runtime context.
+    ///
+    /// # Panics
+    /// Panics for a null context.
+    /// # Safety
+    /// The caller must supply the documented live context for the entire returned lifetime.
+    #[must_use]
+    #[expect(clippy::cast_ptr_alignment)]
+    pub unsafe fn from_raw_ptr<'a>(ptr: *const u8) -> &'a Self {
+        assert!(!ptr.is_null(), "null collector context");
+        // SAFETY: runtime helpers pass a live collector pointer.
+        unsafe { &*ptr.cast::<Self>() }
+    }
+
+    /// Reads the collector pointer from the first field of a runtime context.
+    ///
+    /// # Panics
+    /// Panics for a null context.
+    /// # Safety
+    /// The caller must supply the documented live context for the entire returned lifetime.
+    #[must_use]
+    #[expect(clippy::cast_ptr_alignment)]
+    pub unsafe fn from_context_struct_ptr<'a>(ptr: *const u8) -> &'a Self {
+        assert!(!ptr.is_null(), "null runtime context");
+        // SAFETY: RuntimeContext has its collector pointer as its first repr(C) field.
+        unsafe { Self::from_raw_ptr(*ptr.cast::<*const u8>()) }
     }
 }
 
 impl Drop for GarbageCollector {
     fn drop(&mut self) {
-        if let Err(error) = self.stop() {
-            warn!("Failed to stop garbage collector cleanly: {error}");
+        #[cfg(not(target_family = "wasm"))]
+        self.close_refund_notifier();
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(signals) = self.worker_signals.swap(None) {
+            signals.close();
         }
-    }
-}
-
-impl<T: Trace> Trace for Option<T> {
-    fn trace(&self, collector: &GarbageCollector) {
-        if let Some(value) = self {
-            value.trace(collector);
-        }
-    }
-}
-
-impl<T: Trace> Trace for Vec<T> {
-    fn trace(&self, collector: &GarbageCollector) {
-        for item in self {
-            item.trace(collector);
-        }
-    }
-}
-
-impl<K: Trace, V: Trace, S: ::std::hash::BuildHasher> Trace for HashMap<K, V, S> {
-    fn trace(&self, collector: &GarbageCollector) {
-        for (key, value) in self {
-            key.trace(collector);
-            value.trace(collector);
-        }
-    }
-}
-
-impl<T: Trace, S: ::std::hash::BuildHasher> Trace for HashSet<T, S> {
-    fn trace(&self, collector: &GarbageCollector) {
-        for item in self {
-            item.trace(collector);
-        }
-    }
-}
-
-impl<A: Trace, B: Trace> Trace for (A, B) {
-    fn trace(&self, collector: &GarbageCollector) {
-        self.0.trace(collector);
-        self.1.trace(collector);
-    }
-}
-
-impl<A: Trace, B: Trace, C: Trace> Trace for (A, B, C) {
-    fn trace(&self, collector: &GarbageCollector) {
-        self.0.trace(collector);
-        self.1.trace(collector);
-        self.2.trace(collector);
-    }
-}
-
-impl Trace for String {
-    fn trace(&self, _collector: &GarbageCollector) {}
-}
-
-impl Trace for &str {
-    fn trace(&self, _collector: &GarbageCollector) {}
-}
-
-macro_rules! impl_trace_primitive {
-    ($($t:ty),*) => {
-        $(
-            impl Trace for $t {
-                fn may_contain_gc_references() -> bool { false }
-
-                fn canonical_payload() -> Option<crate::CanonicalPayload<Self>> {
-                    // SAFETY: primitive scalars have no graph, owner, backing or callbacks.
-                    Some(unsafe { crate::CanonicalPayload::new() })
-                }
-
-                fn needs_write_barrier(&self) -> bool { false }
-
-                fn trace(&self, _collector: &GarbageCollector) {}
-            }
-        )*
-    };
-}
-
-impl_trace_primitive!(
-    bool, char, u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64
-);
-
-impl<T> Trace for Mutex<T>
-where
-    T: Trace,
-{
-    fn trace(&self, collector: &GarbageCollector) {
-        match self.lock() {
-            Ok(guard) => guard.trace(collector),
-            Err(poisoned) => poisoned.into_inner().trace(collector),
-        }
-    }
-}
-
-impl<T> Trace for RwLock<T>
-where
-    T: Trace,
-{
-    fn trace(&self, collector: &GarbageCollector) {
-        match self.read() {
-            Ok(guard) => guard.trace(collector),
-            Err(poisoned) => poisoned.into_inner().trace(collector),
-        }
-    }
-}
-
-impl<T> Trace for crate::sync::Mutex<T>
-where
-    T: Trace,
-{
-    fn trace(&self, collector: &GarbageCollector) {
-        self.lock().trace(collector);
-    }
-}
-
-impl<T> Trace for crate::sync::RwLock<T>
-where
-    T: Trace,
-{
-    fn trace(&self, collector: &GarbageCollector) {
-        self.read().trace(collector);
+        self.cleanup_remaining_objects();
     }
 }
 
 #[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+#[path = "reference_tests.rs"]
+mod reference_tests;
+
+#[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+pub(crate) use publication_tests::{
+    pause_after_proposal_link, pause_after_tree_detach, pause_while_graph_slot_owned,
+};
+#[cfg(test)]
+#[path = "publication_tests.rs"]
+mod publication_tests;
+
+#[cfg(test)]
+#[path = "allocation_credit_tests.rs"]
+mod allocation_credit_tests;
+
+#[cfg(test)]
+#[path = "initial_root_tests.rs"]
+mod initial_root_tests;
+
+#[cfg(test)]
 #[path = "private_allocation_tests.rs"]
 mod private_allocation_tests;
+
+#[cfg(test)]
+#[path = "tree_root_progress_tests.rs"]
+mod tree_root_progress_tests;
+#[cfg(test)]
+pub(crate) use tree_root_progress_tests::probe_empty_root_page;

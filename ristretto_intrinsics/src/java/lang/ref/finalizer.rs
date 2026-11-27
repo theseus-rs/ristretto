@@ -14,7 +14,7 @@ pub fn is_finalization_enabled<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::from(false)))
+    Ok(Some(Value::from(true)))
 }
 
 #[intrinsic_method(
@@ -36,7 +36,7 @@ mod tests {
     async fn test_is_finalization_enabled() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = is_finalization_enabled(thread, Parameters::default())?;
-        assert_eq!(Some(Value::from(false)), result);
+        assert_eq!(Some(Value::from(true)), result);
         Ok(())
     }
 

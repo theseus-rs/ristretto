@@ -11,7 +11,15 @@ use cranelift::prelude::*;
 /// as symbols with the JIT module. They allow JIT-compiled code to interact with
 /// the GC-managed heap for array allocation and element access.
 pub(crate) struct RuntimeHelpers {
+    // (ctx, identity spill buffer, count) -> success; failure sets a pending exception.
     pub publish_frame_roots: FuncRef,
+    // (ctx, bci, method-ref, argument cells, count) -> raw return bits.
+    pub invokestatic: FuncRef,
+    pub invokespecial: FuncRef,
+    pub invokevirtual: FuncRef,
+    pub invokeinterface: FuncRef,
+    pub monitorenter: FuncRef,
+    pub monitorexit: FuncRef,
     // Array allocation: (gc_ptr: ptr, count: i32) -> i64
     pub new_bool_array: FuncRef,
     pub new_byte_array: FuncRef,
@@ -85,6 +93,8 @@ pub(crate) struct RuntimeHelpers {
     pub checkcast: FuncRef,
     // instanceof: (ctx: ptr, obj: i64, cp_class_index: i32) -> i32 (1 if instance, 0 otherwise)
     pub instanceof: FuncRef,
+    // (ctx, bci, constant-pool index) -> rooted string or class identity.
+    pub load_constant: FuncRef,
     // athrow: (ctx: ptr, obj: i64);stores obj as pending exception
     pub athrow: FuncRef,
 
@@ -130,6 +140,37 @@ impl RuntimeHelpers {
                 .map_err(|e| InternalError(format!("Failed to declare {name}: {e}")))?;
             Ok(jit_module.declare_func_in_func(id, function_builder.func))
         };
+
+        let publish_frame_roots = declare(
+            "jit_publish_frame_roots",
+            &[ptr_type, ptr_type, types::I32],
+            &[types::I32],
+        )?;
+        let invokestatic = declare(
+            "jit_invokestatic",
+            &[ptr_type, types::I32, types::I32, ptr_type, types::I32],
+            &[types::I64],
+        )?;
+
+        let invokespecial = declare(
+            "jit_invokespecial",
+            &[ptr_type, types::I32, types::I32, ptr_type, types::I32],
+            &[types::I64],
+        )?;
+
+        let invokevirtual = declare(
+            "jit_invokevirtual",
+            &[ptr_type, types::I32, types::I32, ptr_type, types::I32],
+            &[types::I64],
+        )?;
+        let invokeinterface = declare(
+            "jit_invokeinterface",
+            &[ptr_type, types::I32, types::I32, ptr_type, types::I32],
+            &[types::I64],
+        )?;
+
+        let monitorenter = declare("jit_monitorenter", &[ptr_type, types::I32, types::I64], &[])?;
+        let monitorexit = declare("jit_monitorexit", &[ptr_type, types::I32, types::I64], &[])?;
 
         // Array allocation: (ctx: ptr, bci: i32, count: i32) -> i64 (Gc pointer)
         let alloc_params = &[ptr_type, types::I32, types::I32];
@@ -315,12 +356,12 @@ impl RuntimeHelpers {
             &[ptr_type, types::I32, types::I64, types::I32],
             &[types::I32],
         )?;
-        let athrow = declare("jit_athrow", &[ptr_type, types::I32, types::I64], &[])?;
-        let publish_frame_roots = declare(
-            "jit_publish_frame_roots",
-            &[ptr_type, ptr_type, types::I32],
-            &[types::I32],
+        let load_constant = declare(
+            "jit_load_constant",
+            &[ptr_type, types::I32, types::I32],
+            &[types::I64],
         )?;
+        let athrow = declare("jit_athrow", &[ptr_type, types::I32, types::I64], &[])?;
         let pending_exception = declare("jit_pending_exception", &[ptr_type], &[types::I64])?;
         let take_pending_exception =
             declare("jit_take_pending_exception", &[ptr_type], &[types::I64])?;
@@ -333,6 +374,12 @@ impl RuntimeHelpers {
 
         Ok(Self {
             publish_frame_roots,
+            invokestatic,
+            invokespecial,
+            invokevirtual,
+            invokeinterface,
+            monitorenter,
+            monitorexit,
             new_bool_array,
             new_byte_array,
             new_char_array,
@@ -383,6 +430,7 @@ impl RuntimeHelpers {
             putfield_object,
             checkcast,
             instanceof,
+            load_constant,
             athrow,
             pending_exception,
             take_pending_exception,

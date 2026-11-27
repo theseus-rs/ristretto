@@ -1,0 +1,162 @@
+{
+  "tested_revision": "f5bdd2e7f53da61bdf4637950148372c002b543f",
+  "shipping_revision": "d1cab31366d08d5b5283e0829349463fa3dd8236",
+  "gc_source_tree": "7d16f177276561b604b209560d455a0ea3718261",
+  "shipping_rust_sources_and_manifests_identical": true,
+  "suites": {
+    "native": {
+      "passed": 1032,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 467,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "miri": {
+    "passed": 8,
+    "failed": 0,
+    "ignored": 0
+  },
+  "cargo": [
+    "native and WASI all-features all-targets Clippy with -D warnings",
+    "wasm32-unknown-unknown all-features collector check",
+    "cargo package --locked -p ristretto_gc, archive verified"
+  ],
+  "parked_participants": {
+    "control_failed_schedules": 4,
+    "fresh_candidate_processes": 100,
+    "schedules_per_process": 4,
+    "poll_limit": 4096
+  },
+  "counter_wrap_control": "old cached threshold suppressed the next advisory request following a full collection",
+  "reviews": {
+    "final-audit-carbon-xhigh": {
+      "status": "ERROR",
+      "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)"
+    },
+    "final-audit-carbon-high": {
+      "status": "ERROR",
+      "error": "print timeout after 5m0s with the turn still in progress; the response is partial"
+    },
+    "final-audit-neon-high": {
+      "status": "SUCCESS",
+      "response": "**Conclusion:** No. A stale pre-wrap sampler losing `model` CAS never publishes; one that won earlier exposes `last_sample_floor` to `completed()`, which stores `skip_before = 0` before its RCU CAS. Atomic coherence plus `cached != 0` prevents overwriting `0` or skipping post-completion samples.\n\n**Pure-retry & test:** `skip_before.store(0)` is impure in RCU but monotone/idempotent (retry-safe). The test covers both `publish_sample_floor` guards and re-arming, though sequentially without resuming the wrapping publisher.\n\n**Residual limits:** Post-wrap sampling waits for `completed()`, and `0` permanently disables fast-skip.\n"
+    },
+    "floor-runner-neon": {
+      "status": "SUCCESS",
+      "response": "Verification result for:\n```sh\ncargo test --locked -p ristretto_gc --lib a_stalled_pre_wrap_winner_cannot_reinstate_its_hint_after_completion\n```\n\n- **Observed test name**: `scheduling::parked_tests::a_stalled_pre_wrap_winner_cannot_reinstate_its_hint_after_completion`\n- **Test count**: `1` run (`1 passed; 0 failed; 0 ignored; 0 measured; 625 filtered out`)\n- **Exit status**: `0`\n- **Failure**: None (`ok`)\n"
+    }
+  },
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "shipping": {
+    "workspace_graphs": 14,
+    "release_tests": 12,
+    "normalized_consumers": [
+      "native",
+      "wasm32-wasip2"
+    ],
+    "ordinary_java_allocations": {
+      "native": 8192,
+      "wasi": 8192
+    }
+  },
+  "lowest_individual_complete_collection_bounds": {
+    "native": 10.07308440315202,
+    "wasm": 10.272231710784059
+  },
+  "event_cost": {
+    "forks_per_arm": 24,
+    "nanoseconds_per_event": {
+      "control": 17.951665249999998,
+      "snapshot": 27.563347,
+      "floor": 18.050341
+    },
+    "paired_elapsed_ratios": {
+      "snapshot/control": {
+        "median": 1.5356121490342678,
+        "low": 1.5062225667988176,
+        "high": 1.5604660671492026
+      },
+      "floor/control": {
+        "median": 1.0053993943116772,
+        "low": 0.9947269165819418,
+        "high": 1.0150821136924784
+      },
+      "floor/snapshot": {
+        "median": 0.6564742488378726,
+        "low": 0.6461352865927228,
+        "high": 0.676880418317373
+      }
+    },
+    "samples_per_batch": 15
+  },
+  "predictive_collection_allocator": {
+    "control": {
+      "calls": [
+        64
+      ],
+      "requested_bytes": [
+        4608
+      ],
+      "steps": [
+        1216
+      ]
+    },
+    "snapshot": {
+      "calls": [
+        192
+      ],
+      "requested_bytes": [
+        34304
+      ],
+      "steps": [
+        1216
+      ]
+    },
+    "floor": {
+      "calls": [
+        192
+      ],
+      "requested_bytes": [
+        35328
+      ],
+      "steps": [
+        1216
+      ]
+    }
+  }
+}

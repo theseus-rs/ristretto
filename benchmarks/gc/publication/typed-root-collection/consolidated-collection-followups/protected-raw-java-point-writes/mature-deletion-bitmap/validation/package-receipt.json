@@ -1,0 +1,14 @@
+{
+  "sha256": "b7430ad2007e2d8446c9c91dd2888ffcd4ba7d208a83184631be16ef4d687322",
+  "package": "ristretto_gc-0.35.0",
+  "vcs": {
+    "git": {
+      "sha1": "f462e61ca477e2b6e6330b563369171f0e23d214"
+    },
+    "path_in_vcs": "ristretto_gc"
+  },
+  "regular_members": 221,
+  "source_and_example_rust_files_compared": 136,
+  "retired_module_paths_present": [],
+  "experimental_canonical_feature_present": false
+}

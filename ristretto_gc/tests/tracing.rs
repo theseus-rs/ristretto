@@ -10,6 +10,7 @@
     reason = "integration tests use local fixture types, direct fixture indexing, and assertions with Result-returning tests"
 )]
 
+use ristretto_gc::cell::RwLock;
 use ristretto_gc::{GarbageCollector, Gc, GcRootGuard, Result, Trace};
 use std::collections::{HashMap, HashSet};
 
@@ -39,7 +40,15 @@ fn test_option_trace() {
         next: Option<Gc<TestNode>>,
     }
 
-    impl Trace for TestNode {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for TestNode {
+        fn root(&mut self) {
+            self.next.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.next, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             self.next.trace(collector);
         }
@@ -76,7 +85,15 @@ fn test_vec_trace() {
         items: Vec<Gc<i32>>,
     }
 
-    impl Trace for Container {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for Container {
+        fn root(&mut self) {
+            self.items.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.items, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             self.items.trace(collector);
         }
@@ -106,71 +123,75 @@ fn test_custom_trace_implementation() -> Result<()> {
     #[derive(Debug)]
     struct TreeNode {
         value: String,
-        children: Vec<Gc<TreeNode>>,
-        parent: Option<Gc<TreeNode>>,
+        children: Vec<Gc<RwLock<TreeNode>>>,
+        parent: Option<Gc<RwLock<TreeNode>>>,
     }
 
-    impl Trace for TreeNode {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for TreeNode {
+        fn root(&mut self) {
+            self.children.root();
+            self.parent.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.children, owner) };
+            unsafe { Trace::unroot(&mut self.parent, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             // Trace all children
             for child in &self.children {
                 child.trace(collector);
             }
-            // Note: We don't trace parent to avoid cycles in this simple example
-            // In a real implementation, we'd handle cycles properly
+            self.parent.trace(collector);
         }
     }
 
     let collector = GarbageCollector::new();
     collector.start();
 
-    let mut root = Gc::with_collector(
+    let root = Gc::with_collector(
         &collector,
-        TreeNode {
+        RwLock::new(TreeNode {
             value: "root".to_string(),
             children: Vec::new(),
             parent: None,
-        },
+        }),
     );
 
     let child1 = Gc::with_collector(
         &collector,
-        TreeNode {
+        RwLock::new(TreeNode {
             value: "child1".to_string(),
             children: Vec::new(),
             parent: Some(root.clone_gc()),
-        },
+        }),
     );
 
     let child2 = Gc::with_collector(
         &collector,
-        TreeNode {
+        RwLock::new(TreeNode {
             value: "child2".to_string(),
             children: Vec::new(),
             parent: Some(root.clone_gc()),
-        },
+        }),
     );
 
-    // Unsafe modification to create tree structure
-    // Safety: This is safe because:
-    // 1. We have exclusive access to the test environment
-    // 2. No other threads are accessing this object
-    // 3. This is a controlled test for tree structure tracing
-    // 4. The mutation happens before any concurrent access
-    unsafe {
-        let root_mut = root.get_mut_unchecked();
-        root_mut.children.push(child1.clone_gc());
-        root_mut.children.push(child2.clone_gc());
-    }
+    root.write()
+        .children
+        .extend([child1.clone_gc(), child2.clone_gc()]);
 
     // Add root to keep tree reachable
     root.as_root(&collector)?;
 
     // Should trace the entire tree structure
     root.trace(&collector);
-    assert_eq!(root.value, "root");
-    assert_eq!(root.children.len(), 2);
+    assert_eq!(root.read().value, "root");
+    assert_eq!(root.read().children.len(), 2);
 
+    drop((root, child1, child2));
+    collector.stop()?;
+    assert_eq!(collector.managed_bytes(), 0);
     Ok(())
 }
 
@@ -179,10 +200,18 @@ fn test_complex_nested_trace() -> Result<()> {
     #[derive(Debug)]
     struct GraphNode {
         id: usize,
-        neighbors: Vec<Gc<GraphNode>>,
+        neighbors: Vec<Gc<RwLock<GraphNode>>>,
     }
 
-    impl Trace for GraphNode {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for GraphNode {
+        fn root(&mut self) {
+            self.neighbors.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.neighbors, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             for neighbor in &self.neighbors {
                 neighbor.trace(collector);
@@ -194,44 +223,36 @@ fn test_complex_nested_trace() -> Result<()> {
     collector.start();
 
     // Create a simple graph with cycles
-    let mut node_a = Gc::with_collector(
+    let node_a = Gc::with_collector(
         &collector,
-        GraphNode {
+        RwLock::new(GraphNode {
             id: 1,
             neighbors: Vec::new(),
-        },
+        }),
     );
 
-    let mut node_b = Gc::with_collector(
+    let node_b = Gc::with_collector(
         &collector,
-        GraphNode {
+        RwLock::new(GraphNode {
             id: 2,
             neighbors: Vec::new(),
-        },
+        }),
     );
 
-    // Create bidirectional references (cycle)
-    // Safety: This is safe because:
-    // 1. We have exclusive access to the test environment
-    // 2. No other threads are accessing these objects
-    // 3. This is a controlled test for graph structure with cycles
-    // 4. The mutations happen in a single-threaded test context
-    unsafe {
-        let a_mut = node_a.get_mut_unchecked();
-        a_mut.neighbors.push(node_b.clone_gc());
-
-        let b_mut = node_b.get_mut_unchecked();
-        b_mut.neighbors.push(node_a.clone_gc());
-    }
+    node_a.write().neighbors.push(node_b.clone_gc());
+    node_b.write().neighbors.push(node_a.clone_gc());
 
     // Add one as root to keep graph reachable
     node_a.as_root(&collector)?;
 
     // Tracing should handle the cycle properly due to the marking mechanism
     node_a.trace(&collector);
-    assert_eq!(node_a.id, 1);
-    assert_eq!(node_b.id, 2);
+    assert_eq!(node_a.read().id, 1);
+    assert_eq!(node_b.read().id, 2);
 
+    drop((node_a, node_b));
+    collector.stop()?;
+    assert_eq!(collector.managed_bytes(), 0);
     Ok(())
 }
 
@@ -245,7 +266,21 @@ fn test_mixed_types_trace() {
         list: Vec<Gc<bool>>,
     }
 
-    impl Trace for MixedContainer {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for MixedContainer {
+        fn root(&mut self) {
+            self.number.root();
+            self.text.root();
+            self.optional.root();
+            self.list.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.number, owner) };
+            unsafe { Trace::unroot(&mut self.text, owner) };
+            unsafe { Trace::unroot(&mut self.optional, owner) };
+            unsafe { Trace::unroot(&mut self.list, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             self.number.trace(collector);
             self.text.trace(collector);
@@ -286,7 +321,15 @@ fn test_deep_nesting_trace() {
         inner: Option<Gc<Nested>>,
     }
 
-    impl Trace for Nested {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for Nested {
+        fn root(&mut self) {
+            self.inner.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.inner, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             if let Some(ref inner) = self.inner {
                 inner.trace(collector);
@@ -330,7 +373,9 @@ fn test_trace_with_collections() {
         set: HashSet<Gc<String>>,
     }
 
-    impl Trace for CollectionContainer {
+    // SAFETY: outgoing fields remain independently rooted and are included in tracing.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for CollectionContainer {
         fn trace(&self, collector: &GarbageCollector) {
             for value in self.map.values() {
                 value.trace(collector);
@@ -371,10 +416,18 @@ fn test_circular_reference_trace() -> Result<()> {
     #[derive(Debug)]
     struct CircularNode {
         id: usize,
-        partner: Option<Gc<CircularNode>>,
+        partner: Option<Gc<RwLock<CircularNode>>>,
     }
 
-    impl Trace for CircularNode {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for CircularNode {
+        fn root(&mut self) {
+            self.partner.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.partner, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             if let Some(ref partner) = self.partner {
                 partner.trace(collector);
@@ -385,41 +438,35 @@ fn test_circular_reference_trace() -> Result<()> {
     let collector = GarbageCollector::new();
     collector.start();
 
-    let mut node_a = Gc::with_collector(
+    let node_a = Gc::with_collector(
         &collector,
-        CircularNode {
+        RwLock::new(CircularNode {
             id: 1,
             partner: None,
-        },
+        }),
     );
 
     let node_b = Gc::with_collector(
         &collector,
-        CircularNode {
+        RwLock::new(CircularNode {
             id: 2,
             partner: Some(node_a.clone_gc()),
-        },
+        }),
     );
 
-    // Create circular reference
-    // Safety: This is safe because:
-    // 1. We have exclusive access to the test environment
-    // 2. No other threads are accessing this object
-    // 3. This is a controlled test for circular reference tracing
-    // 4. The mutation happens in a single-threaded test context
-    unsafe {
-        let a_mut = node_a.get_mut_unchecked();
-        a_mut.partner = Some(node_b.clone_gc());
-    }
+    node_a.write().partner = Some(node_b.clone_gc());
 
     // Add as root
     node_a.as_root(&collector)?;
 
     // Should handle circular tracing properly
     node_a.trace(&collector);
-    assert_eq!(node_a.id, 1);
-    assert_eq!(node_b.id, 2);
+    assert_eq!(node_a.read().id, 1);
+    assert_eq!(node_b.read().id, 2);
 
+    drop((node_a, node_b));
+    collector.stop()?;
+    assert_eq!(collector.managed_bytes(), 0);
     Ok(())
 }
 
@@ -431,7 +478,15 @@ fn test_trace_performance() {
         children: Vec<Gc<PerfNode>>,
     }
 
-    impl Trace for PerfNode {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for PerfNode {
+        fn root(&mut self) {
+            self.children.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.children, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             self.children.trace(collector);
         }
@@ -489,4 +544,41 @@ fn test_trace_performance() {
         duration.as_millis() < 100,
         "Tracing took too long: {duration:?}"
     );
+}
+
+#[test]
+fn reference_free_buffers_do_not_walk_primitive_elements_but_drop_values_in_batches() {
+    use ristretto_gc::{GarbageCollector, HeapBuffer, TraceProgress};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let gc = GarbageCollector::new();
+    let mut bytes: HeapBuffer<u8> = vec![0; 1024 * 1024].into();
+    assert_eq!(bytes.trace_work(), 1);
+    assert_eq!(bytes.trace_step(&gc, 0, 1), TraceProgress::Complete);
+    assert_eq!(bytes.clear_step(0, 1), TraceProgress::Complete);
+    assert!(bytes.is_empty());
+    let mut words = vec![0_u64; 1024 * 1024];
+    assert_eq!(words.trace_step(&gc, 0, 1), TraceProgress::Complete);
+    assert_eq!(words.clear_step(0, 1), TraceProgress::Complete);
+    assert_eq!(words, [] as [u64; 0]);
+    struct Dropped(std::sync::Arc<AtomicUsize>);
+    // SAFETY: this fixture contains no outgoing GC references.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for Dropped {
+        fn may_contain_gc_references() -> bool {
+            false
+        }
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for Dropped {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    let drops = std::sync::Arc::new(AtomicUsize::new(0));
+    let mut values: HeapBuffer<_> = (0..10).map(|_| Dropped(drops.clone())).collect();
+    assert_eq!(values.trace_step(&gc, 0, 1), TraceProgress::Complete);
+    assert_eq!(values.clear_step(0, 2), TraceProgress::Continue(0));
+    assert_eq!(drops.load(Ordering::Relaxed), 2);
+    drop(values);
+    assert_eq!(drops.load(Ordering::Relaxed), 10);
 }

@@ -34,7 +34,9 @@ filesystem.types.Descriptor.prototype.openAt = function (...args) {
 /** Instantiate once per worker. Repeated calls retain JShell's VM and in-memory files. */
 export async function createEngine(assets: Assets, emit: (event: Event) => void) {
   let request: Request;
-  let terminal = false;
+  let executing = false;
+  let terminal: Event | undefined;
+  let stopped = false;
   let outputSize = 0;
   const send = (event: Event) => {
     if (terminal || event.id !== request?.id) return;
@@ -42,7 +44,10 @@ export async function createEngine(assets: Assets, emit: (event: Event) => void)
       outputSize += encoder.encode(event.text).length;
       if (outputSize > OUTPUT_LIMIT) throw new Error('Output exceeded 1 MiB; session stopped.');
     }
-    if (['error', 'done', 'ready', 'completions'].includes(event.type)) terminal = true;
+    if (['error', 'done', 'ready', 'completions'].includes(event.type)) {
+      terminal = event;
+      return;
+    }
     emit(event);
   };
   const decoder = new EventDecoder(send);
@@ -117,16 +122,42 @@ export async function createEngine(assets: Assets, emit: (event: Event) => void)
     return WebAssembly.compile(bytes);
   }, imports);
   return {
-    execute(next: Request) {
+    async execute(next: Request) {
+      if (stopped) {
+        emit({ id: next.id, type: 'error', message: 'Java session stopped. Restart the session.' });
+        return false;
+      }
+      if (executing) {
+        if (request.id !== next.id) {
+          emit({ id: next.id, type: 'error', message: 'A Java request is already running.' });
+        }
+        return true;
+      }
+      executing = true;
       request = next;
-      terminal = false;
+      terminal = undefined;
       outputSize = 0;
       try {
-        component.execute(JSON.stringify(request));
+        if (!component.startRequest(JSON.stringify(request))) {
+          throw new Error('A Java request is already running.');
+        }
+        const turns = new MessageChannel();
+        try {
+          while (!component.pollRequest()) {
+            await new Promise<void>((resume) => {
+              turns.port1.onmessage = () => resume();
+              turns.port2.postMessage(null);
+            });
+          }
+        } finally {
+          turns.port1.close();
+          turns.port2.close();
+        }
         decoder.flush(request.id);
         if (!terminal) throw new Error('Java exited without a result.');
       } catch (error) {
-        decoder.flush(request.id);
+        // A host exit or trap bypasses the guest's request-slot cleanup.
+        stopped = true;
         if (
           typeof error === 'object' &&
           error !== null &&
@@ -150,7 +181,12 @@ export async function createEngine(assets: Assets, emit: (event: Event) => void)
             message: error instanceof Error ? error.message : String(error),
           });
         }
+      } finally {
+        executing = false;
       }
+      // A caller may submit the next JShell input as soon as it receives ready.
+      if (terminal) emit(terminal);
+      return !stopped;
     },
   };
 }

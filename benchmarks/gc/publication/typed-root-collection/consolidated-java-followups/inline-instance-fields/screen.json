@@ -1,0 +1,81 @@
+{
+  "workloads": {
+    "control": {
+      "before_ops_per_second": 319073.7920720756,
+      "after_ops_per_second": 322885.10166534595,
+      "paired_median": 1.0168279212690028,
+      "lower": 1.005438262245771,
+      "upper": 1.036808719774551,
+      "threshold": 0.95,
+      "pass": true,
+      "paired_ratios": [
+        1.0235114161997982,
+        1.0150723278675164,
+        1.005438262245771,
+        1.0070411919478608,
+        1.0366252587710973,
+        1.0168279212690028,
+        1.036808719774551,
+        0.9899718558904683,
+        1.0726235880506034
+      ]
+    },
+    "allocation": {
+      "before_ops_per_second": 55894.92582340396,
+      "after_ops_per_second": 63791.148558614805,
+      "paired_median": 1.0560787480119471,
+      "lower": 1.0229531326493804,
+      "upper": 1.341264666925973,
+      "threshold": 0.95,
+      "pass": true,
+      "paired_ratios": [
+        1.1816123111271242,
+        1.0442213770605757,
+        1.0923785003337894,
+        1.0560787480119471,
+        1.341264666925973,
+        1.5289070368651434,
+        0.9514604006138692,
+        1.0229531326493804,
+        1.0444610135091121
+      ]
+    },
+    "roots": {
+      "before_ops_per_second": 4711.710371481656,
+      "after_ops_per_second": 4733.83538087463,
+      "paired_median": 0.9840679756867959,
+      "lower": 0.9627794636706963,
+      "upper": 1.1893186388647747,
+      "threshold": 1.0,
+      "pass": false,
+      "paired_ratios": [
+        0.9840679756867959,
+        0.9750799275839174,
+        1.1893186388647747,
+        0.9627794636706963,
+        1.1422293760617117,
+        0.976646942077311,
+        0.9917144402419986,
+        0.8626196695066286,
+        1.1904613332805676
+      ]
+    }
+  },
+  "passed": false,
+  "sources": {
+    "before": {
+      "git_head": "880cce8835daa2cb80922e57fe3d2ec4d728acfc",
+      "source_archive_sha256": "908950c1a75d52cc90d50e699cbad944417ef522c3b176661c3d929b6cbcfa06",
+      "binary_sha256": "4790b3f0f667801ad182bb1930e20743616ae331f3997b5d658bafccefcc62ac",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    },
+    "qualified-after": {
+      "git_head": "fadcf43fdf665fc920fb036f65b30cac2102e502",
+      "source_archive_sha256": "630214e1e5230f44056a402fd8002956f4f36c7b06ece8c0cd10fae36179f670",
+      "binary_sha256": "b491cfef38f4cb6d267904fb77ed6eb8f0177b41b3aed997b793dcf478a98f7a",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+    }
+  },
+  "raw_sha256": "cf5b0e9c7e68db6888be7516005da487b29d88e7e8e51ad29aadcd32ffb2b390",
+  "schedule_sha256": "ecd29dc07cea50cd2514584bde5c3b218c56e7e7c6beebbb9f48170e95eeb81c"
+}

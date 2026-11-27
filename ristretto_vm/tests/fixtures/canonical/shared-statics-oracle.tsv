@@ -1,0 +1,14 @@
+read	0	7
+write	21	49
+read	0	49
+write	-5	-3
+read	0	-3
+clear	0	7
+slow	0	32657
+slow	3	32660
+waitWithRoot	11	32668
+nested	0	32658
+cycleA	0	3
+cycleB	0	2
+bad	0	ExceptionInInitializerError
+bad	0	NoClassDefFoundError

@@ -348,7 +348,9 @@ pub async fn get_cups_default_printers<T: Thread + 'static>(
     }
     let class = thread.class("[Ljava/lang/String;").await?;
     let reference = Reference::try_from((class, entries))?;
-    Ok(Some(Value::new_object(vm.garbage_collector(), reference)))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), reference).await?,
+    ))
 }
 
 #[intrinsic_method("sun/print/CUPSPrinter.getCupsPort()I", Any)]
@@ -395,7 +397,9 @@ pub async fn get_media<T: Thread + 'static>(
     }
     let class = thread.class("[Ljava/lang/String;").await?;
     let reference = Reference::try_from((class, entries))?;
-    Ok(Some(Value::new_object(vm.garbage_collector(), reference)))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), reference).await?,
+    ))
 }
 
 #[intrinsic_method(
@@ -424,11 +428,13 @@ pub async fn get_output_bins<T: Thread + 'static>(
     }
     let class = thread.class("[Ljava/lang/String;").await?;
     let reference = Reference::try_from((class, entries))?;
-    Ok(Some(Value::new_object(vm.garbage_collector(), reference)))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), reference).await?,
+    ))
 }
 
 #[intrinsic_method("sun/print/CUPSPrinter.getPageSizes(Ljava/lang/String;)[F", Any)]
-pub fn get_page_sizes<T: Thread + 'static>(
+pub async fn get_page_sizes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -461,10 +467,9 @@ pub fn get_page_sizes<T: Thread + 'static>(
     floats.push(default_width);
     floats.push(default_height);
     let vm = thread.vm()?;
-    Ok(Some(Value::new_object(
-        vm.garbage_collector(),
-        Reference::from(floats),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), Reference::from(floats)).await?,
+    ))
 }
 
 #[intrinsic_method(
@@ -739,7 +744,7 @@ mod tests {
             .await?;
         let mut params = Parameters::default();
         params.push(printer);
-        let result = get_page_sizes(thread, params)?;
+        let result = get_page_sizes(thread, params).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }

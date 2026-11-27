@@ -1,0 +1,62 @@
+{
+  "0": {
+    "Ristretto": {
+      "metric": "ops_per_second",
+      "median": 689.0344491380779,
+      "failures": 0,
+      "unfinished": 0
+    },
+    "G1": {
+      "metric": "ops_per_second",
+      "median": 1077864.2645960692,
+      "failures": 0,
+      "unfinished": 0
+    },
+    "ZGC": {
+      "metric": "ops_per_second",
+      "median": 609591.3654361696,
+      "failures": 0,
+      "unfinished": 0
+    }
+  },
+  "100": {
+    "Ristretto": {
+      "metric": "p999_us",
+      "median": 2752,
+      "failures": 0,
+      "unfinished": 0
+    },
+    "G1": {
+      "metric": "p999_us",
+      "median": 1104,
+      "failures": 0,
+      "unfinished": 0
+    },
+    "ZGC": {
+      "metric": "p999_us",
+      "median": 241,
+      "failures": 0,
+      "unfinished": 0
+    }
+  },
+  "500": {
+    "Ristretto": {
+      "metric": "p999_us",
+      "median": 180224,
+      "failures": 0,
+      "unfinished": 0
+    },
+    "G1": {
+      "metric": "p999_us",
+      "median": 207,
+      "failures": 0,
+      "unfinished": 0
+    },
+    "ZGC": {
+      "metric": "p999_us",
+      "median": 343,
+      "failures": 0,
+      "unfinished": 0
+    }
+  }
+}

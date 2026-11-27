@@ -1,0 +1,41 @@
+{
+  "artifacts": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "43bb33e4d45bd8255bef94901703b0b52e3a6db399f84f0d282e3084839e620c",
+    "gc_compare": "74961f872c8e4764e2bf4a95f078b84226bfc8a26606cae594a73419b9a3b6e9",
+    "gc_compare.provenance.json": "4f26d7e29b94d61534489eb73330724a950f9291754f799af65999b17082c798",
+    "gc_compare.sources.tar.gz": "3da23cc71d79646a1edffdfe60bb5448da0d2a3e6837b9384b6560489e267adf",
+    "gc_compare-before": "e0967df2f6fade2ee8d06967e5bc10fce9549862c980af81a08eca73772a1bc2",
+    "gc_compare-before.provenance.json": "76e98a3e864f6a07a5a248f0ae203194115fcdd7cc7f19505b05770a84733abc",
+    "gc_compare-before.sources.tar.gz": "659acec8fa008aa4570e3084a7a4bca4502e97cc01f01a490b4f70b5245aae5b"
+  },
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "raw_sha256": "c8439efaf3f0ebaf81ffd26a1e95448c1bf1fcefa2a62536f859a2c13fa7e7f8",
+  "schedule_sha256": "810b5ac6c291409f70d61f81e4a71c3f114fcde7ea71bf745d88b52eff90c769",
+  "harness": "2c93df61e47e43ddb14d504803ed9fea86a158d4",
+  "settings": {
+    "cpus": [
+      16,
+      18
+    ],
+    "cpu_quota": 2.0,
+    "rss_mib": 512,
+    "heap_mib": 64,
+    "repeats": 3,
+    "rates": [
+      0,
+      500
+    ],
+    "runtimes": [
+      "ristretto-candidate-jit-before",
+      "ristretto-candidate-jit"
+    ],
+    "seconds": 10,
+    "warmup": 5,
+    "seed": 251127509
+  }
+}

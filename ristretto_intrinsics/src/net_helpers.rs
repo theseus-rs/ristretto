@@ -275,7 +275,9 @@ pub(crate) async fn java_inet_address<T: Thread + 'static>(
         .into_iter()
         .map(|byte| byte as i8)
         .collect();
-    let bytes = Value::new_object(vm.garbage_collector(), Reference::ByteArray(bytes));
+    let bytes =
+        Value::try_new_object_async(vm.garbage_collector(), Reference::ByteArray(bytes.into()))
+            .await?;
     let host_name = if let Some(host_name) = host_name {
         thread.intern_string(host_name).await?
     } else {

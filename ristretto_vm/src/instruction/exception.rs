@@ -59,9 +59,23 @@ pub(crate) async fn process_throwable(
         } else {
             let exception_class_name =
                 constant_pool.try_get_class(exception_table_entry.catch_type)?;
-            let exception_class = thread
+            let exception_class = match thread
                 .load_referenced_class(class, exception_class_name)
-                .await?;
+                .await
+            {
+                Ok(class) => class,
+                Err(error) => {
+                    let error = match error {
+                        Error::ClassLoaderError(ristretto_classloader::Error::ClassNotFound(
+                            name,
+                        )) => crate::JavaError::NoClassDefFoundError(name).into(),
+                        error => error,
+                    };
+                    // Lookup failure propagates to the caller. Re-entering this
+                    // table would allow a later catch-all to swallow a linkage error.
+                    return Err(Throwable(convert_error_to_throwable(&thread, error).await?));
+                }
+            };
             exception_class
                 .is_assignable_from(&thread, &throwable_class)
                 .await?
@@ -85,6 +99,25 @@ pub(crate) async fn process_throwable(
 ///
 /// if the error cannot be converted to a throwable
 pub(crate) async fn convert_error_to_throwable(thread: &Thread, error: Error) -> Result<Value> {
+    // Propagation of an existing owner needs no Java execution or stack allocation.
+    let error = match error {
+        Throwable(throwable) => return Ok(throwable),
+        error => error,
+    };
+    if matches!(error, JavaError(crate::JavaError::OutOfMemoryError(_)))
+        && let Some(emergency) = thread.vm()?.out_of_memory_error()
+    {
+        return Ok(emergency);
+    }
+    // Keep the cold construction state off every interpreter/dispatch future's
+    // inline storage. Existing throwables and emergency OOM avoid this allocation.
+    crate::native_stack::with_exception_stack(Box::pin(convert_new_error_to_throwable(
+        thread, error,
+    )))
+    .await
+}
+
+async fn convert_new_error_to_throwable(thread: &Thread, error: Error) -> Result<Value> {
     if let JavaError(NullPointerException(None)) = error {
         return thread
             .object(
@@ -131,6 +164,69 @@ mod test {
             )
             .await;
         assert!(result.is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn missing_catch_class_propagates_linkage_error_past_catch_all() -> Result<()> {
+        use ristretto_classfile::attributes::{Attribute, ExceptionTableEntry, Instruction};
+        use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
+        use std::sync::Arc;
+        let (_vm, thread) = crate::test::thread().await?;
+        let mut pool = ConstantPool::new();
+        let this_class = pool.add_class("MissingCatchResolution")?;
+        let missing = pool.add_class("NoSuchCatchClass")?;
+        let method = ristretto_classfile::Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: pool.add_utf8("run")?,
+            descriptor_index: pool.add_utf8("()V")?,
+            attributes: vec![Attribute::Code {
+                name_index: pool.add_utf8("Code")?,
+                max_stack: 1,
+                max_locals: 0,
+                code: vec![
+                    Instruction::Aconst_null,
+                    Instruction::Athrow,
+                    Instruction::Pop,
+                    Instruction::Return,
+                ],
+                exception_table: [missing, 0]
+                    .into_iter()
+                    .map(|catch_type| ExceptionTableEntry {
+                        range_pc: 0..2,
+                        handler_pc: 2,
+                        catch_type,
+                    })
+                    .collect(),
+                attributes: vec![],
+            }],
+        };
+        let class = ristretto_classloader::Class::from(
+            None,
+            ClassFile {
+                version: ristretto_classfile::JAVA_5,
+                constant_pool: pool,
+                this_class,
+                methods: vec![method],
+                ..Default::default()
+            },
+        )?;
+        let frame = Frame::new(
+            &Arc::downgrade(&thread),
+            &class,
+            &class.try_get_method("run", "()V")?,
+        );
+        let throwable = thread
+            .object("java/lang/NullPointerException", "", &[] as &[Value])
+            .await?;
+        let mut stack = OperandStack::with_max_size(1);
+        let Err(Throwable(error)) = process_throwable(&frame, &mut stack, throwable).await else {
+            panic!("catch resolution must propagate its linkage error");
+        };
+        assert_eq!(
+            error.as_object_ref()?.class().name(),
+            "java/lang/NoClassDefFoundError"
+        );
         Ok(())
     }
 }

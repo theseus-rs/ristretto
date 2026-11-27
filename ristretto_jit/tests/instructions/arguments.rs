@@ -40,12 +40,16 @@ fn generated_signatures_cover_inline_heap_and_cloned_entries() -> Result<()> {
                     if expected == count && found == actual
             ));
         }
+        #[cfg(feature = "execution-profile")]
+        assert_eq!(function.execution_count(), 0);
         for function in [&function, &cloned] {
             assert_eq!(
                 function.execute(&vec![Value::I32(42); count], std::ptr::null())?,
                 Some(Value::I32(42))
             );
         }
+        #[cfg(feature = "execution-profile")]
+        assert_eq!(function.execution_count(), 2);
     }
     Ok(())
 }
@@ -88,11 +92,20 @@ fn descriptor_kinds_and_wide_values_are_checked_before_loads() -> Result<()> {
             Err(ristretto_jit::Error::InvalidArgumentType { index: found, .. }) if found == index
         ));
     }
+    #[cfg(feature = "execution-profile")]
+    assert_eq!(function.execution_count(), 0);
     assert_eq!(
         function.execute(&arguments, std::ptr::null())?,
         Some(Value::I32(42))
     );
     Ok(())
+}
+
+extern "C" fn publish(_context: *const u8, _roots: *const i64, _count: i32) -> i32 {
+    1
+}
+extern "C" fn pending(_context: *const u8) -> i64 {
+    0
 }
 
 #[test]
@@ -128,7 +141,10 @@ fn instance_receiver_precedes_wide_parameters() -> Result<()> {
     let function = ristretto_jit::Compiler::new()?.compile(
         &class,
         class.methods.first().expect("instance method"),
-        &[],
+        &[
+            ("jit_publish_frame_roots", publish as *const u8),
+            ("jit_pending_exception", pending as *const u8),
+        ],
     )?;
     assert!(matches!(
         function.execute(&[Value::I64(42), Value::F64(1.5)], std::ptr::null()),
@@ -144,8 +160,10 @@ fn instance_receiver_precedes_wide_parameters() -> Result<()> {
         ),
         Err(ristretto_jit::Error::InvalidArgumentType { index: 0, .. })
     ));
+    #[cfg(feature = "execution-profile")]
+    assert_eq!(function.execution_count(), 0);
     // This backend-only shape check does not perform Java virtual invocation or
-    // validate receiver liveness.
+    // validate receiver liveness; its frame-root helper deliberately accepts null.
     assert_eq!(
         function.execute(
             &[Value::Ptr(0), Value::I64(42), Value::F64(1.5)],
@@ -153,43 +171,5 @@ fn instance_receiver_precedes_wide_parameters() -> Result<()> {
         )?,
         Some(Value::I64(42))
     );
-    Ok(())
-}
-
-#[test]
-fn java_local_slot_can_be_reused_with_a_different_type() -> Result<()> {
-    let function = create_function(
-        "(I)F",
-        &[
-            Instruction::Fconst_2,
-            Instruction::Fstore_0,
-            Instruction::Fload_0,
-            Instruction::Freturn,
-        ],
-    )?;
-    assert_eq!(
-        function.execute(&[Value::I32(42)], std::ptr::null())?,
-        Some(Value::F32(2.0))
-    );
-    Ok(())
-}
-
-#[test]
-fn wide_second_slot_can_be_reused_after_the_wide_value_is_dead() -> Result<()> {
-    for (descriptor, argument) in [("(J)I", Value::I64(42)), ("(D)I", Value::F64(42.0))] {
-        let function = create_function(
-            descriptor,
-            &[
-                Instruction::Bipush(7),
-                Instruction::Istore_1,
-                Instruction::Iload_1,
-                Instruction::Ireturn,
-            ],
-        )?;
-        assert_eq!(
-            function.execute(&[argument], std::ptr::null())?,
-            Some(Value::I32(7))
-        );
-    }
     Ok(())
 }

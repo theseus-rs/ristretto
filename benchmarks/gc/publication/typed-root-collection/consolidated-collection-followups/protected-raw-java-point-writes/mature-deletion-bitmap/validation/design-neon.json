@@ -1,0 +1,5 @@
+{
+  "status": "SUCCESS",
+  "response": "Run the same old-snapshot graph mutation\u2014moving an unmarked target off an unscanned mature parent onto an already-scanned black parent\u2014with deletion debt deliberately dropped (either skipping the open-word publish CAS or letting the helper clear the bit and release the mark-claim gate before reserving its traversal so the empty-only CAS seals before phase 5), and assert that the target is missed (left unmarked or reclaimed) to prove the test detects lost mature-deletion debt rather than passing via incidental reachability.\n",
+  "duration_seconds": 29.22279717
+}

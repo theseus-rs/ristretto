@@ -1,0 +1,5 @@
+{
+  "status": "SUCCESS",
+  "response": "- **Canceled before `commit_typed`:** It breaks out before `direct_marks.publish`, publishing **no witness**, and falls back to **ordinary shading** (`shade_live_domains` under `barrier_guard`, if still live).\n- **Stopped after commit, before publish:** Marking peers already own the committed `RootProposal` (holding `metadata`, typed `Record`, `index`, `strength`, and `promotion_age`) enqueued on `domain_at(index).mark_queue` for ordinary traversal.\n- **Uncertainty needing a schedule:** In `direct_marks.rs`, pausing at `after_epoch_check` while the birth epoch advances without modifying `slot` lets `slot.rcu` install a stale-epoch witness; whether that interleaving races safely with later epochs isn't shown.\n",
+  "duration_seconds": 44.904684318
+}

@@ -106,7 +106,6 @@ pub async fn resolve_method_ref(
     let target_class = thread
         .load_referenced_class(frame.class(), class_name)
         .await?;
-    thread.initialize_class(&target_class).await?;
     let class_name = class_name.to_str_lossy();
 
     // Validate class vs interface for the invoke kind
@@ -283,8 +282,15 @@ fn validate_method_for_invoke(
 /// - The caller module does not read the target module
 /// - The target module does not export the package containing the class
 pub fn check_jpms_access(frame: &Frame, target_class: &Arc<Class>) -> Result<()> {
-    let caller_class = frame.class();
+    let thread = frame.thread()?;
+    check_jpms_class_access(&thread, frame.class(), target_class)
+}
 
+pub(crate) fn check_jpms_class_access(
+    thread: &crate::Thread,
+    caller_class: &Arc<Class>,
+    target_class: &Arc<Class>,
+) -> Result<()> {
     // Same class always has access
     if Arc::ptr_eq(caller_class, target_class) {
         return Ok(());
@@ -300,7 +306,6 @@ pub fn check_jpms_access(frame: &Frame, target_class: &Arc<Class>) -> Result<()>
     }
 
     // Get VM for access checking
-    let thread = frame.thread()?;
     let vm = thread.vm()?;
 
     // Perform combined static + dynamic JPMS check

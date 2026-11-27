@@ -1,0 +1,52 @@
+{
+  "builds": {
+    "before": {
+      "binary_sha256": "cdc24e0203ee0c81d7554882bef7aa564f696bad5f9030997694ee69bbd883d5",
+      "source_archive_sha256": "2f950a0b33302141832e9122cc4be726e3c73d1dd9c7f1b160997ecf08b956fd",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+      "git_head": "0134e21ad92d3e5e1b48398190ee68a541932966"
+    },
+    "after": {
+      "binary_sha256": "e5c54c0aa4022c7c9735956955e249410559c53291ade8557e3b5074cb1bc18e",
+      "source_archive_sha256": "d1a1e464699cb90e1a6861f20ecc11ed7ac7730701b2992a252936308967e4a1",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+      "git_head": "5dd5448001c5c40f882e7d5d51595c870132169e"
+    }
+  },
+  "changed_sources": {
+    "ristretto_classloader/src/class.rs": {
+      "before": "de65adc4ee41629776be00f53a866e6328e867549a27af01417dbe8c8045664d",
+      "after": "3457384307d8a3009b9d2618688e70f1f1b57079d85c5ecf1282bbf12bcc6a8e"
+    },
+    "ristretto_classloader/src/class/method_resolution.rs": {
+      "before": "8dbe9cdf275874c2c65d318e3d6e1142f8264c1fa5b69d85abb168ea37ec32b2",
+      "after": "4f3ad9b35b1709ba3bc0f3c99eb7549cfccd8a73619d81341e562f9ffe86420b"
+    },
+    "ristretto_gc/PREVIEW_RELEASE_PLAN.md": {
+      "before": "1b681f2b9acdd76ca9b2e32d7001d9121baf3f1b6b25494daa2fe6bad23eaee6",
+      "after": null
+    },
+    "ristretto_intrinsics/src/java/lang/object.rs": {
+      "before": "d1f06e8783c6b234aebe5b16533d90e3fc716e5f7d21fc8dc7d39af6538bb4c6",
+      "after": "4a341f6eeefdcf1e6fa28f4c7757f0ef707042ad7a883b8b11855a04e18cceae"
+    }
+  },
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "schedule_sha256": "eed4eb45c297a392ba045626a2031975a87ce36e7ab4a97334e3935c212f0212",
+  "source_files_compared": 2611,
+  "options": {
+    "seconds": 4,
+    "warmup": 2,
+    "seed": 251127,
+    "heap_mib": 64,
+    "cpus": [
+      4,
+      6
+    ],
+    "rss_mib": 512,
+    "cpu_quota": 2.0,
+    "workers": 0,
+    "repeats": 12
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "pass_java_gate": true,
+  "short_saturation_ratio": 9.659320800342732,
+  "scheduled_short": {
+    "forks": 3,
+    "failed": 0,
+    "unfinished_in_successful_forks": 0,
+    "per_fork_medians": {
+      "ops_s": 500.0620438979353,
+      "p999_us": 2816,
+      "p9999_us": 4608
+    }
+  },
+  "long_tail_ratio": 0.0005811234595070422,
+  "long_candidate": [
+    {
+      "runtime": "Ristretto candidate",
+      "fork": "1",
+      "status": "ok",
+      "offered": "60000",
+      "completed": "60000",
+      "unfinished": "0",
+      "p999_us": "2432",
+      "p9999_us": "4416",
+      "max_backlog": "3",
+      "peak_mib": "124.9921875",
+      "oom_kills": "0"
+    },
+    {
+      "runtime": "Ristretto candidate",
+      "fork": "2",
+      "status": "ok",
+      "offered": "60000",
+      "completed": "60000",
+      "unfinished": "0",
+      "p999_us": "2976",
+      "p9999_us": "4032",
+      "max_backlog": "2",
+      "peak_mib": "118.75",
+      "oom_kills": "0"
+    }
+  ],
+  "long_parent": [
+    {
+      "runtime": "Ristretto before",
+      "fork": "1",
+      "status": "ok",
+      "offered": "60000",
+      "completed": "59683",
+      "unfinished": "317",
+      "p999_us": "1245184",
+      "p9999_us": "1261568",
+      "max_backlog": "632",
+      "peak_mib": "131.609375",
+      "oom_kills": "0"
+    },
+    {
+      "runtime": "Ristretto before",
+      "fork": "2",
+      "status": "ok",
+      "offered": "60000",
+      "completed": "55992",
+      "unfinished": "4008",
+      "p999_us": "8060928",
+      "p9999_us": "8060928",
+      "max_backlog": "4008",
+      "peak_mib": "132.48046875",
+      "oom_kills": "0"
+    }
+  ]
+}

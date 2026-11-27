@@ -1,0 +1,472 @@
+{
+  "workflow_sha256": "bd89e62962f648d7089720cfde39092a47307e55edcaa22eec31978fd7e79a66",
+  "rows": [
+    {
+      "target": "aarch64-unknown-linux-gnu",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-unknown-linux-gnu",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "aarch64-apple-darwin",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-apple-darwin",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "wasm32-unknown-unknown",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "wasm32-wasip2",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04"
+    },
+    {
+      "target": "wasm64-unknown-unknown",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "rustflags": "-Zcrate-attr=feature(simd_wasm64) -Zcrate-attr=allow(unused_features) --cfg getrandom_backend=\"unsupported\"",
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "aarch64-pc-windows-msvc",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-pc-windows-msvc",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "aarch64-linux-android",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "aarch64-unknown-linux-musl",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "aarch64_be-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "rustflags": "--cfg rustix_use_libc",
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "arm-linux-androideabi",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "arm-unknown-linux-gnueabi",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "arm-unknown-linux-gnueabihf",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "arm-unknown-linux-musleabi",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "arm-unknown-linux-musleabihf",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "armv5te-unknown-linux-gnueabi",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "armv5te-unknown-linux-musleabi",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "armv7-linux-androideabi",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "armv7-unknown-linux-gnueabi",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "armv7-unknown-linux-gnueabihf",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "armv7-unknown-linux-musleabi",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "armv7-unknown-linux-musleabihf",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "i586-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "i586-unknown-linux-musl",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "i686-linux-android",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "i686-unknown-freebsd",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "i686-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "i686-unknown-linux-musl",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "i686-pc-windows-gnu",
+      "rustflags": "-C link-arg=/opt/wine-stable/lib/wine/i386-windows/libws2_32.a",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "loongarch64-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "loongarch64-unknown-linux-musl",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "mips-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "mips-unknown-linux-musl",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "mips64-unknown-linux-gnuabi64",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "mips64-unknown-linux-muslabi64",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "mips64el-unknown-linux-gnuabi64",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "mips64el-unknown-linux-muslabi64",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "mipsel-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "mipsel-unknown-linux-musl",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "powerpc-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "powerpc64-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "powerpc64le-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "riscv64gc-unknown-linux-gnu",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "riscv64gc-unknown-linux-musl",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "s390x-unknown-linux-gnu",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "sparc64-unknown-linux-gnu",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "sparcv9-sun-solaris",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "rustflags": "-C link-arg=/tmp/ristretto-solaris-compat.o -C link-arg=-Wl,--gc-sections",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "thumbv7neon-linux-androideabi",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "thumbv7neon-unknown-linux-gnueabihf",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-linux-android",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-unknown-dragonfly",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "nightly-2026-09-04",
+      "build_std": "std,panic_abort"
+    },
+    {
+      "target": "x86_64-unknown-freebsd",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-unknown-illumos",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-unknown-linux-musl",
+      "cargo_args": [
+        "--no-default-features",
+        "--features",
+        "tls-rustls-ring"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-unknown-netbsd",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-pc-solaris",
+      "cargo_args": [
+        "--no-default-features"
+      ],
+      "rustflags": "-C link-arg=/tmp/ristretto-solaris-compat.o -C link-arg=-Wl,--gc-sections",
+      "toolchain": "workspace"
+    },
+    {
+      "target": "x86_64-pc-windows-gnu",
+      "toolchain": "workspace"
+    }
+  ],
+  "source_revision": "8cd9d2e4380ed7ef0a082bc11232e6a1c8e1a8d3",
+  "build_profile": "release dry-run settings: opt-level=2, LTO off, 16 codegen units",
+  "wasm_launchers": [
+    {
+      "target": "wasm32-unknown-unknown",
+      "collector_source": "ristretto_gc",
+      "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+      "bytes": 12041458,
+      "sha256": "503e9f9cc3599caa06aaa913f3fa3afaca03bd751f7f3656774ebff1a4e5e5ac",
+      "module_version": "01000000"
+    },
+    {
+      "target": "wasm32-wasip2",
+      "collector_source": "ristretto_gc",
+      "rustc": "rustc 1.100.0-nightly (a69a63265 2026-09-03)",
+      "bytes": 14734553,
+      "sha256": "fd03f19b562c06a0a099d8e9f8dbb7669a61081ca1f777f66f122081dcbddbdb",
+      "module_version": "0d000100"
+    },
+    {
+      "target": "wasm64-unknown-unknown",
+      "collector_source": "ristretto_gc",
+      "rustc": "rustc 1.100.0-nightly (a69a63265 2026-09-03)",
+      "bytes": 12739562,
+      "sha256": "1be089be53fbf0fe441d7e21055c3ffbba06a1e72764721c4b30191f9c36d17d",
+      "module_version": "01000000"
+    }
+  ],
+  "wasi_java_fixture": {
+    "result": 64,
+    "rounds": 8,
+    "jdk_version": "25.0.5.0.10",
+    "class_sha256": {
+      "CanonicalGraphWorkload$Node.class": "084e732a0bf22a12d5e92040e16fe10c06f1e4d72330205b2c67e399257cd363",
+      "CanonicalGraphWorkload.class": "84b0e2b77c7001e001b57c8615dedd481825888b2292122929461a34e760782c",
+      "VerifyLauncher.class": "6e7aecdd152df63a12d30add73bc5eb709f5b94e4ab26dd824ac4c95020d9aa7"
+    },
+    "bootstrap_override": "RISTRETTO_JDK_25_HOME=/jdk"
+  },
+  "negative_control": {
+    "revision": "ca429b0e",
+    "targets": [
+      "wasm32-wasip2",
+      "wasm64-unknown-unknown"
+    ],
+    "compiler": "nightly-2026-09-04",
+    "failure": "recursion-depth-exceeding-limit while proving From<Arc<Thread>> for ThreadHandle<Thread>"
+  }
+}

@@ -290,7 +290,9 @@ pub async fn get_vm_arguments_0<T: Thread + 'static>(
     let class = thread.class("[Ljava/lang/String;").await?;
     let reference = Reference::try_from((class, Vec::<Value>::new()))?;
     let vm = thread.vm()?;
-    Ok(Some(Value::new_object(vm.garbage_collector(), reference)))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), reference).await?,
+    ))
 }
 
 /// Optional support fields are initialized from Java threads, so there is nothing to do here.

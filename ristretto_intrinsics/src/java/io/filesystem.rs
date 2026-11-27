@@ -477,7 +477,7 @@ pub async fn list<T: Thread + 'static>(
 
     let class = thread.class("java.lang.String").await?;
     let reference = Reference::try_from((class, entries))?;
-    let paths = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let paths = Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
     Ok(Some(paths))
 }
 

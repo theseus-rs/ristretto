@@ -814,10 +814,12 @@ async fn invoke_special<T: Thread + 'static>(
                 .await?;
             let allocation_class = thread.resolve_class(&allocation_class, true).await?;
             if is_same_or_subclass_of(&allocation_class, &target_class)? {
-                let instance = Value::from_object(
+                let instance = Value::try_from_object_async(
                     thread.vm()?.garbage_collector(),
-                    Object::new(allocation_class)?,
-                );
+                    Object::new_in_async(thread.vm()?.garbage_collector(), allocation_class)
+                        .await?,
+                )
+                .await?;
                 let constructor_descriptor = ["(", descriptor, ")V"].concat();
                 let method = target_class.try_get_method(&method_name, &constructor_descriptor)?;
                 let mut call_arguments = vec![instance.clone()];
@@ -1102,10 +1104,12 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
                     if !can_initialize_with_target_constructor {
                         return call_method_handle_target(thread, &member, arguments).await;
                     }
-                    let instance = Value::from_object(
+                    let instance = Value::try_from_object_async(
                         thread.vm()?.garbage_collector(),
-                        Object::new(allocation_class)?,
-                    );
+                        Object::new_in_async(thread.vm()?.garbage_collector(), allocation_class)
+                            .await?,
+                    )
+                    .await?;
 
                     let member_type = {
                         let member_ref = member.as_object_ref()?;
@@ -1534,10 +1538,11 @@ mod tests {
             .await?
             .unwrap_or(Value::Object(None));
 
+        let name = member_name.to_object(thread).await?;
         {
             let mut object = member.as_object_mut()?;
             object.set_value("clazz", class_object)?;
-            object.set_value("name", member_name.to_object(thread).await?)?;
+            object.set_value("name", name)?;
             object.set_value("type", method_type)?;
 
             // Calculate flags with reference kind and IS_METHOD flag

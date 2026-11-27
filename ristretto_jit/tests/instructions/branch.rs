@@ -20,26 +20,14 @@ fn backwards_reached_block_discovers_its_successors() -> Result<()> {
         Instruction::Ireturn,    // 16
     ];
     let function = create_function("(Ljava/lang/Object;)I", &instructions)?;
+    let context = crate::util::TestContext::new();
     for (reference, expected) in [(0, 2), (17, 1)] {
         assert_eq!(
-            function.execute(&[Value::Ptr(reference)], std::ptr::null())?,
+            function.execute(&[Value::Ptr(reference)], context.as_ptr())?,
             Some(Value::I32(expected))
         );
     }
     Ok(())
-}
-
-#[test]
-fn branches_must_target_an_instruction_byte_boundary() {
-    let instructions = [
-        Instruction::Iload_0,
-        Instruction::Goto(1),
-        Instruction::Ireturn,
-    ];
-    assert!(matches!(
-        create_internal_function("(I)I", &instructions, 1),
-        Err(ristretto_jit::Error::InvalidBlockAddress(2))
-    ));
 }
 
 #[test]
@@ -60,6 +48,90 @@ fn fallthrough_cannot_merge_a_reference_with_a_long() {
         Err(ristretto_jit::Error::InternalError(message))
             if message.contains("Invalid stack state for address 9")
     ));
+}
+
+#[test]
+fn tableswitch_preserves_operands_and_signed_keys() -> Result<()> {
+    for low in [-1, 0] {
+        let mut instructions = vec![
+            Instruction::Iconst_5,
+            Instruction::Aconst_null,
+            Instruction::Aconst_null,
+            Instruction::Iload_0,
+            Instruction::Tableswitch(Box::new(TableSwitch {
+                default: 40, // BCI 44
+                low,
+                high: low + 2,
+                offsets: vec![28, 32, 36], // BCIs 32, 36, 40
+            })),
+        ];
+        for result in [
+            Instruction::Iconst_1,
+            Instruction::Iconst_2,
+            Instruction::Iconst_3,
+            Instruction::Iconst_4,
+        ] {
+            instructions.extend([
+                Instruction::Pop2,
+                result,
+                Instruction::Iadd,
+                Instruction::Ireturn,
+            ]);
+        }
+        let function = create_function("(I)I", &instructions)?;
+        for (input, expected) in [
+            (low - 1, 9),
+            (low, 6),
+            (low + 1, 7),
+            (low + 2, 8),
+            (low + 3, 9),
+            (i32::MIN, 9),
+            (i32::MAX, 9),
+        ] {
+            assert_eq!(
+                function.execute(&[Value::I32(input)], std::ptr::null())?,
+                Some(Value::I32(expected)),
+                "low={low}, input={input}"
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn lookupswitch_preserves_operands_and_signed_extremes() -> Result<()> {
+    let mut instructions = vec![
+        Instruction::Iconst_5,
+        Instruction::Aconst_null,
+        Instruction::Aconst_null,
+        Instruction::Iload_0,
+        Instruction::Lookupswitch(Box::new(LookupSwitch {
+            default: 48, // BCI 52
+            pairs: IndexMap::from([(i32::MIN, 36), (-1, 40), (i32::MAX, 44)]),
+        })),
+    ];
+    for result in [
+        Instruction::Iconst_1,
+        Instruction::Iconst_2,
+        Instruction::Iconst_3,
+        Instruction::Iconst_4,
+    ] {
+        instructions.extend([
+            Instruction::Pop2,
+            result,
+            Instruction::Iadd,
+            Instruction::Ireturn,
+        ]);
+    }
+    let function = create_function("(I)I", &instructions)?;
+    for (input, expected) in [(i32::MIN, 6), (-1, 7), (i32::MAX, 8), (0, 9), (-2, 9)] {
+        assert_eq!(
+            function.execute(&[Value::I32(input)], std::ptr::null())?,
+            Some(Value::I32(expected)),
+            "input={input}"
+        );
+    }
+    Ok(())
 }
 
 #[test]

@@ -1,0 +1,33 @@
+{
+  "forks": 24,
+  "publication_policies_per_fork": 2,
+  "bounded_peer_steps": 2048,
+  "sha256": "a08766d83e826b5711c5d53660f144d78e40c884d92622ca0afc16ca9bb9165e",
+  "fixture_sha256": "f156b0caf5b3eff3d8cce114ac133cbf5568cad17112c6bbc6e77efbfdac4117",
+  "exit_codes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}

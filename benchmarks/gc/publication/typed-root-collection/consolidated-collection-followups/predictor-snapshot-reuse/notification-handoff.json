@@ -1,0 +1,30 @@
+{
+  "revision": "f65993e23e08397e0b01c2a9c597fe7ce4887ad5",
+  "changed_rust_sources_since_measured_binary": [
+    "ristretto_gc/src/scheduling/parked_tests.rs"
+  ],
+  "native_test_binary_sha256": "974026249eadba2b9dd418be1c06e7bd94e313af639aa71e0a28c399bfb1d487",
+  "test": "scheduling::parked_tests::capped_allocation_recovers_before_the_predicting_publisher_requests_collection",
+  "suite": {
+    "passed": 1034,
+    "failed": 0,
+    "ignored": 1
+  },
+  "clippy": "cargo clippy --locked -p ristretto_gc --all-features --all-targets -- -D warnings",
+  "fresh_processes": 100,
+  "publication_policies": [
+    false,
+    true
+  ],
+  "max_allocation_polls_per_schedule": 4096,
+  "threads": 0,
+  "explicit_collection_requests_by_test": 0,
+  "agy_verification": {
+    "status": "SUCCESS",
+    "response": "- **Command:** `cargo test --locked -p ristretto_gc --all-features --lib capped_allocation_recovers_before_the_predicting_publisher_requests_collection`\n- **Exit code:** `0`\n- **Observed test:**\n  - `scheduling::parked_tests::capped_allocation_recovers_before_the_predicting_publisher_requests_collection` \u2014 **ok**\n  - Summary: `test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 645 filtered out; finished in 0.02s`\n",
+    "read_only_design_attempts": [
+      "Empty response after headless command permission denial",
+      "Inline excerpts exceeded print timeout"
+    ]
+  }
+}

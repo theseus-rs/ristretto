@@ -1,0 +1,17 @@
+{
+  "mode": "candidate",
+  "binary_sha256": "6a7c20c6c0874a56e8d6be7c7f29d8311b5409f18edc169714d59fe775fc2c06",
+  "processes": 1000,
+  "schedules": [
+    "a_peer_claiming_the_last_job_completes_an_enrolled_dispatch",
+    "independent_callbacks_remain_available_before_a_parked_claim",
+    "independent_callbacks_remain_available_after_a_parked_claim",
+    "capped_allocation_progresses_before_a_parked_callback_claim",
+    "capped_allocation_progresses_after_a_parked_callback_claim",
+    "terminal_allocation_observes_a_runnable_pressure_assistant_before_closing",
+    "parked_callback_with_no_queued_sibling_needs_no_assistant_turn",
+    "cancelled_terminal_dispatch_leaves_a_subsequent_allocation_eligible",
+    "disconnection_drains_the_accepted_suffix_after_its_first_callback_parks",
+    "primary_rechecks_linked_jobs_while_their_publisher_is_parked_before_notification"
+  ]
+}

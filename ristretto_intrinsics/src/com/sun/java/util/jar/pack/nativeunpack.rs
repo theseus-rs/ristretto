@@ -32,12 +32,12 @@ struct UnpackContext {
 
 #[derive(Debug, Default)]
 struct NativeUnpackState {
-    contexts: Mutex<HashMap<usize, UnpackContext>>,
+    contexts: Mutex<HashMap<i64, UnpackContext>>,
 }
 
-fn receiver_key(receiver: &Value) -> usize {
+fn receiver_key(receiver: &Value) -> i64 {
     match receiver {
-        Value::Object(Some(reference)) => reference.as_ptr() as usize,
+        Value::Object(Some(reference)) => reference.as_handle_i64(),
         _ => 0,
     }
 }
@@ -77,7 +77,7 @@ async fn byte_buffer_bytes<T: Thread + 'static>(
         ))
     })?;
     byte_array.resize(remaining, 0_i8);
-    let bytes = Value::new_object(collector, Reference::from(byte_array));
+    let bytes = Value::try_new_object_async(collector, Reference::from(byte_array)).await?;
     thread
         .try_invoke(
             "java/nio/ByteBuffer",
@@ -106,7 +106,8 @@ async fn input_stream_bytes<T: Thread + 'static>(
     }
     let vm = thread.vm()?;
     let collector = vm.garbage_collector();
-    let buffer = Value::new_object(collector, Reference::from(vec![0_i8; 16 * 1024]));
+    let buffer =
+        Value::try_new_object_async(collector, Reference::from(vec![0_i8; 16 * 1024])).await?;
     let mut result = Vec::new();
     loop {
         let count = thread
@@ -289,7 +290,7 @@ async fn wrap_byte_buffer<T: Thread + 'static>(thread: &Arc<T>, data: Vec<u8>) -
         ))
     })?;
     signed_data.extend(data.into_iter().map(u8::cast_signed));
-    let array = Value::new_object(collector, Reference::from(signed_data));
+    let array = Value::try_new_object_async(collector, Reference::from(signed_data)).await?;
     thread
         .try_invoke(
             "java/nio/ByteBuffer",
@@ -533,7 +534,7 @@ pub async fn start<T: Thread + 'static>(
     if !receiver.is_null() {
         receiver
             .as_object_mut()?
-            .set_value("unpackerPtr", Value::Long(i64::try_from(key.max(1))?))?;
+            .set_value("unpackerPtr", Value::Long(if key == 0 { 1 } else { key }))?;
     }
     Ok(Some(Value::Long(i64::from(file_count))))
 }

@@ -1,0 +1,140 @@
+{
+  "candidate": "fadcf43fdf665fc920fb036f65b30cac2102e502",
+  "control": "880cce8835daa2cb80922e57fe3d2ec4d728acfc",
+  "patch_sha256": "4f71d5a9bc73763fee8cbdc8cfb6b62569152c67b3a70ddce4f0f87fa08cf3a4",
+  "native_classloader": {
+    "passed": 786,
+    "failed": 0,
+    "ignored": 14
+  },
+  "wasi_projection_integration": {
+    "passed": 7,
+    "failed": 0,
+    "ignored": 0
+  },
+  "miri_held_projection": {
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0
+  },
+  "miri_conditional_references": {
+    "passed": 1,
+    "failed": 0,
+    "ignored": 0
+  },
+  "guard_and_heap_limit_tests": {
+    "passed": 3,
+    "failed": 0,
+    "ignored": 0
+  },
+  "native_layout_bytes": {
+    "value": {
+      "before": 32,
+      "after": 32
+    },
+    "array_elements": {
+      "before": 184,
+      "after": 184
+    },
+    "object": {
+      "before": 232,
+      "after": 232
+    },
+    "reference": {
+      "before": 232,
+      "after": 232
+    }
+  },
+  "wasi_layout_bytes": {
+    "value": {
+      "before": 24,
+      "after": 24
+    },
+    "array_elements": {
+      "before": 104,
+      "after": 104
+    },
+    "object": {
+      "before": 128,
+      "after": 128
+    },
+    "reference": {
+      "before": 136,
+      "after": 128
+    }
+  },
+  "complete_collection_artifact_comparison": [
+    {
+      "target": "native",
+      "identical_source_hashes": true,
+      "identical_control_hashes": true,
+      "identical_binary": true,
+      "original": "c2db66f2072a863cef8fb98ce3ada1cc3695b70d2d2eb0055467202d25e1a34f",
+      "candidate": "c2db66f2072a863cef8fb98ce3ada1cc3695b70d2d2eb0055467202d25e1a34f"
+    },
+    {
+      "target": "wasm",
+      "identical_source_hashes": true,
+      "identical_control_hashes": true,
+      "identical_binary": true,
+      "original": "6412a97bc7dc8f82925e68baaee8401218e04e4580eb00d7d1cb35136d81fd8d",
+      "candidate": "6412a97bc7dc8f82925e68baaee8401218e04e4580eb00d7d1cb35136d81fd8d"
+    }
+  ],
+  "preview_tiers": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 464,
+      "result": 64
+    }
+  },
+  "strict_clippy": {
+    "native": true,
+    "wasi": true
+  },
+  "full_fork_count": 54,
+  "inputs_unchanged": true,
+  "java": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "artifact_sha256": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+    "gc_compare": "b491cfef38f4cb6d267904fb77ed6eb8f0177b41b3aed997b793dcf478a98f7a",
+    "gc_compare.provenance.json": "65c6d1e1ff519e319c6c33c8ae680638e3860b7e7a3b20d8475d66257d2c16b9",
+    "gc_compare.sources.tar.gz": "630214e1e5230f44056a402fd8002956f4f36c7b06ece8c0cd10fae36179f670",
+    "gc_compare-before": "4790b3f0f667801ad182bb1930e20743616ae331f3997b5d658bafccefcc62ac",
+    "gc_compare-before.provenance.json": "ed040fd426f00c8cd7e2b6fb581fd263ea4d2718219bac2a10b698ed98af135d",
+    "gc_compare-before.sources.tar.gz": "908950c1a75d52cc90d50e699cbad944417ef522c3b176661c3d929b6cbcfa06"
+  },
+  "source_scope": "same-Java end-to-end runtime comparison; not isolated collector speed",
+  "cpu_affinity": [
+    4,
+    6
+  ]
+}

@@ -1,0 +1,1 @@
+{"reference":"c051ed39","frozen_before_optimized_probe":true,"microbenchmark_only":true,"target_median_steady_sparse_time_ratio":0.80,"children":[65,129,520,2048],"forks":5,"counted":[false,true],"qualification":"This screen cannot admit a runtime change. A candidate also needs complete collection and native/WASIp2 JVM release comparisons."}

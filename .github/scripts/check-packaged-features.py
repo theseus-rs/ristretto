@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """Build selected features from the workspace's actual Cargo release archives."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import subprocess
 import tarfile
 import tempfile
 
+from collector_graph import check_shipping_source, verify_tree
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", help="Rust target triple for the external consumer build")
-    parser.add_argument("features", nargs="+", metavar="PACKAGE/FEATURE")
+    parser.add_argument("features", nargs="+", metavar="PACKAGE[/FEATURE]")
     args = parser.parse_args()
     metadata = json.loads(subprocess.check_output([
         "cargo", "metadata", "--locked", "--no-deps", "--format-version=1"
@@ -20,9 +23,11 @@ def main():
     selected = {}
     for item in args.features:
         package, sep, feature = item.partition("/")
-        if not sep or package not in packages or feature not in packages[package]["features"]:
+        if package not in packages or (sep and feature not in packages[package]["features"]):
             parser.error(f"unknown publishable workspace package or feature: {item}")
-        selected.setdefault(package, set()).add(feature)
+        enabled = selected.setdefault(package, set())
+        if sep:
+            enabled.add(feature)
     required = set(selected)
     pending = list(selected)
     while pending:
@@ -32,11 +37,16 @@ def main():
             if dep["kind"] != "dev" and name in packages and name not in required:
                 required.add(name)
                 pending.append(name)
-    # Package the workspace together so the published manifests and lockfiles are normalized.
-    subprocess.run(["cargo", "package", "--workspace", "--locked", "--no-verify"], check=True)
+    # Stage the same publishable set as cargo publish --workspace. cargo package
+    # --workspace also tries to normalize path-only, workspace-private crates.
+    stage = ["cargo", "package", "--locked", "--no-verify"]
+    for name in sorted(packages):
+        stage.extend(["-p", name])
+    subprocess.run(stage, check=True)
     archives = Path(metadata["target_directory"]) / "package"
     with tempfile.TemporaryDirectory() as temporary:
-        root = Path(temporary)
+        # Cargo displays the canonical source path, including on hosts with a symlinked TMPDIR.
+        root = Path(temporary).resolve()
         manifest = ['[package]', 'name = "packaged-feature-check"', 'version = "0.0.0"',
                     'edition = "2024"', 'publish = false', '[workspace]', '[dependencies]']
         for name, features in sorted(selected.items()):
@@ -45,23 +55,41 @@ def main():
                             f'features = {json.dumps(sorted(features))} }}')
         # Resolve all in-flight crates at the same versions a coordinated publish would provide.
         manifest.append("[patch.crates-io]")
+        package_set = hashlib.sha256()
         for name in sorted(required):
             package = packages[name]
             directory = f"{name}-{package['version']}"
-            with tarfile.open(archives / (directory + ".crate")) as archive:
+            path = archives / (directory + ".crate")
+            with path.open("rb") as source:
+                package_set.update(hashlib.file_digest(source, "sha256").digest())
+            with tarfile.open(path) as archive:
                 archive.extractall(root, filter="data")
+            check_shipping_source(name, root / directory)
             manifest.append(f'{name} = {{ path = "{directory}" }}')
         (root / "Cargo.toml").write_text("\n".join(manifest) + "\n", encoding="utf-8")
         (root / "src").mkdir()
-        (root / "src/lib.rs").write_text("", encoding="utf-8")
+        libraries = [target["name"] for name in sorted(selected) for target in packages[name]["targets"]
+                     if target["kind"] == ["lib"] or target["kind"] == ["proc-macro"]]
+        (root / "src/lib.rs").write_text("".join(f"use {library} as _;\n" for library in libraries),
+                                          encoding="utf-8")
         # The consumer is new and its dependency manifests are the normalized package versions.
         # Keep the overall workspace's pinned versions wherever their constraints allow them.
         (root / "Cargo.lock").write_bytes((Path(metadata["workspace_root"]) / "Cargo.lock").read_bytes())
         subprocess.run(["cargo", "update", "--workspace", "--manifest-path", root / "Cargo.toml", "--offline"], check=True)
-        # Keep native and cross-target external consumers in separate absolute targets.
+        if {"ristretto_gc", "ristretto_classloader", "ristretto_vm"} & required:
+            version = packages["ristretto_gc"]["version"]
+            unpacked = root / f"ristretto_gc-{version}"
+            # Use the same Cargo config and toolchain discovery as the consumer build below.
+            expected = f"ristretto_gc v{version} ({unpacked})"
+            verify_tree(root / "Cargo.toml", expected, target=args.target, cargo_cwd=Path.cwd())
+            if "ristretto_classloader" in required:
+                verify_tree(root / "Cargo.toml", expected, target=args.target,
+                            package="ristretto_classloader", cargo_cwd=Path.cwd())
+        # Cargo archives normalize file timestamps. Two revisions can have the same
+        # version, filenames and mtimes; only reuse artifacts for identical archives.
         suffix = "packaged-features" if args.target is None else "packaged-features-" + args.target
         build = ["cargo", "build", "--manifest-path", root / "Cargo.toml", "--locked",
-                 "--target-dir", (Path(metadata["target_directory"]) / suffix).resolve()]
+                 "--target-dir", (Path(metadata["target_directory"]) / suffix / package_set.hexdigest()).resolve()]
         if args.target is not None:
             build.extend(["--target", args.target])
         subprocess.run(build, check=True)

@@ -1,10 +1,11 @@
-use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
-use ristretto_classloader::Value;
+use ristretto_classfile::VersionSpecification::{GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
+use ristretto_classloader::{JavaReferenceField, Value};
+#[cfg(test)]
 use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
+use ristretto_types::{Thread, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/ref/Reference.clear0()V", GreaterThanOrEqual(JAVA_17))]
@@ -14,7 +15,10 @@ pub fn clear_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
     let mut object = object.as_object_mut()?;
-    object.set_value("referent", Value::Object(None))?;
+    let slot = object
+        .class()
+        .java_reference_field_slot(JavaReferenceField::Referent)?;
+    object.set_value_at_slot(slot, Value::Object(None))?;
     Ok(None)
 }
 
@@ -29,7 +33,10 @@ pub fn get_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let reference = parameters.pop()?;
     let reference = reference.as_object_ref()?;
-    Ok(Some(reference.value("referent")?))
+    let slot = reference
+        .class()
+        .java_reference_field_slot(JavaReferenceField::Referent)?;
+    Ok(Some(reference.value_at_slot(slot)?))
 }
 
 #[intrinsic_method(
@@ -37,11 +44,26 @@ pub fn get_0<T: Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 pub fn get_and_clear_reference_pending_list<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // TODO: Implement when the pending list is implemented
-    Ok(Some(Value::Object(None)))
+    let vm = thread.vm()?;
+    let gc = vm.garbage_collector();
+    let mut head = Value::Object(None);
+    while let Some(reference) =
+        gc.take_pending_reference::<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>>()?
+    {
+        let value = Value::Object(Some(reference));
+        {
+            let mut object = value.as_object_mut()?;
+            let slot = object
+                .class()
+                .java_reference_field_slot(JavaReferenceField::Discovered)?;
+            object.set_value_at_slot(slot, head)?;
+        }
+        head = value;
+    }
+    Ok(Some(head))
 }
 
 #[intrinsic_method(
@@ -49,11 +71,12 @@ pub fn get_and_clear_reference_pending_list<T: Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 pub fn has_reference_pending_list<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // TODO: Implement when the pending list is implemented
-    Ok(Some(Value::from(false)))
+    Ok(Some(Value::from(
+        thread.vm()?.garbage_collector().has_pending_references(),
+    )))
 }
 
 #[intrinsic_method(
@@ -67,12 +90,7 @@ pub fn refers_to_0<T: Thread + 'static>(
     let object_parameter = parameters.pop()?;
     let reference = parameters.pop()?;
     let reference = reference.as_object_ref()?;
-    let object = reference.value("referent")?;
-    let refers_to = match (&object, &object_parameter) {
-        (Value::Object(Some(a)), Value::Object(Some(b))) => Gc::ptr_eq(a, b),
-        (Value::Object(None), Value::Object(None)) => true,
-        _ => false,
-    };
+    let refers_to = reference.referent_refers_to(&object_parameter)?;
     Ok(Some(Value::from(refers_to)))
 }
 
@@ -81,14 +99,56 @@ pub fn refers_to_0<T: Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 pub async fn wait_for_reference_pending_list<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // The collector does not expose a pending-reference queue yet, so there is no event that can
-    // make this wait complete. Remaining asynchronously pending keeps the JDK Reference Handler
-    // from busy-spinning while still allowing its Tokio task to be cancelled during VM shutdown.
-    std::future::pending::<()>().await;
+    let gc = thread.vm()?.garbage_collector().clone();
+    gc.wait_for_pending_references().await;
     Ok(None)
+}
+
+/// Java 8 uses a different pending-reference loop from later JDKs.
+#[intrinsic_method(
+    "java/lang/ref/Reference.tryHandlePending(Z)Z",
+    LessThanOrEqual(JAVA_8)
+)]
+pub async fn try_handle_pending<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let wait = parameters.pop_bool()?;
+    let gc = thread.vm()?.garbage_collector().clone();
+    if wait {
+        gc.wait_for_pending_references().await;
+    }
+    let Some(reference) = gc
+        .take_pending_reference::<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>>()?
+    else {
+        return Ok(Some(Value::from(false)));
+    };
+    let reference = Value::Object(Some(reference));
+    let cleaner = reference.as_object_ref()?.class().name() == "sun/misc/Cleaner";
+    if cleaner {
+        thread
+            .invoke("sun/misc/Cleaner", "clean()V", &[reference])
+            .await?;
+    } else {
+        let queue = {
+            let object = reference.as_object_ref()?;
+            let slot = object
+                .class()
+                .java_reference_field_slot(JavaReferenceField::Queue)?;
+            object.value_at_slot(slot)?
+        };
+        thread
+            .invoke(
+                "java/lang/ref/ReferenceQueue",
+                "enqueue(Ljava/lang/ref/Reference;)Z",
+                &[queue, reference],
+            )
+            .await?;
+    }
+    Ok(Some(Value::from(true)))
 }
 
 #[cfg(test)]

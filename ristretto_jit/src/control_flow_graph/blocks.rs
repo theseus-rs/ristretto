@@ -1,8 +1,7 @@
 use crate::Error::{InternalError, InvalidBlockAddress, UnsupportedInstruction};
 use crate::Result;
 use crate::control_flow_graph::instruction;
-use crate::control_flow_graph::type_stack::TypeStack;
-use crate::local_type::StackType;
+use crate::control_flow_graph::type_stack::{StackType, TypeStack};
 use ahash::AHashMap;
 use cranelift::prelude::{Block, FunctionBuilder, Type, Value};
 use ristretto_classfile::ConstantPool;

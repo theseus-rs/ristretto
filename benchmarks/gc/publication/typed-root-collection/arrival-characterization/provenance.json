@@ -1,0 +1,70 @@
+{
+  "fixed-arrival-control-60s": {
+    "compared_candidate_binary_sha256": "5e1018fc45dcd6dc9410e1468a27c118ed15cf16ba896ccd97e99453ff2c30a3",
+    "runtime_source": "fc9bba44f486d4179e82b3d22fb9db50b38a091d",
+    "runtime_source_archive_sha256": "2e957bc89f166e461dbff836e1da319be301dac4539ca85b0f1a34fa8b32d95c",
+    "fixture_sha256": "e5e380dfc16f15f4e5a73c91a229052dff5e4d69d4fbc7185b71ee145140e0a4",
+    "harness_source": "3e96ba7d2a28f185de72d6be191dd511f41e8c8c",
+    "jdk": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+    "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+    "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+    "cpu_ids": [
+      4,
+      6
+    ],
+    "seed": 251128,
+    "schedule_sha256": "055d107877e8972fc7a4d730d901f07fd87b88a01f58373924a1c68d7a93ce28",
+    "raw_sha256": "975e7dc0ad027e6000b852d8a3f8592b85fa33b6ad998141f8c1122d42ee43e5"
+  },
+  "roots-ristretto-candidate-jit-00-1500": {
+    "compared_candidate_binary_sha256": "e9d4c7be0257c8b5775d88f8a85c110358f84531149f1cdfc155e48c2f59191c",
+    "runtime_source": "5c6af2f376563bfc57aca54d7e5867930ab5e525",
+    "runtime_source_archive_sha256": "226f23990de425064ddf162b5356fc3d6fa3285ae37abf98093d392a6f71ea0a",
+    "fixture_sha256": "e5e380dfc16f15f4e5a73c91a229052dff5e4d69d4fbc7185b71ee145140e0a4",
+    "harness_source": "3e96ba7d2a28f185de72d6be191dd511f41e8c8c",
+    "jdk": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+    "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+    "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+    "cpu_ids": [
+      12,
+      14
+    ],
+    "seed": 253126,
+    "schedule_sha256": "48f0450eb42ba8044d988f5631fd87b57a2daa101ec7f72616651f5385d7a8e3",
+    "raw_sha256": "521ba25cba3390e95a60f228d6807490852e95da5720cfbbe23e03be1d0f85e5"
+  },
+  "roots-g1-00-1500": {
+    "compared_candidate_binary_sha256": "e9d4c7be0257c8b5775d88f8a85c110358f84531149f1cdfc155e48c2f59191c",
+    "runtime_source": "5c6af2f376563bfc57aca54d7e5867930ab5e525",
+    "runtime_source_archive_sha256": "226f23990de425064ddf162b5356fc3d6fa3285ae37abf98093d392a6f71ea0a",
+    "fixture_sha256": "e5e380dfc16f15f4e5a73c91a229052dff5e4d69d4fbc7185b71ee145140e0a4",
+    "harness_source": "3e96ba7d2a28f185de72d6be191dd511f41e8c8c",
+    "jdk": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+    "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+    "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+    "cpu_ids": [
+      12,
+      14
+    ],
+    "seed": 253126,
+    "schedule_sha256": "48f40b22c2b88810c40b1fd4ab17bfaebb0c83c91eb4ab679c5c02d27465e610",
+    "raw_sha256": "18df1e4289a07c7ac7beacb9805584f16241f1fdd45b9e89aa90c4269bb4d50f"
+  },
+  "roots-zgc-00-1500": {
+    "compared_candidate_binary_sha256": "e9d4c7be0257c8b5775d88f8a85c110358f84531149f1cdfc155e48c2f59191c",
+    "runtime_source": "5c6af2f376563bfc57aca54d7e5867930ab5e525",
+    "runtime_source_archive_sha256": "226f23990de425064ddf162b5356fc3d6fa3285ae37abf98093d392a6f71ea0a",
+    "fixture_sha256": "e5e380dfc16f15f4e5a73c91a229052dff5e4d69d4fbc7185b71ee145140e0a4",
+    "harness_source": "3e96ba7d2a28f185de72d6be191dd511f41e8c8c",
+    "jdk": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+    "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+    "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+    "cpu_ids": [
+      12,
+      14
+    ],
+    "seed": 253126,
+    "schedule_sha256": "8735b75c82253bbb9c9501c41865a3edf301bba79bb024e28803010fdebb10ec",
+    "raw_sha256": "3d010ee3af735f88c15e7614947464edb56925cd942894e12862b02fa2468457"
+  }
+}

@@ -36,6 +36,8 @@ jobs:
         run: rustup toolchain install --no-self-update
       - name: Install Linux dependencies
         run: .github/scripts/setup-linux.sh
+      - name: Verify the alpha JVM's collector dependencies
+        run: python3 benchmarks/gc/release/verify_alpha_heap.py
       - name: Check the project
         run: |
           cargo check --workspace --all-targets --all-features
@@ -89,13 +91,12 @@ jobs:
       - name: Build the packaged native preview features
         run: |
           python3 .github/scripts/check-packaged-features.py \
-            ristretto_gc/experimental-canonical-runtime \
-            ristretto_vm/experimental-canonical-jit \
+            ristretto_gc \
+            ristretto_vm/execution-profile ristretto_vm/experimental-reference-dispatch \
             ristretto_jit/experimental-reference-dispatch
       - name: Install WASI target
         run: rustup target add wasm32-wasip2
-      - name: Build the packaged WASI interpreter features
+      - name: Build the packaged WASI interpreter and collector
         run: |
           python3 .github/scripts/check-packaged-features.py --target wasm32-wasip2 \
-            ristretto_gc/experimental-canonical-runtime \
-            ristretto_vm/experimental-canonical-runtime
+            ristretto_vm/execution-profile

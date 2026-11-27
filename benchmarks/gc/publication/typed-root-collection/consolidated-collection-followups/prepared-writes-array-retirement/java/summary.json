@@ -1,0 +1,86 @@
+{
+  "0": {
+    "Ristretto before": {
+      "forks": 3,
+      "failed": 0,
+      "unfinished_in_successful_forks": 0,
+      "per_fork_medians": {
+        "ops_s": 607.542955978292,
+        "p999_us": 33280,
+        "p9999_us": 105472
+      }
+    },
+    "Ristretto candidate": {
+      "forks": 3,
+      "failed": 0,
+      "unfinished_in_successful_forks": 0,
+      "per_fork_medians": {
+        "ops_s": 5868.452311782824,
+        "p999_us": 23040,
+        "p9999_us": 34304
+      }
+    },
+    "HotSpot G1": {
+      "forks": 3,
+      "failed": 0,
+      "unfinished_in_successful_forks": 0,
+      "per_fork_medians": {
+        "ops_s": 1088883.8710921963,
+        "p999_us": 7,
+        "p9999_us": 265
+      }
+    },
+    "HotSpot ZGC": {
+      "forks": 3,
+      "failed": 0,
+      "unfinished_in_successful_forks": 0,
+      "per_fork_medians": {
+        "ops_s": 550164.021031644,
+        "p999_us": 81,
+        "p9999_us": 169
+      }
+    }
+  },
+  "500": {
+    "Ristretto before": {
+      "forks": 3,
+      "failed": 0,
+      "unfinished_in_successful_forks": 0,
+      "per_fork_medians": {
+        "ops_s": 500.06449916921247,
+        "p999_us": 3552,
+        "p9999_us": 4864
+      }
+    },
+    "Ristretto candidate": {
+      "forks": 3,
+      "failed": 0,
+      "unfinished_in_successful_forks": 0,
+      "per_fork_medians": {
+        "ops_s": 500.0620438979353,
+        "p999_us": 2816,
+        "p9999_us": 4608
+      }
+    },
+    "HotSpot G1": {
+      "forks": 3,
+      "failed": 0,
+      "unfinished_in_successful_forks": 0,
+      "per_fork_medians": {
+        "ops_s": 500.09996818327994,
+        "p999_us": 108,
+        "p9999_us": 2112
+      }
+    },
+    "HotSpot ZGC": {
+      "forks": 3,
+      "failed": 0,
+      "unfinished_in_successful_forks": 0,
+      "per_fork_medians": {
+        "ops_s": 500.0998872509401,
+        "p999_us": 86,
+        "p9999_us": 2208
+      }
+    }
+  }
+}

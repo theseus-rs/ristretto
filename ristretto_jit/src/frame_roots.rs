@@ -6,7 +6,7 @@ use crate::compiler::native_frame::{word_offset, word_stack_slot};
 use crate::local_variables::LocalVariables;
 use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Error, Result};
-use cranelift::codegen::ir::StackSlot;
+use cranelift::codegen::ir::{StackSlot, UserStackMapEntry};
 use cranelift::prelude::*;
 use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
 
@@ -15,6 +15,7 @@ pub(super) struct FrameRoots {
     failure: Block,
     spill: Option<StackSlot>,
     capacity: usize,
+    size_probe: Option<StackSlot>,
 }
 
 impl FrameRoots {
@@ -25,6 +26,7 @@ impl FrameRoots {
         instructions: &[Instruction],
         exceptions: &[ExceptionTableEntry],
         failure: Block,
+        size_probe: StackSlot,
     ) -> Result<Self> {
         let locals = locals.reference_indices();
         let capacity = locals.len() + usize::from(max_stack);
@@ -44,6 +46,7 @@ impl FrameRoots {
             failure,
             spill,
             capacity,
+            size_probe: Some(size_probe),
         })
     }
 
@@ -85,6 +88,18 @@ impl FrameRoots {
         let call = builder
             .ins()
             .call(helpers.publish_frame_roots, &[context, pointer, count]);
+        // The first publication is reachable at Java entry and cannot be
+        // removed as a pure operation. One map suffices for the fixed frame.
+        if let Some(slot) = self.size_probe.take() {
+            builder.func.dfg.append_user_stack_map_entry(
+                call,
+                UserStackMapEntry {
+                    ty: types::I64,
+                    slot,
+                    offset: 0,
+                },
+            );
+        }
         let success = *builder.inst_results(call).first().ok_or_else(|| {
             Error::InternalError("root publication returned no status".to_owned())
         })?;

@@ -1,0 +1,183 @@
+{
+  "source": "ee80df21ae13da0ad57a723e123c76f656f7770c",
+  "all_features": {
+    "native": {
+      "passed": 1016,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 456,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "release": {
+    "native_clippy": {
+      "log_sha256": "2ba87b5e649e0422d79ee9e52b444cf9503ac127285f06aedd4a832c7047bd9b"
+    },
+    "wasi_clippy": {
+      "log_sha256": "6d828c23b946e261ddb76ae0f5060f9b0e612dbdc0c959d69528d4185b84bed3"
+    },
+    "miri": {
+      "log_sha256": "30f2926a7a0d685d3a449862f65260158d02ca775be1fab0c37032f8841cd54d"
+    },
+    "cargo_package": {
+      "log_sha256": "bc2016d22b0df06e5d1dbeff9a052c6fa6ab5a027882f76063475ddd7b6d13bf"
+    },
+    "native_consumer": {
+      "log_sha256": "ada10425089f9bab68df1549002d27dc32b656e082471adc042a33435f64ef42"
+    },
+    "wasi_consumer": {
+      "log_sha256": "d0dcfb97c5bcae2ad159dbb0a415545a9760403e36b5622561e282d1706c86dc"
+    },
+    "corrected_certificate_model": {
+      "upstream_commit": "c673a8d800f3a8163586e8a6177ddafd01f2e665",
+      "overlay_sha256": "c54eb1bfccad1caab30938204ad8f4142bd4864948ca280f7069bbacc7042cf9",
+      "production_and_model_sources": {
+        "ristretto_gc/src/trace_certificate.rs": "3cdbe0a576e0d263520a01982346cb0ee7a38c42a3284219e2ff696ddc5bd9dc",
+        "ristretto_gc/tests/trace_certificate_model.rs": "5cda8bc55bca2f2996020bf5146c90fc8fd4b5e17b91dcd32dfe3d9efa6d2959"
+      },
+      "inputs_unchanged": true,
+      "log_sha256": "fec17f3229a691d71484e9ac50797d62c6b23826b6caf3e9ad87cfe72c8744b7",
+      "exit": 0
+    },
+    "workspace_graphs": 14
+  },
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "browser": {
+    "qualification": false,
+    "binary_sha256": "b951683c05e01afc75f5e103bdc6164961dd470e63c78e5b560e06a5b22e8d28",
+    "trials": [
+      {
+        "policy": "control",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "candidate",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "baseline",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "baseline",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "candidate",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "control",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "candidate",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "baseline",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      },
+      {
+        "policy": "control",
+        "offered": 4000,
+        "completed": 4000,
+        "unfinished": 0
+      }
+    ]
+  },
+  "audit": {
+    "response_sha256": "6a1c56c7b04632ba920cebd659d87a920f8481871d688152bd410be5cc4de9aa"
+  },
+  "fresh_native_threaded_processes": {
+    "parent": 10,
+    "candidate": 100
+  },
+  "cooperative_cases": 18,
+  "new_control": {
+    "case": "manual root removal during synchronous construction",
+    "full_ticket_budget": 2048,
+    "outcomes": [
+      {
+        "concurrent_publication": false,
+        "root_storage": "Tree",
+        "full_ticket_completed_before_return": false
+      },
+      {
+        "concurrent_publication": false,
+        "root_storage": "Slots",
+        "full_ticket_completed_before_return": false
+      },
+      {
+        "concurrent_publication": false,
+        "root_storage": "Contexts",
+        "full_ticket_completed_before_return": false
+      },
+      {
+        "concurrent_publication": true,
+        "root_storage": "Tree",
+        "full_ticket_completed_before_return": false
+      },
+      {
+        "concurrent_publication": true,
+        "root_storage": "Slots",
+        "full_ticket_completed_before_return": false
+      },
+      {
+        "concurrent_publication": true,
+        "root_storage": "Contexts",
+        "full_ticket_completed_before_return": false
+      }
+    ]
+  }
+}

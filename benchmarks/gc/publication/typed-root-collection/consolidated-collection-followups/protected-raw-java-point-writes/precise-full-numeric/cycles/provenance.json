@@ -1,0 +1,103 @@
+{
+  "policy": {
+    "baseline": "f1daebeb",
+    "candidate": "2c93df61e47e43ddb14d504803ed9fea86a158d4",
+    "seed": 251127503,
+    "nodes": 4095,
+    "cycles": 16,
+    "shapes": [
+      "tree",
+      "wide",
+      "mixed"
+    ],
+    "repeats": {
+      "native": 24,
+      "wasm": 48
+    },
+    "workers": {
+      "native": [
+        0,
+        2
+      ],
+      "wasm": [
+        0
+      ]
+    },
+    "cpus": {
+      "native": [
+        0,
+        2,
+        8
+      ],
+      "wasm": [
+        10
+      ]
+    },
+    "lower_bound": 10
+  },
+  "control_revision": "f1daebeb277323fa0d5e732ae3853db6b97eac8b",
+  "targets": {
+    "native": {
+      "processes": 1152,
+      "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "runner": null,
+      "harness_sha256": "b69f912152c50ca12a9d983445cc359a0ccaaec5492f7960c0d7f0bf153369d2",
+      "raw_sha256": "4d1a3b939517d2e08a6ea8c3d0ac01ba5a59ffd769e12b5115d7a964d7a9f16d",
+      "binaries": {
+        "before": {
+          "binary_sha256": "844228aabef911e99f21392858bf654d731b8d6cf9af45f2c47a437cf05085af",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "features": [],
+          "target": "native",
+          "profile_sha256": "29bf18fb4566aacb0a376c7b00398f7ef30b69c277cf7d01eb136c4d319d54d3",
+          "dependencies_sha256": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+          "compiler_controls_sha256": "1691980159557926245b72097cc92c3099081c2610738053707353d6887db63f"
+        },
+        "after": {
+          "binary_sha256": "bbe2bbafaddafc2d1d5a1b63de36833d51039c6855a54faa69c92053f41cf67f",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "features": [],
+          "target": "native",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+          "compiler_controls_sha256": "1691980159557926245b72097cc92c3099081c2610738053707353d6887db63f"
+        }
+      }
+    },
+    "wasm": {
+      "processes": 1152,
+      "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "runner": {
+        "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/array-physical-cleanup-df71e5a2-v1/integrated-point-raw/old-raw/cycles/wasm-results/wasmtime",
+        "sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+        "version": "wasmtime 50.0.1 (c307ec81d 2026-10-29)"
+      },
+      "harness_sha256": "b69f912152c50ca12a9d983445cc359a0ccaaec5492f7960c0d7f0bf153369d2",
+      "raw_sha256": "8029f2771a660686475d5c370a663ef99248aaad9b7c16736766b636ed97de52",
+      "binaries": {
+        "before": {
+          "binary_sha256": "30d022b6a49ad2c0d8f117e4135d05c28332e702a5ba343d39c587dd4766c05b",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "features": [],
+          "target": "wasm",
+          "profile_sha256": "29bf18fb4566aacb0a376c7b00398f7ef30b69c277cf7d01eb136c4d319d54d3",
+          "dependencies_sha256": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+          "compiler_controls_sha256": "660bda5a05f438ce70c1f96dece5f5bf6dd0850c739dc7347bfb42392a149630"
+        },
+        "after": {
+          "binary_sha256": "453d2aa012622c0c3b59d52b105b4cc1be397801d9b00dd1728482ec985c13b3",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "features": [],
+          "target": "wasm",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "b35438e0440644fe40dd9b29c60b51793d04f91aeab6ca4045212bd0a1f4b137",
+          "compiler_controls_sha256": "660bda5a05f438ce70c1f96dece5f5bf6dd0850c739dc7347bfb42392a149630"
+        }
+      }
+    }
+  }
+}

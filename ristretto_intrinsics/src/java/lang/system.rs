@@ -339,12 +339,10 @@ pub fn nano_time<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let now = SystemTime::now();
-    let duration = now
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| InternalError(error.to_string()))?;
-    let time = i64::try_from(duration.as_nanos())?;
-    Ok(Some(Value::Long(time)))
+    let time = ristretto_gc::clock::monotonic_time_ns()
+        .ok_or_else(|| InternalError("monotonic clock unavailable".to_owned()))?;
+    // Java nanoTime has an arbitrary epoch and signed wrapping subtraction.
+    Ok(Some(Value::Long(time.cast_signed())))
 }
 
 #[intrinsic_method("java/lang/System.registerNatives()V", Any)]
@@ -736,11 +734,37 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_current_time_millis_retains_wall_clock_epoch() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let before = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|error| InternalError(error.to_string()))?
+            .as_millis();
+        let actual = current_time_millis(thread, Parameters::default())?
+            .expect("currentTimeMillis result")
+            .as_i64()?;
+        let after = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|error| InternalError(error.to_string()))?
+            .as_millis();
+        let actual = u128::try_from(actual)?;
+        assert!(before <= actual && actual <= after);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_nano_time() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = nano_time(thread, Parameters::default())?;
-        let time = result.unwrap_or(Value::Long(0)).as_i64()?;
-        assert!(time > 0);
+        let before = ristretto_gc::clock::monotonic_time_ns().expect("clock available");
+        let result = nano_time(thread.clone(), Parameters::default())?;
+        let time = result.expect("nanoTime result").as_i64()?.cast_unsigned();
+        let after = ristretto_gc::clock::monotonic_time_ns().expect("clock available");
+        assert!(before <= time && time <= after);
+        let later = nano_time(thread, Parameters::default())?
+            .expect("nanoTime result")
+            .as_i64()?
+            .cast_unsigned();
+        assert!(later >= time);
         Ok(())
     }
 

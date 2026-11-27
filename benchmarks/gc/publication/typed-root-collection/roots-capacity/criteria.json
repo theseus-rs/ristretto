@@ -1,0 +1,228 @@
+{
+  "500": [
+    {
+      "workload": "roots",
+      "runtime": "ristretto-candidate-jit",
+      "points": [
+        {
+          "status": "fail",
+          "forks": [
+            {
+              "repeat": 0,
+              "completed": 30000,
+              "unfinished": 0,
+              "p999_us": 3424,
+              "peak_backlog_us": 4000.0,
+              "reasons": [
+                "response p99.9 limit"
+              ],
+              "gc_observed": true,
+              "million_samples": false
+            },
+            {
+              "repeat": 1,
+              "completed": 30000,
+              "unfinished": 0,
+              "p999_us": 2944,
+              "peak_backlog_us": 4000.0,
+              "reasons": [
+                "response p99.9 limit"
+              ],
+              "gc_observed": true,
+              "million_samples": false
+            }
+          ],
+          "rate": 500,
+          "directory": "roots-ristretto-candidate-jit-00-500",
+          "confirmation": false
+        }
+      ],
+      "confirmed": false
+    },
+    {
+      "workload": "roots",
+      "runtime": "g1",
+      "points": [
+        {
+          "status": "fail",
+          "forks": [
+            {
+              "repeat": 0,
+              "completed": 30000,
+              "unfinished": 0,
+              "p999_us": 1616,
+              "peak_backlog_us": 2000.0,
+              "reasons": [
+                "response p99.9 limit"
+              ],
+              "gc_observed": true,
+              "million_samples": false
+            },
+            {
+              "repeat": 1,
+              "completed": 30000,
+              "unfinished": 0,
+              "p999_us": 724,
+              "peak_backlog_us": 2000.0,
+              "reasons": [],
+              "gc_observed": true,
+              "million_samples": false
+            }
+          ],
+          "rate": 500,
+          "directory": "roots-g1-00-500",
+          "confirmation": false
+        }
+      ],
+      "confirmed": false
+    },
+    {
+      "workload": "roots",
+      "runtime": "zgc",
+      "points": [
+        {
+          "status": "fail",
+          "forks": [
+            {
+              "repeat": 0,
+              "completed": 30000,
+              "unfinished": 0,
+              "p999_us": 1872,
+              "peak_backlog_us": 2000.0,
+              "reasons": [
+                "response p99.9 limit"
+              ],
+              "gc_observed": true,
+              "million_samples": false
+            },
+            {
+              "repeat": 1,
+              "completed": 30000,
+              "unfinished": 0,
+              "p999_us": 2032,
+              "peak_backlog_us": 2000.0,
+              "reasons": [
+                "response p99.9 limit"
+              ],
+              "gc_observed": true,
+              "million_samples": false
+            }
+          ],
+          "rate": 500,
+          "directory": "roots-zgc-00-500",
+          "confirmation": false
+        }
+      ],
+      "confirmed": false
+    }
+  ],
+  "1000": [
+    {
+      "workload": "roots",
+      "runtime": "ristretto-candidate-jit",
+      "points": [
+        {
+          "status": "fail",
+          "forks": [
+            {
+              "repeat": 0,
+              "completed": 60000,
+              "unfinished": 0,
+              "p999_us": 1392,
+              "peak_backlog_us": 5000.0,
+              "reasons": [
+                "response p99.9 limit"
+              ],
+              "gc_observed": true,
+              "million_samples": false
+            },
+            {
+              "repeat": 1,
+              "completed": 60000,
+              "unfinished": 0,
+              "p999_us": 214,
+              "peak_backlog_us": 1000.0,
+              "reasons": [],
+              "gc_observed": true,
+              "million_samples": false
+            }
+          ],
+          "rate": 1000,
+          "directory": "roots-ristretto-candidate-jit-00-1000",
+          "confirmation": false
+        }
+      ],
+      "confirmed": false
+    },
+    {
+      "workload": "roots",
+      "runtime": "g1",
+      "points": [
+        {
+          "status": "pass",
+          "forks": [
+            {
+              "repeat": 0,
+              "completed": 60000,
+              "unfinished": 0,
+              "p999_us": 296,
+              "peak_backlog_us": 0.0,
+              "reasons": [],
+              "gc_observed": true,
+              "million_samples": false
+            },
+            {
+              "repeat": 1,
+              "completed": 60000,
+              "unfinished": 0,
+              "p999_us": 5,
+              "peak_backlog_us": 0.0,
+              "reasons": [],
+              "gc_observed": true,
+              "million_samples": false
+            }
+          ],
+          "rate": 1000,
+          "directory": "roots-g1-00-1000",
+          "confirmation": false
+        }
+      ],
+      "confirmed": false
+    },
+    {
+      "workload": "roots",
+      "runtime": "zgc",
+      "points": [
+        {
+          "status": "pass",
+          "forks": [
+            {
+              "repeat": 0,
+              "completed": 60000,
+              "unfinished": 0,
+              "p999_us": 8,
+              "peak_backlog_us": 3000.0,
+              "reasons": [],
+              "gc_observed": true,
+              "million_samples": false
+            },
+            {
+              "repeat": 1,
+              "completed": 60000,
+              "unfinished": 0,
+              "p999_us": 181,
+              "peak_backlog_us": 0.0,
+              "reasons": [],
+              "gc_observed": true,
+              "million_samples": false
+            }
+          ],
+          "rate": 1000,
+          "directory": "roots-zgc-00-1000",
+          "confirmation": false
+        }
+      ],
+      "confirmed": false
+    }
+  ]
+}

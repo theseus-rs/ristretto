@@ -1,0 +1,41 @@
+{
+  "revisions": {
+    "parent": "5ba3b2074ea8942441e41d0a54a4f3c662735a1e",
+    "test_control": "8ac949288ed7edbafb560f81df26f6aba7863d49",
+    "candidate": "5fc3a4d68abb27551ee3776a853a20784ecb44d3",
+    "pressure_cut": "f28ab91e38a04e723c32ad220ff99070b54cda8f"
+  },
+  "binary_sha256": {
+    "parent-suite": "928619949ec23e6e8a771519b34891a3c588b8662a2f0956227ba334f997f1e5",
+    "candidate-suite": "98699120143cee7cb3104ba5905d63798c0d843e881901d7ce9e7dd6925566ad",
+    "parent-cost": "5d63f4632ccde6cb3c08acce748980840f16387b3cd30090109148d3d93baff0",
+    "candidate-cost": "6843b9c95d1009eb42a47c08ded00c74ce23f79c0793a42fcbafddc8afa1d3df"
+  },
+  "benchmark_sha256": "10e36e25eb033dab59f6785da3e6f7120cb80eedd3d42b8f61a3aeb8f9058e43",
+  "cost": {
+    "cpu_affinity": [
+      4,
+      6,
+      9
+    ],
+    "process_pairs_per_condition": 24,
+    "cycles_per_fork": 16,
+    "warmup_cycles": 3,
+    "seed": 251127297,
+    "bootstrap_draws": 4096
+  },
+  "claim": {
+    "process_pairs_per_case": 100,
+    "seed": 1308,
+    "cpus": [
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ]
+  }
+}

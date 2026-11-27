@@ -215,10 +215,11 @@ pub async fn write<T: Thread + 'static>(
     let append = parameters.pop_bool()?;
     let byte = i8::from_ne_bytes([parameters.pop_int()?.to_le_bytes()[0]]);
     let file_output_stream = parameters.pop()?;
-    let bytes = Value::new_object(
+    let bytes = Value::try_new_object_async(
         thread.vm()?.garbage_collector(),
         Reference::from(vec![byte]),
-    );
+    )
+    .await?;
     let mut parameters = Parameters::default();
     parameters.push(file_output_stream);
     parameters.push(bytes);

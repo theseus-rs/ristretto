@@ -1,0 +1,7 @@
+diagnostic,runtime,fork,seconds,offered,completed,unfinished,peak_backlog,p9999_us,process_collections,process_cgroup_cpu_s,oom_kills
+diagnostic,candidate,1,30,15000,15000,0,109,217088,1125,40.924,0
+diagnostic,parent,1,30,15000,15000,0,2,4160,1038,42.428,0
+diagnostic,candidate,2,30,15000,15000,0,2,4352,1105,41.225,0
+diagnostic,parent,2,30,15000,15000,0,2,4064,1045,43.06,0
+reverse-120,parent,1,120,60000,60000,0,2,3840,1917,114.016,0
+reverse-120,candidate,1,120,60000,60000,0,2,4416,2090,107.963,0

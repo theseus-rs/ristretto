@@ -1,6 +1,6 @@
 //! Return a pending Java invocation with no generated caller left on the stack.
 use super::Continuation;
-use crate::compiler::native_frame::{word_offset, word_stack_slot};
+use crate::compiler::native_frame::word_offset;
 use crate::function::ContinuationLayout;
 use crate::function::activation::RequestKind;
 use crate::operand_stack::OperandStack;
@@ -14,8 +14,11 @@ pub(crate) struct CallContinuation<'a> {
 }
 
 impl CallContinuation<'_> {
-    #[expect(clippy::too_many_lines)]
-    pub(super) fn emit(
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "default bytecode request uses its BCI as the distinct resume site"
+    )]
+    pub fn emit(
         &self,
         builder: &mut FunctionBuilder,
         stack: &mut OperandStack,
@@ -23,8 +26,36 @@ impl CallContinuation<'_> {
         count: usize,
         bci: usize,
         request: (RequestKind, u16),
+        synchronous: impl FnOnce(&mut FunctionBuilder) -> Result<Value>,
     ) -> Result<Value> {
-        let site = bci;
+        self.emit_at(
+            builder,
+            stack,
+            arguments,
+            count,
+            bci,
+            bci,
+            request,
+            synchronous,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        clippy::too_many_lines,
+        reason = "distinct handler sites share the owning request ABI and exact restore/join"
+    )]
+    pub fn emit_at(
+        &self,
+        builder: &mut FunctionBuilder,
+        stack: &mut OperandStack,
+        arguments: StackSlot,
+        count: usize,
+        bci: usize,
+        site: usize,
+        request: (RequestKind, u16),
+        synchronous: impl FnOnce(&mut FunctionBuilder) -> Result<Value>,
+    ) -> Result<Value> {
         let state = self.state;
         let offset = self
             .continuation
@@ -47,8 +78,28 @@ impl CallContinuation<'_> {
         }
         let result = builder.declare_var(types::I64);
         let save = builder.create_block();
-        // This path has no synchronous helper import or fallback.
-        builder.ins().jump(save, &[]);
+        if self.continuation.layout.requests_only {
+            // Do not emit a fallback call, even in unreachable IR: a foreign
+            // reference runtime must never link a legacy helper or context cast.
+            builder.ins().jump(save, &[]);
+        } else {
+            let sync = builder.create_block();
+            let mode = builder.ins().load(
+                types::I64,
+                MemFlagsData::trusted(),
+                state,
+                word_offset(ContinuationLayout::ASYNC_MODE)?,
+            );
+            builder.ins().brif(mode, save, &[], sync, &[]);
+            builder.switch_to_block(sync);
+            let bits = synchronous(builder)?;
+            builder.def_var(result, bits);
+            let values = original
+                .iter()
+                .map(|value| (*value).into())
+                .collect::<Vec<_>>();
+            builder.ins().jump(join, &values);
+        }
 
         builder.switch_to_block(save);
         // Runtime requests consume the same local budget as loop/handler edges.
@@ -152,185 +203,5 @@ impl CallContinuation<'_> {
         stack.inherit_block_references(builder, join)?;
         stack.reset(builder)?;
         Ok(builder.use_var(result))
-    }
-}
-
-use ristretto_classfile::attributes::Instruction;
-use ristretto_classfile::{BaseType, Constant, ConstantPool, FieldType};
-
-const MAX_PARAMETER_SLOTS: usize = u8::MAX as usize;
-
-#[derive(Clone, Copy)]
-pub(crate) enum CallTarget {
-    Static(u16),
-    Special(u16),
-    Virtual(u16),
-    Interface(u16, u8),
-}
-impl CallTarget {
-    pub fn from_instruction(instruction: &Instruction) -> Option<Self> {
-        Some(match *instruction {
-            Instruction::Invokestatic(i) => Self::Static(i),
-            Instruction::Invokespecial(i) => Self::Special(i),
-            Instruction::Invokevirtual(i) => Self::Virtual(i),
-            Instruction::Invokeinterface(i, c) => Self::Interface(i, c),
-            _ => return None,
-        })
-    }
-
-    fn metadata(self) -> (RequestKind, u16) {
-        match self {
-            Self::Static(i) => (RequestKind::InvokeStatic, i),
-            Self::Special(i) => (RequestKind::InvokeSpecial, i),
-            Self::Virtual(i) => (RequestKind::InvokeVirtual, i),
-            Self::Interface(i, _) => (RequestKind::InvokeInterface, i),
-        }
-    }
-
-    pub fn receiver(self) -> usize {
-        usize::from(!matches!(self, Self::Static(_)))
-    }
-
-    pub fn signature(self, pool: &ConstantPool) -> Result<(Vec<FieldType>, Option<FieldType>)> {
-        let (_, index) = self.metadata();
-        let entry = pool.try_get(index)?;
-        let nt = match (self, entry) {
-            (
-                Self::Interface(..),
-                Constant::InterfaceMethodRef {
-                    name_and_type_index,
-                    ..
-                },
-            )
-            | (
-                Self::Virtual(_),
-                Constant::MethodRef {
-                    name_and_type_index,
-                    ..
-                },
-            )
-            | (
-                Self::Static(_) | Self::Special(_),
-                Constant::MethodRef {
-                    name_and_type_index,
-                    ..
-                }
-                | Constant::InterfaceMethodRef {
-                    name_and_type_index,
-                    ..
-                },
-            ) => *name_and_type_index,
-            _ => {
-                return Err(ristretto_classfile::Error::InvalidConstantPoolIndexType(index).into());
-            }
-        };
-        let (_, descriptor) = pool.try_get_name_and_type(nt)?;
-        let signature = FieldType::parse_method_descriptor(pool.try_get_utf8(*descriptor)?)?;
-        let slots = signature
-            .0
-            .iter()
-            .map(|kind| usize::from(kind.slot_count()))
-            .sum::<usize>()
-            + self.receiver();
-        if slots > MAX_PARAMETER_SLOTS {
-            return Err(crate::Error::UnsupportedMethod(
-                "compiled call exceeds the Java parameter-slot limit".to_owned(),
-            ));
-        }
-        if let Self::Interface(_, count) = self
-            && usize::from(count) != slots
-        {
-            return Err(crate::Error::UnsupportedMethod(
-                "interface call count disagrees with the Java parameter-slot count".to_owned(),
-            ));
-        }
-        Ok(signature)
-    }
-}
-
-impl CallContinuation<'_> {
-    pub fn invoke(
-        &self,
-        pool: &ConstantPool,
-        builder: &mut FunctionBuilder,
-        stack: &mut OperandStack,
-        target: CallTarget,
-        bci: usize,
-    ) -> Result<()> {
-        let (parameters, result) = target.signature(pool)?;
-        let receiver = target.receiver();
-        let count = parameters.len() + receiver;
-        let arguments = word_stack_slot(builder, count.max(1))?;
-        for (position, kind) in parameters.iter().enumerate().rev() {
-            let bits = argument_bits(builder, stack, kind)?;
-            builder.ins().stack_store(
-                types::I64,
-                bits,
-                arguments,
-                word_offset(position + receiver)?,
-            );
-        }
-        if receiver != 0 {
-            let value = stack.pop_object(builder)?;
-            builder.ins().stack_store(types::I64, value, arguments, 0);
-        }
-        let bits = self.emit(builder, stack, arguments, count, bci, target.metadata())?;
-        if let Some(kind) = result {
-            push_result(builder, stack, &kind, bits)?;
-        }
-        Ok(())
-    }
-}
-
-pub(super) fn argument_bits(
-    builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    kind: &FieldType,
-) -> Result<Value> {
-    Ok(match kind {
-        FieldType::Object(_) | FieldType::Array(_) => stack.pop_object(builder)?,
-        FieldType::Base(BaseType::Long) => stack.pop_long(builder)?,
-        FieldType::Base(BaseType::Double) => {
-            let value = stack.pop_double(builder)?;
-            builder
-                .ins()
-                .bitcast(types::I64, MemFlagsData::new(), value)
-        }
-        FieldType::Base(BaseType::Float) => {
-            let value = stack.pop_float(builder)?;
-            let bits = builder
-                .ins()
-                .bitcast(types::I32, MemFlagsData::new(), value);
-            builder.ins().uextend(types::I64, bits)
-        }
-        FieldType::Base(_) => {
-            let value = stack.pop_int(builder)?;
-            builder.ins().sextend(types::I64, value)
-        }
-    })
-}
-
-pub(super) fn push_result(
-    builder: &mut FunctionBuilder,
-    stack: &mut OperandStack,
-    kind: &FieldType,
-    bits: Value,
-) -> Result<()> {
-    match kind {
-        FieldType::Object(_) | FieldType::Array(_) => stack.push_object(builder, bits),
-        FieldType::Base(BaseType::Long) => stack.push_long(builder, bits),
-        FieldType::Base(BaseType::Double) => {
-            let value = builder.ins().bitcast(types::F64, MemFlagsData::new(), bits);
-            stack.push_double(builder, value)
-        }
-        FieldType::Base(BaseType::Float) => {
-            let bits = builder.ins().ireduce(types::I32, bits);
-            let value = builder.ins().bitcast(types::F32, MemFlagsData::new(), bits);
-            stack.push_float(builder, value)
-        }
-        FieldType::Base(_) => {
-            let value = builder.ins().ireduce(types::I32, bits);
-            stack.push_int(builder, value)
-        }
     }
 }

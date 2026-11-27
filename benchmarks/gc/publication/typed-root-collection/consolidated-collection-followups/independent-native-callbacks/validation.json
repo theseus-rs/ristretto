@@ -1,0 +1,95 @@
+{
+  "code": "29634965",
+  "native": {
+    "passed": 975,
+    "ignored": 1
+  },
+  "wasi": {
+    "passed": 448,
+    "ignored": 0
+  },
+  "release_dependency_graphs": 14,
+  "cargo_package_verified": true,
+  "loom": 2,
+  "miri": {
+    "a_full_ticket_range_rolls_over_to_a_new_bank": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "a_successor_link_becomes_dispatchable_only_after_a_job_is_published": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "racing_takers_return_each_owned_value_once_across_reuse_and_growth": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "packaged_consumers": [
+    "native reference dispatch",
+    "wasm32-wasip2 interpreter"
+  ],
+  "clippy": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "preview": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "control_uses_distinct_binary": true,
+  "review": {
+    "slot_reuse": "Consumer acquires publication before accessing the payload. The next publisher acquires slot return before reuse.",
+    "successor": "Consumers recheck old publication after observing a successor, before advancing the head.",
+    "terminal_allocation": "The originating dispatch can finish when no published job is available. Physical ownership and refund remain with the claimant.",
+    "independent_model_test_runner": "Two Loom tests passed under the read-only CLI."
+  },
+  "callback_fixture": {
+    "parent": "fc3c8f3932477ed52d904c902f5a89126fc103a74a1a6163222a25cba80cd4a0",
+    "candidate": "83a437e97fddb21a9cc9627084bb1c4a4fc2bfabe02e17dd64fa134d07084a60",
+    "source_sha256": "10e36e25eb033dab59f6785da3e6f7120cb80eedd3d42b8f61a3aeb8f9058e43"
+  }
+}

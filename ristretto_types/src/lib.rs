@@ -52,7 +52,7 @@ pub use module_access::{
 pub use native_memory::NativeMemory;
 pub use parameters::Parameters;
 pub use resource_manager::ResourceManager;
-pub use rust_value::RustValue;
+pub use rust_value::{RustValue, ValueConversion};
 use std::pin::Pin;
 pub use string_factory::StringFactory;
 pub use thread::Thread;

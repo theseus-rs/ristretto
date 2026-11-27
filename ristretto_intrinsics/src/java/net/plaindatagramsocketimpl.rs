@@ -756,10 +756,10 @@ mod tests {
     async fn implementation_lifecycle_and_option_wrappers() -> Result<()> {
         let (vm, thread) = crate::test::java17_thread().await?;
         let implementation_class = thread.class("java.net.PlainDatagramSocketImpl").await?;
-        let implementation = Value::new_object(
+        let implementation = Value::try_new_object(
             vm.garbage_collector(),
             Reference::Object(Object::new(implementation_class)?),
-        );
+        )?;
         let file_descriptor = thread.object("java.io.FileDescriptor", "", &[]).await?;
         implementation
             .as_object_mut()?

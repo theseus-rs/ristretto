@@ -1,0 +1,137 @@
+{
+  "revision": "f4cdf10f1a42f70b5a1cfcd00990f05f6a89312c",
+  "release": {
+    "native-clippy": "5e5bc511ad1752a651e25b65a86da058e359c80e39239757e4e68bc06dc6df2d",
+    "wasi-clippy": "2a525f291b9ec647665e41ddc22f6a5e3d173cce3c403faf87687d445f8465a4",
+    "package": "8a47caf988b67b0e14206a5b86adea0a417770543a4b93d4409c02003d6eac9b",
+    "consumer-native": "d9410cbd460911abefe8233828e8ea8c2be175ec8b9ffcf20d394cc01d5f023b",
+    "consumer-wasi": "6e6dbab90721b8b63fd7c4c4cc24b4fb946ca44c0f5667c28a31af8c93f4cb14",
+    "release-tests": "3c51f0a63b2deb7e5d73c7df05f30b886f723c91bed11d518ed901f3996a7395",
+    "miri-range": "5c0bf49355c01c7d65d3a95b363a17735b65cfc6efe359990f9c815b680ac09e",
+    "miri-budget": "c16c6098816467cb2db19171043fbbe6785cfb29ec655ea3ac8ed1f1de4120c0"
+  },
+  "tests": {
+    "native": {
+      "passed": 1024,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 462,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "reproducer": {
+    "native-debug": {
+      "binary_sha256": "c423b16791c3d7eabce7dc5770eabb4aaa1f973bf05444461f9bbc108ef2f659",
+      "iterations": 8192,
+      "stats": {
+        "live_objects": 12310,
+        "managed_bytes": 52808969,
+        "workers": 2,
+        "candidate": true,
+        "jit_enabled": true,
+        "collections_completed": 595
+      }
+    },
+    "native-release": {
+      "binary_sha256": "7142a915a2e4826c5793e75b9656ba651ba664c17ed8d43bd5f7e9037a97ecfe",
+      "iterations": 8192,
+      "stats": {
+        "live_objects": 12233,
+        "managed_bytes": 62663369,
+        "workers": 2,
+        "candidate": true,
+        "jit_enabled": true,
+        "collections_completed": 821
+      }
+    },
+    "wasi-debug": {
+      "binary_sha256": "48e8e3c1b0a2d33d6498f797f03e05d089c3c8cb520f790d73d1a77d7f6d8d88",
+      "iterations": 8192,
+      "stats": {
+        "live_objects": 12750,
+        "managed_bytes": 57933233,
+        "workers": 0,
+        "candidate": true,
+        "jit_enabled": false,
+        "collections_completed": 30
+      }
+    },
+    "class_sha256": "fa79b8b9a2d6621df701be321cd6a40976b16ad616aff0a324478c19e9cda1d8"
+  },
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "audit": {
+    "attempts": [
+      {
+        "attempt": "audit-gemini-4-carbon-high",
+        "status": "SUCCESS",
+        "error": null,
+        "response_sha256": "b3eb1a1ca9a30c9a876ce53aa587c4d7707c9aaafb12eea7127769b0af55cbb8"
+      },
+      {
+        "attempt": "audit-gemini-4-carbon-xhigh",
+        "status": "ERROR",
+        "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)",
+        "response_sha256": null
+      }
+    ]
+  },
+  "workspace_graphs": 14,
+  "two_minute": {
+    "g1": {
+      "status": "ok",
+      "exit_code": 0,
+      "completed": 12000,
+      "unfinished": 0,
+      "p999_us": 30
+    },
+    "ristretto-candidate-jit": {
+      "status": "ok",
+      "exit_code": 0,
+      "completed": 12000,
+      "unfinished": 0,
+      "p999_us": 2368
+    },
+    "zgc": {
+      "status": "ok",
+      "exit_code": 0,
+      "completed": 12000,
+      "unfinished": 0,
+      "p999_us": 32
+    },
+    "overlap": "Concurrent three-fork functional screen on different CPU affinities; these rows establish workload completion only."
+  }
+}

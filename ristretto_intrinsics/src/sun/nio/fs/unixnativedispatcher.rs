@@ -1656,10 +1656,11 @@ pub async fn getcwd<T: Thread + 'static>(
     #[cfg(not(target_family = "unix"))]
     let current_dir_bytes = current_dir_owned.as_slice();
     let current_dir: &[i8] = zerocopy::transmute_ref!(current_dir_bytes);
-    let current_dir_bytes = Value::new_object(
+    let current_dir_bytes = Value::try_new_object_async(
         thread.vm()?.garbage_collector(),
         Reference::from(current_dir.to_vec()),
-    );
+    )
+    .await?;
     Ok(Some(current_dir_bytes))
 }
 
@@ -1680,10 +1681,10 @@ pub async fn getgrgid<T: Thread + 'static>(
         };
         let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes.as_slice());
         let vm = thread.vm()?;
-        Ok(Some(Value::new_object(
-            vm.garbage_collector(),
-            Reference::from(name_i8.to_vec()),
-        )))
+        Ok(Some(
+            Value::try_new_object_async(vm.garbage_collector(), Reference::from(name_i8.to_vec()))
+                .await?,
+        ))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1820,10 +1821,10 @@ pub async fn getpwuid<T: Thread + 'static>(
         };
         let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes.as_slice());
         let vm = thread.vm()?;
-        Ok(Some(Value::new_object(
-            vm.garbage_collector(),
-            Reference::from(name_i8.to_vec()),
-        )))
+        Ok(Some(
+            Value::try_new_object_async(vm.garbage_collector(), Reference::from(name_i8.to_vec()))
+                .await?,
+        ))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -2313,10 +2314,13 @@ pub async fn readdir_0<T: Thread + 'static>(
         Some(Ok(entry)) => {
             let name = entry.file_name();
             let bytes: &[i8] = zerocopy::transmute_ref!(name.as_encoded_bytes());
-            Ok(Some(Value::new_object(
-                vm.garbage_collector(),
-                Reference::from(bytes.to_vec()),
-            )))
+            Ok(Some(
+                Value::try_new_object_async(
+                    vm.garbage_collector(),
+                    Reference::from(bytes.to_vec()),
+                )
+                .await?,
+            ))
         }
     }
 }
@@ -2488,10 +2492,10 @@ pub async fn readdir_0<T: Thread + 'static>(
             return Ok(Some(Value::Object(None)));
         };
         let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes.as_slice());
-        Ok(Some(Value::new_object(
-            vm.garbage_collector(),
-            Reference::from(name_i8.to_vec()),
-        )))
+        Ok(Some(
+            Value::try_new_object_async(vm.garbage_collector(), Reference::from(name_i8.to_vec()))
+                .await?,
+        ))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -2525,10 +2529,10 @@ pub async fn readlink_0<T: Thread + 'static>(
 
     let target_bytes = target.as_os_str().as_encoded_bytes().to_vec();
     let target_i8: &[i8] = zerocopy::transmute_ref!(target_bytes.as_slice());
-    Ok(Some(Value::new_object(
-        vm.garbage_collector(),
-        Reference::from(target_i8.to_vec()),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), Reference::from(target_i8.to_vec()))
+            .await?,
+    ))
 }
 
 #[cfg(any(target_family = "unix", target_os = "wasi"))]
@@ -2555,10 +2559,13 @@ pub async fn realpath_0<T: Thread + 'static>(
 
     let canonical_bytes = canonical.as_os_str().as_encoded_bytes().to_vec();
     let canonical_i8: &[i8] = zerocopy::transmute_ref!(canonical_bytes.as_slice());
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        Reference::from(canonical_i8.to_vec()),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(
+            thread.vm()?.garbage_collector(),
+            Reference::from(canonical_i8.to_vec()),
+        )
+        .await?,
+    ))
 }
 
 #[cfg(target_family = "unix")]
@@ -2840,7 +2847,7 @@ pub async fn statvfs_0<T: Thread + 'static>(
 
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.strerror(I)[B", Any)]
-pub fn strerror<T: Thread + 'static>(
+pub async fn strerror<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2864,10 +2871,9 @@ pub fn strerror<T: Thread + 'static>(
         .to_string()
         .into_bytes();
     let vm = thread.vm()?;
-    Ok(Some(Value::new_object(
-        vm.garbage_collector(),
-        Reference::from(msg_bytes),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), Reference::from(msg_bytes)).await?,
+    ))
 }
 
 #[cfg(target_family = "unix")]
@@ -4216,7 +4222,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::new(vec![]);
         parameters.push_int(2); // ENOENT
-        let result = strerror(thread, parameters)?;
+        let result = strerror(thread, parameters).await?;
         let bytes = result.expect("strerror result");
         let bytes = bytes.as_byte_vec_ref()?;
         let bytes: &[u8] = transmute_ref!(&*bytes);

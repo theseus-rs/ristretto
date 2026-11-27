@@ -42,11 +42,11 @@ fn load_library(candidates: &[&str], required_symbols: &[&[u8]]) -> Option<liblo
     None
 }
 
-fn byte_array<T: Thread>(thread: &Arc<T>, bytes: Vec<u8>) -> Result<Value> {
-    Ok(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        Reference::from(bytes),
-    ))
+async fn byte_array<T: Thread>(thread: &Arc<T>, bytes: Vec<u8>) -> Result<Value> {
+    Ok(
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), Reference::from(bytes))
+            .await?,
+    )
 }
 
 #[intrinsic_method("sun/nio/fs/GnomeFileTypeDetector.initializeGio()Z", Equal(JAVA_8))]
@@ -114,7 +114,7 @@ pub fn initialize_gnome_vfs<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/GnomeFileTypeDetector.probeUsingGio(J)[B", Equal(JAVA_8))]
-pub fn probe_using_gio<T: Thread + 'static>(
+pub async fn probe_using_gio<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -180,7 +180,7 @@ pub fn probe_using_gio<T: Thread + 'static>(
         }
     };
     match mime {
-        Some(mime) => Ok(Some(byte_array(&thread, mime)?)),
+        Some(mime) => Ok(Some(byte_array(&thread, mime).await?)),
         None => Ok(Some(Value::Object(None))),
     }
 }
@@ -189,7 +189,7 @@ pub fn probe_using_gio<T: Thread + 'static>(
     "sun/nio/fs/GnomeFileTypeDetector.probeUsingGnomeVfs(J)[B",
     Equal(JAVA_8)
 )]
-pub fn probe_using_gnome_vfs<T: Thread + 'static>(
+pub async fn probe_using_gnome_vfs<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -222,7 +222,7 @@ pub fn probe_using_gnome_vfs<T: Thread + 'static>(
         }
     };
     match mime {
-        Some(mime) => Ok(Some(byte_array(&thread, mime)?)),
+        Some(mime) => Ok(Some(byte_array(&thread, mime).await?)),
         None => Ok(Some(Value::Object(None))),
     }
 }
@@ -251,7 +251,9 @@ mod tests {
     #[tokio::test]
     async fn test_probe_using_gio() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = probe_using_gio(thread, Parameters::new(vec![Value::Long(0)])).expect("probe");
+        let result = probe_using_gio(thread, Parameters::new(vec![Value::Long(0)]))
+            .await
+            .expect("probe");
         assert_eq!(result, Some(Value::Object(None)));
     }
 
@@ -259,8 +261,9 @@ mod tests {
     #[tokio::test]
     async fn test_probe_using_gnome_vfs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            probe_using_gnome_vfs(thread, Parameters::new(vec![Value::Long(0)])).expect("probe");
+        let result = probe_using_gnome_vfs(thread, Parameters::new(vec![Value::Long(0)]))
+            .await
+            .expect("probe");
         assert_eq!(result, Some(Value::Object(None)));
     }
 }

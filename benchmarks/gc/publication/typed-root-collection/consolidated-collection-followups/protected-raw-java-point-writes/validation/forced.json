@@ -1,0 +1,12 @@
+{
+  "revision": "f97f8a99b77601eb060037d49debdf648195321f",
+  "binary": "3641e33391b01654f927844edb7e07b68195e168785442ef9ce22fe6e63d6ec1",
+  "cases": 640,
+  "processes": 160,
+  "tests": {
+    "fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended": 4,
+    "fresh_full_and_capped_allocation_finish_while_dirty_owner_flusher_is_suspended": 4,
+    "a_paused_traced_edge_offer_allows_peer_allocation_and_two_full_cycles": 4,
+    "raw_explicit_barrier_queues_the_protected_child_identity": 4
+  }
+}

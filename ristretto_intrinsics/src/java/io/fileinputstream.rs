@@ -313,10 +313,11 @@ pub async fn read_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file_input_stream = parameters.pop()?;
-    let bytes = Value::new_object(
+    let bytes = Value::try_new_object_async(
         thread.vm()?.garbage_collector(),
         Reference::from(vec![0i8; 1]),
-    );
+    )
+    .await?;
     let mut parameters = Parameters::default();
     parameters.push(file_input_stream);
     parameters.push(bytes.clone());

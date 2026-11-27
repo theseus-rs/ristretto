@@ -4,7 +4,7 @@ use crate::field::FieldKey;
 use crate::{Class, Field, Reference, Result, Value};
 use ahash::AHashSet;
 use ristretto_classfile::JAVA_8;
-use ristretto_gc::{GarbageCollector, Trace};
+use ristretto_gc::{GarbageCollector, GcWeak, ReferenceKind, Trace};
 use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -58,10 +58,30 @@ pub struct Object {
     /// Field values for all instance fields in the class hierarchy.
     /// Fields are stored in order: root class fields first, then subclass fields.
     /// Initially set to default zero values; actual initialization happens in constructors.
-    values: Box<[Value]>,
+    values: crate::ArrayElements,
+    reference: Option<ReferenceState>,
+}
+
+#[derive(Clone)]
+struct ReferenceState {
+    slot: usize,
+    kind: ReferenceKind,
+    owner: usize,
+    link: Option<GcWeak<ristretto_gc::sync::RwLock<Reference>>>,
 }
 
 impl Object {
+    /// Copies instance fields without invoking the infallible backing allocator.
+    /// # Errors
+    /// Returns an allocation error when the field storage cannot be copied.
+    pub fn try_clone(&self) -> Result<Self> {
+        Ok(Self {
+            class: self.class.clone(),
+            values: self.values.try_clone()?,
+            reference: self.reference.clone(),
+        })
+    }
+
     /// Create a new object with the given class.
     ///
     /// This performs the **allocation phase** of object creation:
@@ -92,14 +112,96 @@ impl Object {
     ///
     /// if the fields of the class cannot be read.
     pub fn new(class: Arc<Class>) -> Result<Self> {
+        Self::new_with_collector(class, None)
+    }
+
+    /// Initializes fields directly in the collector's selected payload storage.
+    /// # Errors
+    /// Returns an error if field metadata or backing storage is unavailable.
+    pub fn new_in(collector: &GarbageCollector, class: Arc<Class>) -> Result<Self> {
+        Self::new_with_collector(class, Some(collector))
+    }
+
+    /// Initializes fields directly, awaiting recovery and yielding during large initialization.
+    /// # Errors
+    /// Returns an error if field metadata, the heap budget, or backing storage is unavailable.
+    pub async fn new_in_async(collector: &GarbageCollector, class: Arc<Class>) -> Result<Self> {
+        let fields = class.object_field_layout()?;
+        collector
+            .make_room_async(Self::field_allocation_size(fields.len())?)
+            .await?;
+        let mut initialize = fields.iter();
+        let values =
+            ristretto_gc::HeapBuffer::try_with_fn_in_async(collector, fields.len(), |_| {
+                initialize
+                    .next()
+                    .map(|field| field.default_value())
+                    .ok_or(ristretto_gc::Error::OutOfMemory)
+            })
+            .await?;
+        let reference = Self::reference_state(&class, &fields)?;
+        drop(fields);
+        Ok(Self {
+            class,
+            values: crate::ArrayElements::from_default_fields(values),
+            reference,
+        })
+    }
+
+    fn field_allocation_size(length: usize) -> ristretto_gc::Result<usize> {
+        let bytes = length
+            .checked_mul(size_of::<Value>())
+            .ok_or(ristretto_gc::Error::OutOfMemory)?;
+        ristretto_gc::Gc::<ristretto_gc::sync::RwLock<Reference>>::allocation_size_with_external(
+            bytes,
+        )
+    }
+
+    fn new_with_collector(class: Arc<Class>, collector: Option<&GarbageCollector>) -> Result<Self> {
         let object_fields = class.object_field_layout()?;
-        let values = object_fields
-            .iter()
-            .map(|field| field.default_value())
-            .collect::<Vec<_>>()
-            .into_boxed_slice();
+        if let Some(gc) = collector {
+            let bytes = Self::field_allocation_size(object_fields.len())?;
+            if !ristretto_gc::cell::has_guards() {
+                gc.make_room(bytes)?;
+            }
+        }
+        let mut fields = object_fields.iter();
+        let initialize = |_| {
+            fields
+                .next()
+                .map(|field| field.default_value())
+                .ok_or(ristretto_gc::Error::OutOfMemory)
+        };
+        let values = match collector {
+            Some(gc) => {
+                ristretto_gc::HeapBuffer::try_with_fn_in(gc, object_fields.len(), initialize)?
+            }
+            None => ristretto_gc::HeapBuffer::try_with_fn(None, object_fields.len(), initialize)?,
+        };
+        let reference = Self::reference_state(&class, &object_fields)?;
         drop(object_fields);
-        Ok(Self { class, values })
+        Ok(Self {
+            class,
+            values: crate::ArrayElements::from_default_fields(values),
+            reference,
+        })
+    }
+
+    fn reference_state(
+        class: &Arc<Class>,
+        object_fields: &[Arc<Field>],
+    ) -> Result<Option<ReferenceState>> {
+        let Some(kind) = class.reference_kind()? else {
+            return Ok(None);
+        };
+        Ok(class
+            .conditional_referent_slot(object_fields)?
+            .map(|slot| ReferenceState {
+                slot,
+                kind,
+                owner: 0,
+                link: None,
+            }))
     }
 
     /// Read an already resolved instance slot without rebuilding or searching the layout.
@@ -107,9 +209,47 @@ impl Object {
     /// # Errors
     /// Returns an error if the slot is outside this object.
     pub fn value_at_slot(&self, slot: usize) -> Result<Value> {
+        if let Some(reference) = &self.reference
+            && reference.slot == slot
+        {
+            return Ok(Value::Object(
+                reference.link.as_ref().and_then(GcWeak::upgrade),
+            ));
+        }
         self.values.get(slot).cloned().ok_or_else(|| FieldNotFound {
             class_name: self.class.name().to_owned(),
             field_name: slot.to_string(),
+        })
+    }
+
+    /// Tests Java referent identity without reading the referent into an owning handle.
+    ///
+    /// # Errors
+    /// Returns an error if the reference class has no resolved referent field.
+    pub fn referent_refers_to(&self, target: &Value) -> Result<bool> {
+        let slot = self
+            .class
+            .java_reference_field_slot(crate::JavaReferenceField::Referent)?;
+        if let Some(state) = &self.reference
+            && state.slot == slot
+        {
+            return Ok(match target {
+                Value::Object(Some(object)) => state
+                    .link
+                    .as_ref()
+                    .is_some_and(|link| link.refers_to(object)),
+                Value::Object(None) => state.link.as_ref().is_none_or(GcWeak::is_cleared),
+                _ => false,
+            });
+        }
+        let field = self.values.get(slot).ok_or_else(|| FieldNotFound {
+            class_name: self.class.name().to_owned(),
+            field_name: slot.to_string(),
+        })?;
+        Ok(match (field, target) {
+            (Value::Object(Some(a)), Value::Object(Some(b))) => a.ptr_eq(b),
+            (Value::Object(None), Value::Object(None)) => true,
+            _ => false,
         })
     }
 
@@ -119,11 +259,29 @@ impl Object {
     /// # Errors
     /// Returns an error if the slot is outside this object.
     pub fn set_value_at_slot(&mut self, slot: usize, value: Value) -> Result<()> {
-        let destination = self.values.get_mut(slot).ok_or_else(|| FieldNotFound {
+        if let Some(reference) = &mut self.reference
+            && reference.slot == slot
+        {
+            if let Some(previous) = reference.link.take() {
+                previous.clear();
+            }
+            reference.link = match value {
+                Value::Object(Some(target)) => {
+                    Some(GcWeak::new(&target, reference.kind, reference.owner))
+                }
+                Value::Object(None) => None,
+                _ => {
+                    return Err(InvalidValueType(
+                        "reference referent must be an object".into(),
+                    ));
+                }
+            };
+            return Ok(());
+        }
+        self.values.set(slot, value).map_err(|_| FieldNotFound {
             class_name: self.class.name().to_owned(),
             field_name: slot.to_string(),
         })?;
-        *destination = value;
         Ok(())
     }
 
@@ -264,8 +422,8 @@ impl Object {
     ///
     /// if the field cannot be found.
     pub fn value_in_class<K: FieldKey>(&self, class: &Class, key: K) -> Result<Value> {
-        let (_index, _field, value) = self.field_value(class, key)?;
-        Ok(value.clone())
+        let (index, _field, _value) = self.field_value(class, key)?;
+        self.value_at_slot(index)
     }
 
     /// Get value for a field.
@@ -290,15 +448,7 @@ impl Object {
     ) -> Result<()> {
         let (index, field, _value) = self.field_value(class, key)?;
         field.check_value(&value)?;
-        if let Some(element) = self.values.get_mut(index) {
-            *element = value;
-            Ok(())
-        } else {
-            Err(FieldNotFound {
-                class_name: class.name().to_string(),
-                field_name: key.to_string(),
-            })
-        }
+        self.set_value_at_slot(index, value)
     }
 
     /// Sets value for field.
@@ -318,16 +468,7 @@ impl Object {
     /// if the field cannot be found.
     pub fn set_value_unchecked<S: FieldKey>(&mut self, key: S, value: Value) -> Result<()> {
         let (index, _field, _value) = self.field_value(&self.class, key)?;
-        if let Some(element) = self.values.get_mut(index) {
-            *element = value;
-            Ok(())
-        } else {
-            let class = self.class();
-            Err(FieldNotFound {
-                class_name: class.name().to_string(),
-                field_name: key.to_string(),
-            })
-        }
+        self.set_value_at_slot(index, value)
     }
 
     /// Check if the object is an instance of the given class and return the "value".
@@ -742,13 +883,86 @@ impl Hash for Object {
     }
 }
 
-impl Trace for Object {
+// SAFETY: strong instance fields are traced and regain ownership before movement;
+// conditional links retain their reference policy and bind to the actual owner.
+#[expect(unsafe_code, reason = "audited instance-field ownership and tracing")]
+unsafe impl Trace for Object {
+    fn trace_work(&self) -> usize {
+        self.values.len().max(1)
+    }
+    fn prepare(&mut self, heap: &ristretto_gc::region::RegionHeap) -> ristretto_gc::Result<()> {
+        self.values.prepare(heap)
+    }
+    fn prepare_step(
+        &mut self,
+        heap: &ristretto_gc::region::RegionHeap,
+        bytes: usize,
+    ) -> ristretto_gc::Result<ristretto_gc::TraceProgress> {
+        self.values.prepare_step(heap, bytes)
+    }
+    fn relocation_region(&self, heap: &ristretto_gc::region::RegionHeap) -> Option<u64> {
+        self.values.relocation_region(heap)
+    }
+    fn compact_step(
+        &mut self,
+        heap: &ristretto_gc::region::RegionHeap,
+        bytes: usize,
+    ) -> ristretto_gc::TraceProgress {
+        self.values.compact_step(heap, bytes)
+    }
+
+    fn clear_step(&mut self, offset: usize, budget: usize) -> ristretto_gc::TraceProgress {
+        self.values.clear_step(offset, budget)
+    }
+    fn heap_owner(&self) -> Option<Arc<dyn ristretto_gc::HeapOwner>> {
+        Some(self.class.clone())
+    }
+    unsafe fn attach(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+        // SAFETY: construction protection covers the object's initialized fields.
+        unsafe { self.values.attach(owner) };
+        let address = owner.address();
+        if let Some(reference) = &mut self.reference {
+            reference.owner = address;
+            if let Some(link) = &reference.link {
+                link.set_owner(address);
+            }
+        }
+    }
+
     fn trace(&self, collector: &GarbageCollector) {
         for value in &self.values {
             if let Value::Object(Some(reference)) = value {
                 reference.trace(collector);
             }
         }
+    }
+
+    fn trace_step(
+        &self,
+        collector: &GarbageCollector,
+        offset: usize,
+        budget: usize,
+    ) -> ristretto_gc::TraceProgress {
+        self.values.trace_step(collector, offset, budget)
+    }
+
+    fn external_size(&self) -> usize {
+        self.values.len() * size_of::<Value>()
+    }
+
+    unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+        // SAFETY: exclusive managed mutation protects the fields during rebinding.
+        let rebound = unsafe { self.values.unroot(owner) };
+        if rebound && let Some(reference) = &mut self.reference {
+            reference.owner = owner.address();
+            if let Some(link) = &reference.link {
+                link.set_owner(owner.address());
+            }
+        }
+    }
+
+    fn root(&mut self) {
+        self.values.root();
     }
 }
 
@@ -789,11 +1003,50 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn field_preflight_matches_the_published_charge() -> Result<()> {
+        let class = load_class("java.lang.Integer").await?;
+        let reference = Reference::Object(Object::new(class.clone())?);
+        let charge =
+            ristretto_gc::Gc::allocation_size(&ristretto_gc::sync::RwLock::new(reference))?;
+        let gc = GarbageCollector::with_config(
+            ristretto_gc::Configuration::builder()
+                .max_heap_bytes(charge)
+                .build(),
+        );
+        let object = Object::new_in_async(&gc, class).await?;
+        let value = Value::try_new_object_async(&gc, Reference::Object(object)).await?;
+        assert_eq!(gc.managed_bytes(), charge);
+        drop(value);
+        gc.collect_full_async().await?;
+        assert_eq!(gc.managed_bytes(), 0);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_new() -> Result<()> {
         let class = string_class().await?;
         let object = Object::new(class)?;
         let object_class = object.class();
         assert_eq!("java/lang/String", object_class.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_new_in_initializes_fields_without_staging() -> Result<()> {
+        let gc = GarbageCollector::with_config(
+            ristretto_gc::Configuration::builder()
+                .compact_heap(true)
+                .build(),
+        );
+        let object = Object::new_in(&gc, load_class("java.lang.Integer").await?)?;
+        assert_eq!(object.value("value")?, Value::Int(0));
+        let value = Value::try_new_object(&gc, Reference::Object(object))?;
+        let heap = gc.region_heap().expect("region heap");
+        assert!(heap.statistics().occupied_bytes > 0);
+        assert_eq!(heap.statistics().bytes_staged, 0);
+        drop(value);
+        gc.collect_full()?;
+        assert_eq!(heap.statistics().occupied_bytes, 0);
         Ok(())
     }
 

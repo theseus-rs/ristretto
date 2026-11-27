@@ -531,7 +531,7 @@ mod tests {
     fn byte_array<V: VM + ?Sized>(vm: &V, bytes: &[i8]) -> Value {
         Value::new_object(
             vm.garbage_collector(),
-            Reference::ByteArray(bytes.to_vec().into_boxed_slice()),
+            Reference::ByteArray(bytes.to_vec().into()),
         )
     }
 

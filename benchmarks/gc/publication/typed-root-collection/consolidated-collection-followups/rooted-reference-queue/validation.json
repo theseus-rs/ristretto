@@ -1,0 +1,109 @@
+{
+  "source": "e0f2b29c1bec6ddcc0500b3910d400e3042f1d40",
+  "schedules": {
+    "test": "collector::reference_tests::parked_pending_notice_allows_allocation_full_collection_and_exact_transfer",
+    "control_processes": 10,
+    "candidate_processes": 100,
+    "configurations_per_process": 16,
+    "control_tests_patch_sha256": "a0cd2b54f1409bd9b5a7e5145198268aa201c7899608aafeb996bf3a5c67486b",
+    "binaries": {
+      "candidate": "66d264c52391bd1fb41fe36499cb5ee0e797ac9c675cb31b890d01754b76dba6",
+      "control": "bd91c41929a3c60816beb51df15191030cf3502a612494b4774c60a798ee673f"
+    },
+    "control_source": "444e57b300983fc0bf8566ca3f78aab27b396b61",
+    "observations": [
+      "headroom allocation",
+      "new full ticket within 2048 polls",
+      "handler woken"
+    ]
+  },
+  "tests": {
+    "native": {
+      "passed": 983,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 449,
+      "failed": 0,
+      "ignored": 0
+    },
+    "native_java_references": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    },
+    "miri_parked_producer": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "checks": {
+    "clippy-native": "72eee917c5acd14688efeb0b56800aae1a4c096d801604f252321c66a4541ef3",
+    "clippy-wasi": "c890b610c7b46abcec16d0a600a2d25efd56d40e1a2f3edf1ac7c05185f49b12",
+    "package": "dcc62603c470664d4820dcf6071598e120da1fe1b637263364e0bfee28c771d7",
+    "consumer-native": "e13df32f96bcdfb594769458428f7dc20b11e94ed9bc42b2fa9af1a759361545",
+    "consumer-wasi": "9ced36c6dc635096d75df4b07244ca8dceb42076c96baebd0912c74de690332a",
+    "playground": "49fb7eb7d5cbf18df6f52ed360ae31a27400713f7a5862e489f3640a2a0e1594"
+  },
+  "java": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "shipping_cargo_graphs": 14,
+  "review": {
+    "carbon": {
+      "model": "gemini-4-carbon",
+      "effort": "high",
+      "response_sha256": "7b8f8b1cfdfbfdd0b055af8954ac00cd93d688115e2756ac1e553a4003ccd3ed"
+    },
+    "neon": {
+      "model": "gemini-4-neon",
+      "effort": "high",
+      "response_sha256": "c6462c481395a60ee9e07b39e6564e2a8f605893dafa57b82850b5d376d9a790"
+    }
+  },
+  "browser": {
+    "trial_count": 9,
+    "frozen_module_sha256": "d773f4568d42c7c9c067462daadf5bc1b16a984ff2bb2a170e4f59487c193047",
+    "source_archive_sha256": "13ac4bae95bb606f01d7444f13abfdc8211b7f08ab6bbca47c256430fa0484f1",
+    "offered_per_fork": 4000,
+    "unfinished_per_fork": [
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ]
+  }
+}

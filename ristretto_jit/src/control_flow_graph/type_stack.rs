@@ -4,7 +4,32 @@ use cranelift::prelude::{Type, types};
 
 const POINTER_SIZE: i32 = 8;
 
-use crate::local_type::StackType;
+/// Java reference/category information must survive lowering to machine types.
+/// A reference and a long both use I64 registers, but occupy different JVM categories.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum StackType {
+    Primitive(Type),
+    Reference,
+}
+
+impl StackType {
+    pub(crate) fn machine_type(self) -> Type {
+        match self {
+            Self::Primitive(value) => value,
+            Self::Reference => types::I64,
+        }
+    }
+
+    pub(crate) fn is_category_two(self) -> bool {
+        matches!(self, Self::Primitive(value) if value == types::I64 || value == types::F64)
+    }
+}
+
+impl From<Type> for StackType {
+    fn from(value: Type) -> Self {
+        Self::Primitive(value)
+    }
+}
 
 // Primitive fixture assertions retain their machine-type spelling; references
 // deliberately do not compare equal to I64.

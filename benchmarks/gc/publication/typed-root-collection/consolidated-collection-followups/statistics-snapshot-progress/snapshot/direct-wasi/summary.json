@@ -1,0 +1,62 @@
+{
+  "results": [
+    {
+      "shape": "mixed",
+      "policy": "gated",
+      "workers": 0,
+      "diagnostics": false,
+      "before_ns": 50.932341269841274,
+      "after_ns": 49.55763888888889,
+      "after_before": {
+        "median": 0.9735166017329359,
+        "low": 0.9676602183712781,
+        "high": 0.9832232989660694,
+        "pairs": 64
+      }
+    },
+    {
+      "shape": "mixed",
+      "policy": "gated",
+      "workers": 0,
+      "diagnostics": true,
+      "before_ns": 53.131112637362634,
+      "after_ns": 51.87570207570208,
+      "after_before": {
+        "median": 0.9753135202080867,
+        "low": 0.96898606733125,
+        "high": 0.9850174251371188,
+        "pairs": 64
+      }
+    },
+    {
+      "shape": "mixed",
+      "policy": "counted",
+      "workers": 0,
+      "diagnostics": false,
+      "before_ns": 50.81746794871795,
+      "after_ns": 49.42515262515262,
+      "after_before": {
+        "median": 0.969657960126286,
+        "low": 0.962932490480912,
+        "high": 0.9779838554221836,
+        "pairs": 64
+      }
+    },
+    {
+      "shape": "mixed",
+      "policy": "counted",
+      "workers": 0,
+      "diagnostics": true,
+      "before_ns": 52.764331501831506,
+      "after_ns": 51.44040750915751,
+      "after_before": {
+        "median": 0.9789429850894379,
+        "low": 0.9703647903289454,
+        "high": 0.9876597153011554,
+        "pairs": 64
+      }
+    }
+  ],
+  "inputs_unchanged": true,
+  "qualification": false
+}

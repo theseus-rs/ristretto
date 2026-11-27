@@ -11,6 +11,23 @@ pub struct ThreadHandle<T: Send + Sync> {
     /// The join handle for the thread, if it exists.
     #[cfg(not(target_family = "wasm"))]
     pub join_handle: Option<JoinHandle<()>>,
+    /// Cancels a cooperatively scheduled wasm task during VM shutdown.
+    #[cfg(target_family = "wasm")]
+    pub abort_handle: Option<futures_util::future::AbortHandle>,
+}
+
+impl<T: Send + Sync> ThreadHandle<T> {
+    /// Requests task cancellation without invalidating its owning GC handles.
+    pub fn abort(&self) {
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(handle) = &self.join_handle {
+            handle.abort();
+        }
+        #[cfg(target_family = "wasm")]
+        if let Some(handle) = &self.abort_handle {
+            handle.abort();
+        }
+    }
 }
 
 impl<T: Send + Sync> From<Arc<T>> for ThreadHandle<T> {
@@ -20,6 +37,8 @@ impl<T: Send + Sync> From<Arc<T>> for ThreadHandle<T> {
             daemon: false,
             #[cfg(not(target_family = "wasm"))]
             join_handle: None,
+            #[cfg(target_family = "wasm")]
+            abort_handle: None,
         }
     }
 }

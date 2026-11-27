@@ -1,0 +1,79 @@
+{
+  "source": "ab7a3000dc4183fee096bb4547fe2806d2a02fa2",
+  "base": "c02357cab38f326956f6b44e43e5e1f701bd4ed8",
+  "tests": {
+    "native": {
+      "passed": 1828,
+      "failed": 0,
+      "ignored": 15
+    },
+    "wasi": {
+      "passed": 1233,
+      "failed": 0,
+      "ignored": 9
+    }
+  },
+  "queue_loom_models": 8,
+  "miri": "consumed_record_cannot_be_republished_and_retains_no_history",
+  "release_tests": 12,
+  "workspace_graphs": 18,
+  "cargo_package": "ristretto_gc",
+  "normalized_consumer_targets": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "java_previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "ordinary_java_8192": {
+    "native": {
+      "live_objects": 12227,
+      "managed_bytes": 66473733,
+      "workers": 2,
+      "candidate": true,
+      "jit_enabled": true,
+      "collections_completed": 858
+    },
+    "wasi": {
+      "live_objects": 12745,
+      "managed_bytes": 57440760,
+      "workers": 0,
+      "candidate": true,
+      "jit_enabled": false,
+      "collections_completed": 30
+    }
+  },
+  "strict_clippy": [
+    "native",
+    "wasm32-wasip2"
+  ]
+}

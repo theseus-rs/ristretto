@@ -1,0 +1,28 @@
+{
+  "source": "df71e5a2",
+  "binary_sha256": "c4643ccc545feced0a001620399dc1771250cd23f199fbeaed6b8875da4e1dbb",
+  "classes": {
+    "GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "GcBench.class": "43bb33e4d45bd8255bef94901703b0b52e3a6db399f84f0d282e3084839e620c"
+  },
+  "java_home": "Corretto 25.0.5",
+  "cores": [
+    8,
+    10
+  ],
+  "quota": 2,
+  "rss_mib": 512,
+  "heap_mib": 64,
+  "workers": 2,
+  "warmup_s": 5,
+  "measure_s": 10,
+  "scheduled_rate": 500,
+  "seeds": [
+    26112701,
+    26112702
+  ],
+  "raw_sha256": "c7a035ce5e932736853bb6a747b04741900a58e9923ef1f679f314281c2a59f4"
+}

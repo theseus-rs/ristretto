@@ -128,38 +128,40 @@ pub fn free_entry<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getCommentBytes(J)[B", LessThanOrEqual(JAVA_8))]
-pub fn get_comment_bytes<T: Thread + 'static>(
+pub async fn get_comment_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
 
     let state = get_zip_file_state(&thread)?;
-    let zip_guard = state.zip_handles.read();
-    let Some(context) = zip_guard.get(&handle) else {
-        return Err(ristretto_types::JavaError::RuntimeException(
-            "ZipFile has been closed".to_string(),
-        )
-        .into());
+    let comment_bytes: Vec<i8> = {
+        let zip_guard = state.zip_handles.read();
+        let Some(context) = zip_guard.get(&handle) else {
+            return Err(ristretto_types::JavaError::RuntimeException(
+                "ZipFile has been closed".to_string(),
+            )
+            .into());
+        };
+
+        if context.comment.is_empty() {
+            return Ok(Some(Value::Object(None)));
+        }
+
+        context
+            .comment
+            .iter()
+            .map(|&b| {
+                #[expect(clippy::cast_possible_wrap)]
+                let v = b as i8;
+                v
+            })
+            .collect()
     };
-
-    if context.comment.is_empty() {
-        return Ok(Some(Value::Object(None)));
-    }
-
-    let comment_bytes: Vec<i8> = context
-        .comment
-        .iter()
-        .map(|&b| {
-            #[expect(clippy::cast_possible_wrap)]
-            let v = b as i8;
-            v
-        })
-        .collect();
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
     let reference = Reference::from(comment_bytes);
-    Ok(Some(Value::new_object(gc, reference)))
+    Ok(Some(Value::try_new_object_async(gc, reference).await?))
 }
 
 // Note: `getEntry(J[BZ)J` is not registered as an intrinsic because it is not present as a native
@@ -255,7 +257,7 @@ pub fn get_entry_no_add_slash<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryBytes(JI)[B", LessThanOrEqual(JAVA_8))]
-pub fn get_entry_bytes<T: Thread + 'static>(
+pub async fn get_entry_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -273,38 +275,40 @@ pub fn get_entry_bytes<T: Thread + 'static>(
         (zh, idx)
     };
 
-    let zip_guard = state.zip_handles.read();
-    let Some(context) = zip_guard.get(&zip_handle) else {
-        return Ok(Some(Value::Object(None)));
-    };
-    let Some(entry) = context.entries.get(index) else {
-        return Ok(Some(Value::Object(None)));
-    };
+    let result_bytes: Vec<i8> = {
+        let zip_guard = state.zip_handles.read();
+        let Some(context) = zip_guard.get(&zip_handle) else {
+            return Ok(Some(Value::Object(None)));
+        };
+        let Some(entry) = context.entries.get(index) else {
+            return Ok(Some(Value::Object(None)));
+        };
 
-    // type: 0 = name, 1 = extra, 2 = comment
-    let bytes: &[u8] = match entry_type {
-        0 => &entry.name_bytes,
-        1 => &entry.extra_bytes,
-        2 => &entry.comment_bytes,
-        _ => return Ok(Some(Value::Object(None))),
+        // type: 0 = name, 1 = extra, 2 = comment
+        let bytes: &[u8] = match entry_type {
+            0 => &entry.name_bytes,
+            1 => &entry.extra_bytes,
+            2 => &entry.comment_bytes,
+            _ => return Ok(Some(Value::Object(None))),
+        };
+
+        if bytes.is_empty() {
+            return Ok(Some(Value::Object(None)));
+        }
+
+        bytes
+            .iter()
+            .map(|&b| {
+                #[expect(clippy::cast_possible_wrap)]
+                let v = b as i8;
+                v
+            })
+            .collect()
     };
-
-    if bytes.is_empty() {
-        return Ok(Some(Value::Object(None)));
-    }
-
-    let result_bytes: Vec<i8> = bytes
-        .iter()
-        .map(|&b| {
-            #[expect(clippy::cast_possible_wrap)]
-            let v = b as i8;
-            v
-        })
-        .collect();
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
     let reference = Reference::from(result_bytes);
-    Ok(Some(Value::new_object(gc, reference)))
+    Ok(Some(Value::try_new_object_async(gc, reference).await?))
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryCSize(J)J", LessThanOrEqual(JAVA_8))]
@@ -1102,7 +1106,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(0); // name
-        let result = get_entry_bytes(thread.clone(), parameters)?;
+        let result = get_entry_bytes(thread.clone(), parameters).await?;
         let name_value = result.expect("expected name bytes");
         let name_bytes = name_value.as_byte_vec_ref()?;
         let name_u8: Vec<u8> = name_bytes.iter().map(|&b| b.cast_unsigned()).collect();
@@ -1288,7 +1292,7 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_comment_bytes(thread.clone(), parameters)?;
+        let result = get_comment_bytes(thread.clone(), parameters).await?;
         // Default zip has no comment
         assert_eq!(Some(Value::Object(None)), result);
 
@@ -1590,27 +1594,27 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(0);
-        let result = get_entry_bytes(thread.clone(), parameters)?;
+        let result = get_entry_bytes(thread.clone(), parameters).await?;
         assert!(result.expect("expected name").is_object());
 
         // Type 1 = extra (may be empty/null)
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(1);
-        let _result = get_entry_bytes(thread.clone(), parameters)?;
+        let _result = get_entry_bytes(thread.clone(), parameters).await?;
 
         // Type 2 = comment (empty for our entries)
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(2);
-        let result = get_entry_bytes(thread.clone(), parameters)?;
+        let result = get_entry_bytes(thread.clone(), parameters).await?;
         assert_eq!(Some(Value::Object(None)), result);
 
         // Invalid type
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(99);
-        let result = get_entry_bytes(thread.clone(), parameters)?;
+        let result = get_entry_bytes(thread.clone(), parameters).await?;
         assert_eq!(Some(Value::Object(None)), result);
 
         // Cleanup
@@ -1735,7 +1739,7 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_comment_bytes(thread, parameters);
+        let result = get_comment_bytes(thread, parameters).await;
         assert!(result.is_err());
         Ok(())
     }

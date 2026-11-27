@@ -1,0 +1,1362 @@
+{
+  "source": "cdee5888fd866e32857e66ac6cf179607359ba4e",
+  "source_file_count": 2674,
+  "binary_sha256": "244e220466c36eca60dc02a21eddb3586c2633320579ff8681c28eca08e7114d",
+  "build_source_archive_sha256": "8e2a297c9706ad0917cb026cd13d7d554d217d7a646ec75f509c38b2a82f8e2e",
+  "options": {
+    "workloads": [
+      "roots"
+    ],
+    "runtimes": [
+      "ristretto-candidate-jit",
+      "g1",
+      "zgc"
+    ],
+    "initial_rate": 4000,
+    "max_rate": 128000,
+    "max_points": 6,
+    "tolerance": 0.25,
+    "p999_us": 1000.0,
+    "backlog_us": 10000.0,
+    "minimum_completions": 1000,
+    "seconds": 10,
+    "warmup": 5,
+    "repeats": 5,
+    "heap_mib": 64,
+    "workers": 2,
+    "cpus": [
+      4,
+      6
+    ],
+    "rss_mib": 512,
+    "cpu_quota": 2.0,
+    "seed": 141021
+  },
+  "points": [
+    {
+      "runtime": "Ristretto",
+      "rate": 4000,
+      "confirmation": false,
+      "status": "fail",
+      "directory": "roots-ristretto-candidate-jit-00-4000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 39998,
+          "unfinished": 2,
+          "p999_us": 303104,
+          "peak_backlog_us": 304000.0,
+          "reasons": [
+            "unfinished requests",
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 39285,
+          "unfinished": 715,
+          "p999_us": 215040,
+          "peak_backlog_us": 217000.0,
+          "reasons": [
+            "unfinished requests",
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 39629,
+          "unfinished": 371,
+          "p999_us": 97280,
+          "peak_backlog_us": 99500.0,
+          "reasons": [
+            "unfinished requests",
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 39997,
+          "unfinished": 3,
+          "p999_us": 462848,
+          "peak_backlog_us": 464500.0,
+          "reasons": [
+            "unfinished requests",
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 39045,
+          "unfinished": 955,
+          "p999_us": 278528,
+          "peak_backlog_us": 280500.0,
+          "reasons": [
+            "unfinished requests",
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "866d9b7a51b3ff0d3649194d93fe0f8bcd87a02e8443a8ec9cca80d36e074f14"
+    },
+    {
+      "runtime": "Ristretto",
+      "rate": 2000,
+      "confirmation": false,
+      "status": "fail",
+      "directory": "roots-ristretto-candidate-jit-01-2000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 20000,
+          "unfinished": 0,
+          "p999_us": 84992,
+          "peak_backlog_us": 88000.0,
+          "reasons": [
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 20000,
+          "unfinished": 0,
+          "p999_us": 2176,
+          "peak_backlog_us": 3500.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 20000,
+          "unfinished": 0,
+          "p999_us": 6208,
+          "peak_backlog_us": 8500.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 20000,
+          "unfinished": 0,
+          "p999_us": 73728,
+          "peak_backlog_us": 79500.0,
+          "reasons": [
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 20000,
+          "unfinished": 0,
+          "p999_us": 2144,
+          "peak_backlog_us": 3500.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "9155f564ef917205a9cb32295d445a397986500506a8f2f9fb9a8087891b7396"
+    },
+    {
+      "runtime": "Ristretto",
+      "rate": 1000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-ristretto-candidate-jit-02-1000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 218,
+          "peak_backlog_us": 0.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 982,
+          "peak_backlog_us": 2000.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 355,
+          "peak_backlog_us": 0.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 184,
+          "peak_backlog_us": 0.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 390,
+          "peak_backlog_us": 4000.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "e869f35c7d80a380e68c5d75378feb6a8ad2fada7eadc9036ee15ed97393e489"
+    },
+    {
+      "runtime": "Ristretto",
+      "rate": 1500,
+      "confirmation": false,
+      "status": "fail",
+      "directory": "roots-ristretto-candidate-jit-03-1500",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 15000,
+          "unfinished": 0,
+          "p999_us": 4992,
+          "peak_backlog_us": 8666.666666666666,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 15000,
+          "unfinished": 0,
+          "p999_us": 76800,
+          "peak_backlog_us": 84000.0,
+          "reasons": [
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 15000,
+          "unfinished": 0,
+          "p999_us": 627,
+          "peak_backlog_us": 3333.3333333333335,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 15000,
+          "unfinished": 0,
+          "p999_us": 2848,
+          "peak_backlog_us": 4666.666666666667,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 15000,
+          "unfinished": 0,
+          "p999_us": 1616,
+          "peak_backlog_us": 5333.333333333333,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "2fe990e636adf8ef2c3002f4dbd8ac11beaa349d8e58a6bd9f7fda121be4ea69"
+    },
+    {
+      "runtime": "Ristretto",
+      "rate": 1250,
+      "confirmation": false,
+      "status": "fail",
+      "directory": "roots-ristretto-candidate-jit-04-1250",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 831,
+          "peak_backlog_us": 1600.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 258,
+          "peak_backlog_us": 4000.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 1120,
+          "peak_backlog_us": 1600.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 1424,
+          "peak_backlog_us": 1600.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 562,
+          "peak_backlog_us": 1600.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "ea869634642c382c5e34f7ac2f0880995521c3b70629a1f697001ea73d1bb129"
+    },
+    {
+      "runtime": "Ristretto",
+      "rate": 1000,
+      "confirmation": true,
+      "status": "fail",
+      "directory": "roots-ristretto-candidate-jit-05-1000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 883,
+          "peak_backlog_us": 5000.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 304,
+          "peak_backlog_us": 2000.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 260,
+          "peak_backlog_us": 1000.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 23808,
+          "peak_backlog_us": 29000.0,
+          "reasons": [
+            "response p99.9 limit",
+            "peak backlog time limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 10000,
+          "unfinished": 0,
+          "p999_us": 4480,
+          "peak_backlog_us": 6000.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "1235b8beac3fb7a57ef36f2bbe1132f570871dd41389324db9538af6ef013d77"
+    },
+    {
+      "runtime": "Ristretto",
+      "rate": 1250,
+      "confirmation": true,
+      "status": "fail",
+      "directory": "roots-ristretto-candidate-jit-06-1250",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 1728,
+          "peak_backlog_us": 4000.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 423,
+          "peak_backlog_us": 3200.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 1296,
+          "peak_backlog_us": 4000.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 1616,
+          "peak_backlog_us": 3200.0,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 12500,
+          "unfinished": 0,
+          "p999_us": 357,
+          "peak_backlog_us": 1600.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "0f8610532e5edf9f524c00cdacb9fbdcb3123317df740e2af33d56642e68ff65"
+    },
+    {
+      "runtime": "G1",
+      "rate": 4000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-g1-00-4000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 109,
+          "peak_backlog_us": 250.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 173,
+          "peak_backlog_us": 2250.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 286,
+          "peak_backlog_us": 500.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 318,
+          "peak_backlog_us": 750.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 102,
+          "peak_backlog_us": 250.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "b1d51a755e1d194d1e97bf4091e3bc2169b59e28c4ff01a439fe246cb788edce"
+    },
+    {
+      "runtime": "G1",
+      "rate": 8000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-g1-01-8000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 133,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 278,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 228,
+          "peak_backlog_us": 500.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 109,
+          "peak_backlog_us": 500.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 166,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "e895786c2655a49870f87e00f78ae281be44b287ae0e95e04191a5384315032b"
+    },
+    {
+      "runtime": "G1",
+      "rate": 16000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-g1-02-16000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 145,
+          "peak_backlog_us": 1562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 152,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 199,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 156,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 242,
+          "peak_backlog_us": 750.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "5760d0e5399db7cb1cc30eb5282d9004415de50173a9de8975c0765d0f68e10d"
+    },
+    {
+      "runtime": "G1",
+      "rate": 32000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-g1-03-32000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 223,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 179,
+          "peak_backlog_us": 656.25,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 106,
+          "peak_backlog_us": 718.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 193,
+          "peak_backlog_us": 781.25,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 140,
+          "peak_backlog_us": 718.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "163965186ba3cde3f68fb34316addd440397d5d86f818f950be0ca70517c1fcb"
+    },
+    {
+      "runtime": "G1",
+      "rate": 64000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-g1-04-64000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 208,
+          "peak_backlog_us": 1687.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 282,
+          "peak_backlog_us": 1718.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 209,
+          "peak_backlog_us": 1828.125,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 565,
+          "peak_backlog_us": 9484.375,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 231,
+          "peak_backlog_us": 1406.25,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "b77946c97ae08ce87d790f6391f036cb9489b000463100f419c7db1365246c5a"
+    },
+    {
+      "runtime": "G1",
+      "rate": 128000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-g1-05-128000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 1280000,
+          "unfinished": 0,
+          "p999_us": 252,
+          "peak_backlog_us": 843.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": true
+        },
+        {
+          "repeat": 1,
+          "completed": 1280000,
+          "unfinished": 0,
+          "p999_us": 299,
+          "peak_backlog_us": 2257.8125,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": true
+        },
+        {
+          "repeat": 2,
+          "completed": 1280000,
+          "unfinished": 0,
+          "p999_us": 332,
+          "peak_backlog_us": 2132.8125,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": true
+        },
+        {
+          "repeat": 3,
+          "completed": 1280000,
+          "unfinished": 0,
+          "p999_us": 332,
+          "peak_backlog_us": 2218.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": true
+        },
+        {
+          "repeat": 4,
+          "completed": 1280000,
+          "unfinished": 0,
+          "p999_us": 234,
+          "peak_backlog_us": 804.6875,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": true
+        }
+      ],
+      "raw_sha256": "ba453f50d0f96fb029d6916b7acf06cdbd1460801634c6112f269a13861915ee"
+    },
+    {
+      "runtime": "ZGC",
+      "rate": 4000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-zgc-00-4000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 166,
+          "peak_backlog_us": 1250.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 330,
+          "peak_backlog_us": 3000.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 184,
+          "peak_backlog_us": 500.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 258,
+          "peak_backlog_us": 500.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 40000,
+          "unfinished": 0,
+          "p999_us": 115,
+          "peak_backlog_us": 1500.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "76458d8d1471b2fdcdbeed0b59c667dc2572e2a94def7a01272c838434158993"
+    },
+    {
+      "runtime": "ZGC",
+      "rate": 8000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-zgc-01-8000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 168,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 110,
+          "peak_backlog_us": 375.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 194,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 143,
+          "peak_backlog_us": 500.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 80000,
+          "unfinished": 0,
+          "p999_us": 154,
+          "peak_backlog_us": 500.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "1b4373edf14d30283fe3d438111bab763e7e8a9a0e08b58dfb53a8a1ceacfcbc"
+    },
+    {
+      "runtime": "ZGC",
+      "rate": 16000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-zgc-02-16000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 171,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 127,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 146,
+          "peak_backlog_us": 625.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 223,
+          "peak_backlog_us": 875.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 160000,
+          "unfinished": 0,
+          "p999_us": 82,
+          "peak_backlog_us": 750.0,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "a78c2cb0985a5fa7d1ce9daee513e56e78f1de8b837f5a485ecf80d69595ffc4"
+    },
+    {
+      "runtime": "ZGC",
+      "rate": 32000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-zgc-03-32000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 186,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 858,
+          "peak_backlog_us": 2937.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 189,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 206,
+          "peak_backlog_us": 1531.25,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 320000,
+          "unfinished": 0,
+          "p999_us": 175,
+          "peak_backlog_us": 1593.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "3ca75ceb58f33ad5da6e96f267c25b432fafbe2c31160fa9d7b37ccfd6d07284"
+    },
+    {
+      "runtime": "ZGC",
+      "rate": 64000,
+      "confirmation": false,
+      "status": "fail",
+      "directory": "roots-zgc-04-64000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 62,
+          "peak_backlog_us": 578.125,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 34,
+          "peak_backlog_us": 812.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 58,
+          "peak_backlog_us": 593.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 59,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 1552,
+          "peak_backlog_us": 4531.25,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "635d2c774dbba90a663a58feb6173b54b8f32eca556fc41c1b59dcb296e10ad0"
+    },
+    {
+      "runtime": "ZGC",
+      "rate": 48000,
+      "confirmation": false,
+      "status": "pass",
+      "directory": "roots-zgc-05-48000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 201,
+          "peak_backlog_us": 2916.6666666666665,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 98,
+          "peak_backlog_us": 708.3333333333334,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 128,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 184,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 185,
+          "peak_backlog_us": 687.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "6b26d2f3624d25547db9bba0ec9d90d7cec1bec1d70d0c5223bb351c1be7de6a"
+    },
+    {
+      "runtime": "ZGC",
+      "rate": 48000,
+      "confirmation": true,
+      "status": "pass",
+      "directory": "roots-zgc-06-48000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 140,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 104,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 244,
+          "peak_backlog_us": 3645.8333333333335,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 124,
+          "peak_backlog_us": 583.3333333333334,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 480000,
+          "unfinished": 0,
+          "p999_us": 185,
+          "peak_backlog_us": 562.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "de94d937ebbbdbda77817b13b3ed5239c92cb2faf7edf80a97909b33f9af2582"
+    },
+    {
+      "runtime": "ZGC",
+      "rate": 64000,
+      "confirmation": true,
+      "status": "fail",
+      "directory": "roots-zgc-07-64000",
+      "forks": [
+        {
+          "repeat": 0,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 60,
+          "peak_backlog_us": 937.5,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 1,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 229,
+          "peak_backlog_us": 3421.875,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 2,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 2752,
+          "peak_backlog_us": 6109.375,
+          "reasons": [
+            "response p99.9 limit"
+          ],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 3,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 151,
+          "peak_backlog_us": 593.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        },
+        {
+          "repeat": 4,
+          "completed": 640000,
+          "unfinished": 0,
+          "p999_us": 72,
+          "peak_backlog_us": 593.75,
+          "reasons": [],
+          "gc_observed": true,
+          "million_samples": false
+        }
+      ],
+      "raw_sha256": "c0b1421a9d48d27fe87e42aeb16c8d6ab3007b225fc3d59c0f4f21e0e0f9e2f5"
+    }
+  ],
+  "java": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+  "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)"
+}

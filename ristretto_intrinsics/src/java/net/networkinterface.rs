@@ -455,20 +455,23 @@ async fn create_interface<T: Thread + 'static>(
         bindings.push(binding);
     }
     let address_class = thread.class("[Ljava/net/InetAddress;").await?;
-    let addresses = Value::new_object(
+    let addresses = Value::try_new_object_async(
         vm.garbage_collector(),
         Reference::try_from((address_class, addresses))?,
-    );
+    )
+    .await?;
     let binding_class = thread.class("[Ljava/net/InterfaceAddress;").await?;
-    let bindings = Value::new_object(
+    let bindings = Value::try_new_object_async(
         vm.garbage_collector(),
         Reference::try_from((binding_class, bindings))?,
-    );
+    )
+    .await?;
     let child_class = thread.class("[Ljava/net/NetworkInterface;").await?;
-    let children = Value::new_object(
+    let children = Value::try_new_object_async(
         vm.garbage_collector(),
         Reference::try_from((child_class, Vec::new()))?,
-    );
+    )
+    .await?;
     let name = thread.intern_string(&interface.name).await?;
     let display_name = thread.intern_string(&interface.display_name).await?;
     let value = thread.object("java.net.NetworkInterface", "", &[]).await?;
@@ -530,10 +533,9 @@ pub async fn get_all<T: Thread + 'static>(
     }
     let class = thread.class("[Ljava/net/NetworkInterface;").await?;
     let reference = Reference::try_from((class, values))?;
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        reference,
-    )))
+    Ok(Some(
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?,
+    ))
 }
 
 #[intrinsic_method(
@@ -601,7 +603,7 @@ pub fn get_mtu_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/NetworkInterface.getMacAddr0([BLjava/lang/String;I)[B", Any)]
-pub fn get_mac_addr_0<T: Thread + 'static>(
+pub async fn get_mac_addr_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -612,10 +614,13 @@ pub fn get_mac_addr_0<T: Thread + 'static>(
     };
     #[expect(clippy::cast_possible_wrap)]
     let bytes: Box<[i8]> = mac.into_iter().map(|byte| byte as i8).collect();
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        Reference::ByteArray(bytes),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(
+            thread.vm()?.garbage_collector(),
+            Reference::ByteArray(bytes.into()),
+        )
+        .await?,
+    ))
 }
 
 #[intrinsic_method("java/net/NetworkInterface.init()V", Any)]

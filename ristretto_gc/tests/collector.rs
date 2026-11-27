@@ -252,7 +252,9 @@ fn test_root_management() -> Result<()> {
         data: String,
     }
 
-    impl Trace for TestObject {
+    // SAFETY: this fixture contains no outgoing GC references.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for TestObject {
         fn trace(&self, _collector: &GarbageCollector) {
             // No GC references to trace
         }
@@ -301,7 +303,15 @@ fn test_reachability_analysis() -> Result<()> {
         children: Vec<Gc<Node>>,
     }
 
-    impl Trace for Node {
+    // SAFETY: all strong fields are traced and paired root/demotion hooks forward the owner.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for Node {
+        fn root(&mut self) {
+            self.children.root();
+        }
+        unsafe fn unroot(&mut self, owner: ristretto_gc::TraceOwner<'_>) {
+            unsafe { Trace::unroot(&mut self.children, owner) };
+        }
         fn trace(&self, collector: &GarbageCollector) {
             for child in &self.children {
                 child.trace(collector);
@@ -416,7 +426,9 @@ fn test_concurrent_collection_safety() -> Result<()> {
         values: Mutex<Vec<usize>>,
     }
 
-    impl Trace for SharedData {
+    // SAFETY: this fixture contains no outgoing GC references.
+    #[expect(unsafe_code, reason = "Trace requires an explicit ownership contract")]
+    unsafe impl Trace for SharedData {
         fn trace(&self, _collector: &GarbageCollector) {
             // No GC references to trace
         }
@@ -566,5 +578,23 @@ fn test_parallel_garbage_collection() -> Result<()> {
 
     // Objects are freed during sweep or at shutdown via cleanup_remaining_objects
     collector.stop()?;
+    Ok(())
+}
+
+#[test_log::test]
+fn registered_worker_count_follows_start_stop_and_restart() -> Result<()> {
+    for configured in [0, 1, 3] {
+        let gc =
+            GarbageCollector::with_config(Configuration::builder().threads(configured).build());
+        assert_eq!(gc.registered_workers(), 0);
+        for _ in 0..2 {
+            gc.start();
+            assert_eq!(gc.registered_workers(), configured.max(1));
+            gc.start(); // Starting an already running collector must not add workers.
+            assert_eq!(gc.registered_workers(), configured.max(1));
+            gc.stop()?;
+            assert_eq!(gc.registered_workers(), 0);
+        }
+    }
     Ok(())
 }

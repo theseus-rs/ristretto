@@ -1,0 +1,38 @@
+[
+  {
+    "folder": "run-0002-ristretto-candidate-jit-reference-array-0",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  },
+  {
+    "folder": "run-0005-ristretto-candidate-jit-reference-array-100",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  },
+  {
+    "folder": "run-0006-ristretto-candidate-jit-reference-array-500",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  },
+  {
+    "folder": "run-0011-ristretto-candidate-jit-reference-array-100",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  },
+  {
+    "folder": "run-0013-ristretto-candidate-jit-reference-array-500",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  },
+  {
+    "folder": "run-0016-ristretto-candidate-jit-reference-array-0",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  },
+  {
+    "folder": "run-0020-ristretto-candidate-jit-reference-array-0",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  },
+  {
+    "folder": "run-0023-ristretto-candidate-jit-reference-array-500",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  },
+  {
+    "folder": "run-0025-ristretto-candidate-jit-reference-array-100",
+    "stderr": "Error: Throwable(Object(Some(RwLock { data: Object(Object(java/lang/OutOfMemoryError)\n  backtrace=java/lang/Object[0]\n  detailMessage=String(\"Java heap space\")\n  cause=Object(class java/lang/OutOfMemoryError)\n  stackTrace=java/lang/StackTraceElement[0]\n  depth=int(0)\n  suppressedExceptions=Object(class java/util/Collections$EmptyList)\n) })))\n"
+  }
+]

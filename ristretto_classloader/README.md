@@ -41,7 +41,7 @@ Classes can also be retained and loaded entirely in memory:
 ```rust,no_run
 use ristretto_classloader::{ClassLoader, ClassPath, ClassPathEntry, JavaStr, Memory, Result};
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let class_bytes = std::fs::read("HelloWorld.class")?;
     let memory = Memory::new("memory");
@@ -65,7 +65,7 @@ The following features are available:
 | `tls-native-tls`           | Enables Native TLS support                     | No       |
 | `tls-rustls-aws-lc-rs`     | Enables Rustls with the AWS-LC crypto provider | No       |
 | `tls-rustls-ring`          | Enables Rustls with the Ring crypto provider   | Yes      |
-| `url`                      | Enables URL class path entries                 | No       |
+| `url`                      | Enables URL class path entries on native hosts | No       |
 
 The TLS backend features are alternatives. To select a non-default backend without compiling Ring,
 disable default features and enable `tls-native-tls` or `tls-rustls-aws-lc-rs`.

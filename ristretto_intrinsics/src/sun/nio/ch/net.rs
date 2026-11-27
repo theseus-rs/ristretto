@@ -717,7 +717,9 @@ async fn inet_address_value<T: Thread + 'static>(
     };
     #[expect(clippy::cast_possible_wrap)]
     let bytes: Box<[i8]> = bytes.into_iter().map(|byte| byte as i8).collect();
-    let bytes = Value::new_object(vm.garbage_collector(), Reference::ByteArray(bytes));
+    let bytes =
+        Value::try_new_object_async(vm.garbage_collector(), Reference::ByteArray(bytes.into()))
+            .await?;
     let result = if scope_id == 0 {
         thread
             .invoke(

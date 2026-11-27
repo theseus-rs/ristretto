@@ -1,0 +1,17 @@
+{
+  "collector_control": "f1daebeb",
+  "jvm_parent": "df71e5a2",
+  "prepared_source": "ea8f3406",
+  "cleanup_source": "2351794a",
+  "complete_conditions": 36,
+  "minimum_individual_lower_95": 10,
+  "short_forks_per_cell": 3,
+  "minimum_saturation_ratio": 0.95,
+  "short_scheduled_required": 5000,
+  "long_scheduled_required": 60000,
+  "long_forks_per_runtime": 2,
+  "maximum_long_candidate_to_parent_median_p999_ratio": 1.1,
+  "mechanism_required": "Strict reduction in actual native callback republications per completed 4097-element array in both matched process pairs, preserve normal physical backing returns and verify exact live root boundaries.",
+  "maximum_extra_nulls_per_step": 512,
+  "jvm_parent_binary": "729aea8f"
+}

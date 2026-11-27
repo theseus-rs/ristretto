@@ -8,6 +8,7 @@ use ristretto_classfile::{
     CLASS_INITIALIZER_NAME, CONSTRUCTOR_NAME, ClassAccessFlags, ClassFile, Constant, ConstantPool,
     FieldAccessFlags, JavaStr, JavaString, MethodAccessFlags,
 };
+use ristretto_gc::ReferenceKind;
 use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
@@ -17,6 +18,56 @@ use tokio::sync::Notify;
 
 mod method_resolution;
 pub use method_resolution::{MethodResolutionError, ResolvedMethod};
+
+#[derive(Debug)]
+struct InstanceLayout {
+    fields: Box<[Arc<Field>]>,
+    reference_kind: Option<ReferenceKind>,
+    reference_fields: Option<Arc<ReferenceSlots>>,
+}
+
+#[derive(Debug)]
+struct ReferenceSlots {
+    referent: Option<usize>,
+    discovered: Option<usize>,
+    queue: Option<usize>,
+}
+
+/// Instance fields owned by java.lang.ref.Reference and accessed by the VM.
+#[derive(Clone, Copy, Debug)]
+pub enum JavaReferenceField {
+    /// Conditional reference to the target.
+    Referent,
+    /// Link in the pending-reference chain.
+    Discovered,
+    /// Queue supplied to the Reference constructor.
+    Queue,
+}
+
+impl JavaReferenceField {
+    fn definition(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Referent => ("referent", "java/lang/Object"),
+            Self::Discovered => ("discovered", "java/lang/ref/Reference"),
+            Self::Queue => ("queue", "java/lang/ref/ReferenceQueue"),
+        }
+    }
+
+    fn declared_index(self, fields: &[Arc<Field>]) -> Option<usize> {
+        let (name, target) = self.definition();
+        fields.iter().position(|field| {
+            field.name() == name
+                && matches!(field.field_type(), ristretto_classfile::FieldType::Object(t) if t == target)
+        })
+    }
+
+    fn missing(self) -> crate::Error {
+        FieldNotFound {
+            class_name: "java/lang/ref/Reference".to_owned(),
+            field_name: self.definition().0.to_owned(),
+        }
+    }
+}
 
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
 ///
@@ -309,7 +360,7 @@ pub struct Class {
     class_file: Arc<ClassFile<'static>>,
     parent: RwLock<Option<Arc<Class>>>,
     /// Published after linking; ancestor slots are a stable prefix of descendant layouts.
-    field_layout: OnceLock<Box<[Arc<Field>]>>,
+    field_layout: OnceLock<InstanceLayout>,
     /// Verification is independent of linking and initialization.
     verification: OnceLock<std::result::Result<(), String>>,
     interfaces: RwLock<Vec<Arc<Class>>>,
@@ -1104,17 +1155,43 @@ impl Class {
                 ["Incomplete links for ", self.name()].concat(),
             ));
         }
-        let mut fields = if let Some(parent) = parent.as_ref() {
-            parent
-                .field_layout
-                .get()
-                .ok_or_else(|| InternalError(["Unlinked parent of ", self.name()].concat()))?
-                .to_vec()
-        } else {
-            Vec::new()
-        };
+        let parent_layout = parent
+            .as_ref()
+            .map(|parent| {
+                parent
+                    .field_layout
+                    .get()
+                    .ok_or_else(|| InternalError(["Unlinked parent of ", self.name()].concat()))
+            })
+            .transpose()?;
+        let mut fields = parent_layout.map_or_else(Vec::new, |layout| layout.fields.to_vec());
         fields.extend(self.object_fields.iter().cloned());
-        let _ = self.field_layout.set(fields.into_boxed_slice());
+        let reference_kind = self
+            .declared_reference_kind()
+            .or_else(|| parent_layout.and_then(|layout| layout.reference_kind));
+        // Resolve the declaring class once. A subclass may declare a strong field with
+        // the same name and descriptor, while its inherited slot stays at the same offset.
+        let reference_fields = if self.name() == "java/lang/ref/Reference" {
+            use JavaReferenceField::{Discovered, Queue, Referent};
+            let inherited = fields.len() - self.object_fields.len();
+            let slot = |member: JavaReferenceField| {
+                member
+                    .declared_index(&self.object_fields)
+                    .map(|index| inherited + index)
+            };
+            Some(Arc::new(ReferenceSlots {
+                referent: slot(Referent),
+                discovered: slot(Discovered),
+                queue: slot(Queue),
+            }))
+        } else {
+            parent_layout.and_then(|layout| layout.reference_fields.clone())
+        };
+        let _ = self.field_layout.set(InstanceLayout {
+            fields: fields.into_boxed_slice(),
+            reference_kind,
+            reference_fields,
+        });
         Ok(())
     }
 
@@ -1125,9 +1202,84 @@ impl Class {
     /// Returns an error if a hierarchy lock is poisoned.
     pub fn object_field_layout(&self) -> Result<Cow<'_, [Arc<Field>]>> {
         if let Some(fields) = self.field_layout.get() {
-            return Ok(Cow::Borrowed(fields));
+            return Ok(Cow::Borrowed(&fields.fields));
         }
         Ok(Cow::Owned(self.build_object_fields()?))
+    }
+
+    /// Return the slot declared by java.lang.ref.Reference in this linked class hierarchy.
+    ///
+    /// # Errors
+    /// Returns an error for an unlinked receiver or a missing or mistyped declaration.
+    pub fn java_reference_field_slot(&self, member: JavaReferenceField) -> Result<usize> {
+        self.field_layout
+            .get()
+            .and_then(|layout| layout.reference_fields.as_deref())
+            .and_then(|fields| match member {
+                JavaReferenceField::Referent => fields.referent,
+                JavaReferenceField::Discovered => fields.discovered,
+                JavaReferenceField::Queue => fields.queue,
+            })
+            .ok_or_else(|| member.missing())
+    }
+
+    pub(crate) fn conditional_referent_slot(&self, fields: &[Arc<Field>]) -> Result<Option<usize>> {
+        let member = JavaReferenceField::Referent;
+        if let Some(layout) = self.field_layout.get() {
+            if layout.reference_fields.is_some() {
+                return self.java_reference_field_slot(member).map(Some);
+            }
+        } else {
+            // Unlinked clients may have a mutable ancestor chain. Match the declaration
+            // against this object's captured field metadata before using its slot.
+            let mut ancestor = self.parent()?;
+            while let Some(class) = ancestor {
+                if class.name() == "java/lang/ref/Reference" {
+                    let declared = member
+                        .declared_index(&class.object_fields)
+                        .and_then(|index| class.object_fields.get(index))
+                        .ok_or_else(|| member.missing())?;
+                    return fields
+                        .iter()
+                        .position(|field| Arc::ptr_eq(field, declared))
+                        .map(Some)
+                        .ok_or_else(|| member.missing());
+                }
+                ancestor = class.parent()?;
+            }
+        }
+        // Standalone conditional classes can supply their own referent without a JDK base.
+        Ok(member.declared_index(fields))
+    }
+
+    fn declared_reference_kind(&self) -> Option<ReferenceKind> {
+        match self.name() {
+            "java/lang/ref/SoftReference" => Some(ReferenceKind::Soft),
+            "java/lang/ref/WeakReference" => Some(ReferenceKind::Weak),
+            "java/lang/ref/FinalReference" => Some(ReferenceKind::Final),
+            "java/lang/ref/PhantomReference"
+                if self.class_file.version <= ristretto_classfile::JAVA_8 =>
+            {
+                Some(ReferenceKind::PhantomRetained)
+            }
+            "java/lang/ref/PhantomReference" => Some(ReferenceKind::Phantom),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn reference_kind(self: &Arc<Self>) -> Result<Option<ReferenceKind>> {
+        if let Some(layout) = self.field_layout.get() {
+            return Ok(layout.reference_kind);
+        }
+        // Standalone classes can still change parent until their layout is published.
+        let mut ancestor = Some(self.clone());
+        while let Some(current) = ancestor {
+            if let Some(kind) = current.declared_reference_kind() {
+                return Ok(Some(kind));
+            }
+            ancestor = current.parent()?;
+        }
+        Ok(None)
     }
 
     /// Get storage for a static field declared in this class, by its local static-field index.
@@ -1606,6 +1758,23 @@ impl PartialEq for Class {
             && self.object_fields == other.object_fields
             && self.methods == other.methods
             && *self_object == *other_object
+    }
+}
+
+impl ristretto_gc::HeapOwner for Class {
+    fn release_heap_roots(&self) {
+        for value in &self.static_values {
+            let mut value = value
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            if matches!(*value, Value::Object(_)) {
+                *value = Value::Object(None);
+            }
+        }
+        *self
+            .object
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = None;
     }
 }
 

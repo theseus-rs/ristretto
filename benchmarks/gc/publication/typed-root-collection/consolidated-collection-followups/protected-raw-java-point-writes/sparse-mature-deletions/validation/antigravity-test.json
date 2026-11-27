@@ -1,0 +1,4 @@
+{
+  "status": "SUCCESS",
+  "response": "`cargo test --lib mature_deletions` **passed** (exit code `0`).\n\n- **Observed test count:** 7 tests (`7 passed; 0 failed; 0 ignored; 0 measured; 643 filtered out`)\n"
+}

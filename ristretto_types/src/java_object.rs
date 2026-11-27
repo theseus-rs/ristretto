@@ -174,7 +174,8 @@ impl<T: Thread> JavaObject<T> for str {
             let class = thread.class("java.lang.String").await?;
             let vm = thread.vm()?;
             vm.string_factory()
-                .create_utf8(class, vm.garbage_collector(), self)
+                .create_utf8_async(class, vm.garbage_collector(), self)
+                .await
         })
     }
 }
@@ -209,9 +210,16 @@ where
             }
 
             let class = thread.class("[Ljava/lang/String;").await?;
-            let reference = Reference::try_from((class, values))?;
             let vm = thread.vm()?;
-            Ok(Value::new_object(vm.garbage_collector(), reference))
+            let mut values = values.into_iter();
+            let elements = ristretto_gc::HeapBuffer::try_with_fn_in_async(
+                vm.garbage_collector(),
+                values.len(),
+                |_| values.next().ok_or(ristretto_gc::Error::OutOfMemory),
+            )
+            .await?;
+            let reference = Reference::try_from((class, elements))?;
+            Ok(Value::try_new_object_async(vm.garbage_collector(), reference).await?)
         })
     }
 }
@@ -229,7 +237,8 @@ impl<T: Thread> JavaObject<T> for &JavaStr {
             let class = thread.class("java.lang.String").await?;
             let vm = thread.vm()?;
             vm.string_factory()
-                .create_utf16(class, vm.garbage_collector(), utf16)
+                .create_utf16_async(class, vm.garbage_collector(), utf16)
+                .await
         })
     }
 }
@@ -479,10 +488,10 @@ fn create_boot_unnamed_module<T: Thread + 'static>(
     Box::pin(async move {
         let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
         let module_class = thread.load_and_link_class(module_class_name).await?;
-        let module_object = Object::new(module_class)?;
-
         let vm = thread.vm()?;
-        Ok(Value::from_object(vm.garbage_collector(), module_object))
+        let module_object = Object::new_in_async(vm.garbage_collector(), module_class).await?;
+
+        Ok(Value::try_from_object_async(vm.garbage_collector(), module_object).await?)
     })
 }
 
@@ -505,11 +514,11 @@ fn create_named_boot_module<'a, T: Thread + 'static>(
 
         let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
         let module_class = thread.load_and_link_class(module_class_name).await?;
-        let mut module_object = Object::new(module_class)?;
+        let mut module_object = Object::new_in_async(vm.garbage_collector(), module_class).await?;
         let name = module_name.to_object(thread).await?;
         module_object.set_value_unchecked("name", name)?;
         module_object.set_value_unchecked("loader", Value::Object(None))?;
-        let module = Value::from_object(vm.garbage_collector(), module_object);
+        let module = Value::try_from_object_async(vm.garbage_collector(), module_object).await?;
 
         let mut defined_module = DefinedModule::new(module_name.to_string(), false);
         let packages = vm
@@ -598,11 +607,11 @@ fn create_unnamed_module<'a, T: Thread + 'static>(
     Box::pin(async move {
         let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
         let module_class = thread.load_and_link_class(module_class_name).await?;
-        let mut module_object = Object::new(module_class)?;
+        let vm = thread.vm()?;
+        let mut module_object = Object::new_in_async(vm.garbage_collector(), module_class).await?;
         module_object.set_value_unchecked("loader", class_loader_object.clone())?;
 
-        let vm = thread.vm()?;
-        Ok(Value::from_object(vm.garbage_collector(), module_object))
+        Ok(Value::try_from_object_async(vm.garbage_collector(), module_object).await?)
     })
 }
 

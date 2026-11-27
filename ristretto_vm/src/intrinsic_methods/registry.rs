@@ -259,6 +259,7 @@ mod tests {
 
         // Required methods for ristretto; some are version-specific or OS-specific
         let mut required_methods = vec![
+            "java/lang/Object.<init>()V".to_string(),
             "java/lang/System.allowSecurityManager()Z".to_string(),
             "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;".to_string(),
             "java/lang/System.setSecurityManager(Ljava/lang/SecurityManager;)V".to_string(),
@@ -301,6 +302,7 @@ mod tests {
         }
         // initSystemClassLoader is only a native method in Java 8 and earlier
         if version_major <= JAVA_8.java() {
+            required_methods.push("java/lang/ref/Reference.tryHandlePending(Z)Z".to_string());
             required_methods.push(
                 "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;".to_string(),
             );

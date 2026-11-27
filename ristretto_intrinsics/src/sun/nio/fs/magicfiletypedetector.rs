@@ -59,7 +59,7 @@ pub fn initialize0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/MagicFileTypeDetector.probe0(J)[B", Equal(JAVA_8))]
-pub fn probe0<T: Thread + 'static>(
+pub async fn probe0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,10 +114,9 @@ pub fn probe0<T: Thread + 'static>(
     let Some(mime) = mime else {
         return Ok(Some(Value::Object(None)));
     };
-    Ok(Some(Value::new_object(
-        vm.garbage_collector(),
-        Reference::from(mime),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(vm.garbage_collector(), Reference::from(mime)).await?,
+    ))
 }
 
 #[cfg(test)]
@@ -134,7 +133,9 @@ mod tests {
     #[tokio::test]
     async fn test_probe0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = probe0(thread, Parameters::new(vec![Value::Long(0)])).expect("probe");
+        let result = probe0(thread, Parameters::new(vec![Value::Long(0)]))
+            .await
+            .expect("probe");
         assert_eq!(result, Some(Value::Object(None)));
     }
 }

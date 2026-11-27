@@ -3,14 +3,23 @@ use crate::Object;
 use ristretto_classfile::FieldType;
 
 fn class(name: &str, parent: Option<&Arc<Class>>, field_name: &str) -> Result<Arc<Class>> {
+    class_with_field(name, parent, field_name, "I")
+}
+
+fn class_with_field(
+    name: &str,
+    parent: Option<&Arc<Class>>,
+    field_name: &str,
+    descriptor: &str,
+) -> Result<Arc<Class>> {
     let mut pool = ConstantPool::default();
     let this_class = pool.add_class(name)?;
     let super_class = parent.map_or(Ok(0), |parent| pool.add_class(parent.name()))?;
     let field = ristretto_classfile::Field {
         access_flags: FieldAccessFlags::PUBLIC,
         name_index: pool.add_utf8(field_name)?,
-        descriptor_index: pool.add_utf8("I")?,
-        field_type: FieldType::parse("I")?,
+        descriptor_index: pool.add_utf8(descriptor)?,
+        field_type: FieldType::parse(descriptor)?,
         attributes: vec![],
     };
     Class::from(
@@ -58,6 +67,71 @@ fn linked_layouts_are_shared_and_keep_ancestor_slots() -> Result<()> {
             .set_interfaces(vec![class("Other", None, "other")?])
             .is_err()
     );
+    Ok(())
+}
+
+#[test]
+fn conditional_tracing_and_native_access_share_the_declared_reference_slot() -> Result<()> {
+    use JavaReferenceField::{Queue, Referent};
+
+    let descriptor = "Ljava/lang/Object;";
+    let ancestor = class_with_field("Ancestor", None, "referent", descriptor)?;
+    ancestor.finalize_field_layout()?;
+    for declared in [descriptor, "I"] {
+        let base = class_with_field(
+            "java/lang/ref/Reference",
+            Some(&ancestor),
+            "referent",
+            declared,
+        )?;
+        base.set_parent(Some(ancestor.clone()))?;
+        base.finalize_field_layout()?;
+        let weak = class_with_field(
+            "java/lang/ref/WeakReference",
+            Some(&base),
+            "referent",
+            descriptor,
+        )?;
+        weak.set_parent(Some(base))?;
+        weak.finalize_field_layout()?;
+        let child = class_with_field(
+            "Child",
+            Some(&weak),
+            "queue",
+            "Ljava/lang/ref/ReferenceQueue;",
+        )?;
+        child.set_parent(Some(weak))?;
+        let layout = child.object_field_layout()?;
+        if declared == descriptor {
+            assert_eq!(child.conditional_referent_slot(&layout)?, Some(1));
+        } else {
+            assert!(Object::new(child.clone()).is_err());
+        }
+        drop(layout);
+        child.finalize_field_layout()?;
+        assert!(child.java_reference_field_slot(Queue).is_err());
+        if declared == descriptor {
+            assert_eq!(child.java_reference_field_slot(Referent)?, 1);
+            let gc = ristretto_gc::GarbageCollector::new();
+            let mut object = Object::new_in(&gc, child)?;
+            for (slot, marker) in [(0, 1_i8), (1, 2), (2, 3)] {
+                let value =
+                    Value::new_object(&gc, crate::Reference::ByteArray(vec![marker].into()));
+                object.set_value_at_slot(slot, value)?;
+            }
+            let root = Value::new_object(&gc, crate::Reference::Object(object));
+            gc.collect_full()?;
+            gc.collect_full()?;
+            let object = root.as_object_ref()?;
+            assert!(object.value_at_slot(1)?.is_null());
+            for (slot, marker) in [(0, 1_i8), (2, 3)] {
+                assert_eq!(&*object.value_at_slot(slot)?.as_byte_vec_ref()?, &[marker]);
+            }
+        } else {
+            assert!(child.java_reference_field_slot(Referent).is_err());
+            assert!(Object::new(child).is_err());
+        }
+    }
     Ok(())
 }
 
@@ -118,5 +192,35 @@ fn concurrent_layout_finalization_preserves_shared_storage() -> Result<()> {
     })?;
     assert_eq!(child.object_field_layout()?.len(), 2);
     assert!(child.set_parent(None).is_err());
+    Ok(())
+}
+
+#[test]
+fn linked_reference_classes_keep_the_nearest_kind_and_its_classfile_version() -> Result<()> {
+    let ordinary = class("Ordinary", None, "referent")?;
+    ordinary.finalize_field_layout()?;
+    assert_eq!(ordinary.reference_kind()?, None);
+    for (version, expected) in [
+        (ristretto_classfile::JAVA_8, ReferenceKind::PhantomRetained),
+        (ristretto_classfile::JAVA_17, ReferenceKind::Phantom),
+    ] {
+        let mut definition = class("java/lang/ref/PhantomReference", None, "referent")?
+            .class_file()
+            .clone();
+        definition.version = version;
+        let phantom = Class::from(None, definition)?;
+        phantom.finalize_field_layout()?;
+        let child = class("Child", Some(&phantom), "referent")?;
+        child.set_parent(Some(ordinary.clone()))?;
+        assert_eq!(child.reference_kind()?, None);
+        child.set_parent(Some(phantom))?;
+        assert_eq!(child.reference_kind()?, Some(expected));
+        child.finalize_field_layout()?;
+        assert_eq!(child.reference_kind()?, Some(expected));
+        let weak = class("java/lang/ref/WeakReference", Some(&child), "other")?;
+        weak.set_parent(Some(child))?;
+        weak.finalize_field_layout()?;
+        assert_eq!(weak.reference_kind()?, Some(ReferenceKind::Weak));
+    }
     Ok(())
 }

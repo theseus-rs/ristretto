@@ -1,0 +1,354 @@
+{
+  "baseline": {
+    "native": {
+      "cpus": [
+        4,
+        6,
+        8
+      ],
+      "nodes": 4095,
+      "cycles": 16,
+      "seed": 7281,
+      "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "repeats": 12,
+      "argv0": "mark_cycles",
+      "harness_sha256": "721d9e36875fa0309c57c0b7e4b2f2d94e79984eceeebf3c95d7e7eb63d4bda7",
+      "builds": {
+        "before": {
+          "source_revision": "f1daebeb",
+          "binary_sha256": "844228aabef911e99f21392858bf654d731b8d6cf9af45f2c47a437cf05085af",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "native",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "c6f77a5a44c80341d8d3e8d4871213cb1a5cd898cc93d0d0074cbdc1be533def",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles"
+          ],
+          "features": []
+        },
+        "after": {
+          "source_revision": "9a7536d9",
+          "binary_sha256": "88944106e0c3b6c18b3a126608df89a6d5364350ecbd6df50df9a36157e65ed0",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "native",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "c6f77a5a44c80341d8d3e8d4871213cb1a5cd898cc93d0d0074cbdc1be533def",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles"
+          ],
+          "features": []
+        }
+      },
+      "different_collector_sources": {
+        "ristretto_gc/src/birth_visibility.rs": [
+          "50eb2ad7e1b262bef27d0218a395541e5274797277cb40e97c988148e9bff50c",
+          "642634681576da99dddb368de979b74d419ed31f31ff7900a6631f81b6bf88f1"
+        ],
+        "ristretto_gc/src/collector.rs": [
+          "4507a0f7841419a9f5bed8ffa08bf209860e1cd2033751b2be9601003b2ecc0a",
+          "fe5d9db9123e634d34b34dd8af7958693ded9997be10bd45b32f6200be0019ce"
+        ],
+        "ristretto_gc/src/gc.rs": [
+          "694b181808865fa781c76b8969a9b0dcdbf59478ceb10f451acb1720e8546dec",
+          "2b15596fe597af667842dc91178f8ad971ec4521cb7611949bfa8a0265a70c5f"
+        ],
+        "ristretto_gc/src/nursery.rs": [
+          "66ea8d6dc508cb60cc711537fe2470b5e5e9452ca19ebf4787522f3d69b2ffbf",
+          "f06767090f70155aad769c9b9f4405d792fd7b199106afde2abf25567d8000b8"
+        ],
+        "ristretto_gc/src/old_generation.rs": [
+          "d4758652bdcde7ffea6aa548747eb1ee7ad08a42902ba47862622cc9bae2cc11",
+          "3fae04e2eafe65ab1299da8ed9f0582998071dd353a0994af347ee501d10b3e9"
+        ],
+        "ristretto_gc/src/phase_work.rs": [
+          "9956a1ed79b075d2d9cd3bdb4951bcfa46d7b555ae7be4d503178481521186fd",
+          "75cb431219bf14658a8678f7a3251d330517e99e31a7253a935bc8dc42e396c1"
+        ],
+        "ristretto_gc/src/publication_owner.rs": [
+          "c1be81457871ee3894190c15e4cc031ae4b2638ff4ce37bca54b966a3f82b4b6",
+          "ffd712cccf4c1e01626c8518681b4d193be7ba5afb52f564e51dc8d84e48e021"
+        ],
+        "ristretto_gc/src/publication_state.rs": [
+          "e99e100d9078ab2ccbc72cdb11f91d2dcabf38afdd6886ab4e3d04821d37baec",
+          "67f0c8d980cc60a7c6409e2ffef06b0f2fe1a2a62935d75114a81787444bb7ee"
+        ],
+        "ristretto_gc/src/publication_tests.rs": [
+          "babbb6a88516ed3833aca07d2efad3986de9bb65fa7d533ed5c291d2b4c797a8",
+          "78dc01bd3342af51be17edb78ff96155a9f07db21c847a87246c169083d69a5b"
+        ],
+        "ristretto_gc/src/root_overflow.rs": [
+          "5a28ba0862b113e4812c9ea3e0c6c7c6bf664e80b740b86a9e76ebee32164216",
+          "c7dafcb2cef94e66abc57d2f02d0468be706c0be01e049badfe0da0cfeca9389"
+        ],
+        "ristretto_gc/src/root_slot_state.rs": [
+          "fbdf19550e52d34a75bd2c658566dddcd10f6d46f5285c241f55ce6e32223f26",
+          "5e559b820fda5847a6395cb1fdb7b244cb54c79405252e26e0c9978292197fd2"
+        ],
+        "ristretto_gc/src/roots.rs": [
+          "beb0e6571dd28252de1aa5affb965f0a05271b26ac5ac529a2e87f51f3044afb",
+          "4291f519ac462bffd6661af4aae3880a5bb6d232fc5728fedff4595611854753"
+        ]
+      }
+    },
+    "wasm": {
+      "cpus": [
+        10
+      ],
+      "nodes": 4095,
+      "cycles": 16,
+      "seed": 7281,
+      "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "repeats": 12,
+      "argv0": "mark_cycles",
+      "harness_sha256": "721d9e36875fa0309c57c0b7e4b2f2d94e79984eceeebf3c95d7e7eb63d4bda7",
+      "builds": {
+        "before": {
+          "source_revision": "f1daebeb",
+          "binary_sha256": "30d022b6a49ad2c0d8f117e4135d05c28332e702a5ba343d39c587dd4766c05b",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "wasm",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "c6f77a5a44c80341d8d3e8d4871213cb1a5cd898cc93d0d0074cbdc1be533def",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles",
+            "--target",
+            "wasm32-wasip2"
+          ],
+          "features": []
+        },
+        "after": {
+          "source_revision": "9a7536d9",
+          "binary_sha256": "f40b5e2eff2a1569bf6543f3720ea3ad2a72716b41fb68210b231e597871331b",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "wasm",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "c6f77a5a44c80341d8d3e8d4871213cb1a5cd898cc93d0d0074cbdc1be533def",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles",
+            "--target",
+            "wasm32-wasip2"
+          ],
+          "features": []
+        }
+      },
+      "different_collector_sources": {
+        "ristretto_gc/src/birth_visibility.rs": [
+          "50eb2ad7e1b262bef27d0218a395541e5274797277cb40e97c988148e9bff50c",
+          "642634681576da99dddb368de979b74d419ed31f31ff7900a6631f81b6bf88f1"
+        ],
+        "ristretto_gc/src/collector.rs": [
+          "4507a0f7841419a9f5bed8ffa08bf209860e1cd2033751b2be9601003b2ecc0a",
+          "fe5d9db9123e634d34b34dd8af7958693ded9997be10bd45b32f6200be0019ce"
+        ],
+        "ristretto_gc/src/gc.rs": [
+          "694b181808865fa781c76b8969a9b0dcdbf59478ceb10f451acb1720e8546dec",
+          "2b15596fe597af667842dc91178f8ad971ec4521cb7611949bfa8a0265a70c5f"
+        ],
+        "ristretto_gc/src/nursery.rs": [
+          "66ea8d6dc508cb60cc711537fe2470b5e5e9452ca19ebf4787522f3d69b2ffbf",
+          "f06767090f70155aad769c9b9f4405d792fd7b199106afde2abf25567d8000b8"
+        ],
+        "ristretto_gc/src/old_generation.rs": [
+          "d4758652bdcde7ffea6aa548747eb1ee7ad08a42902ba47862622cc9bae2cc11",
+          "3fae04e2eafe65ab1299da8ed9f0582998071dd353a0994af347ee501d10b3e9"
+        ],
+        "ristretto_gc/src/phase_work.rs": [
+          "9956a1ed79b075d2d9cd3bdb4951bcfa46d7b555ae7be4d503178481521186fd",
+          "75cb431219bf14658a8678f7a3251d330517e99e31a7253a935bc8dc42e396c1"
+        ],
+        "ristretto_gc/src/publication_owner.rs": [
+          "c1be81457871ee3894190c15e4cc031ae4b2638ff4ce37bca54b966a3f82b4b6",
+          "ffd712cccf4c1e01626c8518681b4d193be7ba5afb52f564e51dc8d84e48e021"
+        ],
+        "ristretto_gc/src/publication_state.rs": [
+          "e99e100d9078ab2ccbc72cdb11f91d2dcabf38afdd6886ab4e3d04821d37baec",
+          "67f0c8d980cc60a7c6409e2ffef06b0f2fe1a2a62935d75114a81787444bb7ee"
+        ],
+        "ristretto_gc/src/publication_tests.rs": [
+          "babbb6a88516ed3833aca07d2efad3986de9bb65fa7d533ed5c291d2b4c797a8",
+          "78dc01bd3342af51be17edb78ff96155a9f07db21c847a87246c169083d69a5b"
+        ],
+        "ristretto_gc/src/root_overflow.rs": [
+          "5a28ba0862b113e4812c9ea3e0c6c7c6bf664e80b740b86a9e76ebee32164216",
+          "c7dafcb2cef94e66abc57d2f02d0468be706c0be01e049badfe0da0cfeca9389"
+        ],
+        "ristretto_gc/src/root_slot_state.rs": [
+          "fbdf19550e52d34a75bd2c658566dddcd10f6d46f5285c241f55ce6e32223f26",
+          "5e559b820fda5847a6395cb1fdb7b244cb54c79405252e26e0c9978292197fd2"
+        ],
+        "ristretto_gc/src/roots.rs": [
+          "beb0e6571dd28252de1aa5affb965f0a05271b26ac5ac529a2e87f51f3044afb",
+          "4291f519ac462bffd6661af4aae3880a5bb6d232fc5728fedff4595611854753"
+        ]
+      },
+      "wasmtime": {
+        "version": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+        "sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8"
+      }
+    }
+  },
+  "incremental": {
+    "native": {
+      "cpus": [
+        4,
+        6,
+        8
+      ],
+      "nodes": 4095,
+      "cycles": 16,
+      "seed": 1301,
+      "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "repeats": 6,
+      "argv0": "mark_cycles",
+      "harness_sha256": "721d9e36875fa0309c57c0b7e4b2f2d94e79984eceeebf3c95d7e7eb63d4bda7",
+      "builds": {
+        "before": {
+          "source_revision": "46ef6e26",
+          "binary_sha256": "aeb231948912d89d66caf7069b8dd2316f91ccbc5239798f5f9f11b37cbd5eb6",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "native",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "c6f77a5a44c80341d8d3e8d4871213cb1a5cd898cc93d0d0074cbdc1be533def",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles"
+          ],
+          "features": []
+        },
+        "after": {
+          "source_revision": "9a7536d9",
+          "binary_sha256": "88944106e0c3b6c18b3a126608df89a6d5364350ecbd6df50df9a36157e65ed0",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "native",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "c6f77a5a44c80341d8d3e8d4871213cb1a5cd898cc93d0d0074cbdc1be533def",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles"
+          ],
+          "features": []
+        }
+      },
+      "different_collector_sources": {
+        "ristretto_gc/src/nursery.rs": [
+          "0184afe07a7a66a649ebc4c93c398c0451b8c404a4fe127645066525356c741c",
+          "f06767090f70155aad769c9b9f4405d792fd7b199106afde2abf25567d8000b8"
+        ]
+      }
+    },
+    "wasm": {
+      "cpus": [
+        10
+      ],
+      "nodes": 4095,
+      "cycles": 16,
+      "seed": 1301,
+      "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "repeats": 8,
+      "argv0": "mark_cycles",
+      "harness_sha256": "721d9e36875fa0309c57c0b7e4b2f2d94e79984eceeebf3c95d7e7eb63d4bda7",
+      "builds": {
+        "before": {
+          "source_revision": "46ef6e26",
+          "binary_sha256": "b48db72fc5873c5f10ddcc9ae2676aa4ec17fa4f2090cfb616ccefba50b5b87e",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "wasm",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "c6f77a5a44c80341d8d3e8d4871213cb1a5cd898cc93d0d0074cbdc1be533def",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles",
+            "--target",
+            "wasm32-wasip2"
+          ],
+          "features": []
+        },
+        "after": {
+          "source_revision": "9a7536d9",
+          "binary_sha256": "f40b5e2eff2a1569bf6543f3720ea3ad2a72716b41fb68210b231e597871331b",
+          "fixture_sha256": "748ee3aa3853843e2e5e547a6778703de19ed2147a7c16100eb4f0fe084e6eab",
+          "toolchain": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5",
+          "target": "wasm",
+          "profile_sha256": "aea21d03659073107d715cf53117ed5d0a8aa425e4b7c2f703946166cb4bd00a",
+          "dependencies_sha256": "c6f77a5a44c80341d8d3e8d4871213cb1a5cd898cc93d0d0074cbdc1be533def",
+          "build_command": [
+            "cargo",
+            "build",
+            "--locked",
+            "--release",
+            "-p",
+            "ristretto_gc",
+            "--example",
+            "mark_cycles",
+            "--target",
+            "wasm32-wasip2"
+          ],
+          "features": []
+        }
+      },
+      "different_collector_sources": {
+        "ristretto_gc/src/nursery.rs": [
+          "0184afe07a7a66a649ebc4c93c398c0451b8c404a4fe127645066525356c741c",
+          "f06767090f70155aad769c9b9f4405d792fd7b199106afde2abf25567d8000b8"
+        ]
+      },
+      "wasmtime": {
+        "version": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+        "sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8"
+      }
+    }
+  }
+}

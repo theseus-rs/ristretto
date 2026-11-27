@@ -1,0 +1,102 @@
+{
+  "source_revision": "46d0afec1a71fedc98d4ce0c29203375dc5609af",
+  "parent": "f72a6053",
+  "native_test_binary_sha256": "a16e4a2cf960868d8ca10c920556e6563230e180bf9f374d29ce0e540d57f01e",
+  "suites": {
+    "native": {
+      "passed": 1037,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasm": {
+      "passed": 470,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "miri": {
+    "birth": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    },
+    "overlap": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "forced_settings": 800,
+  "fresh_processes": 300,
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "shipping": {
+    "collector_dependency_graphs": 14,
+    "release_tool_tests": 12,
+    "managed_64_mib_array_allocations": {
+      "native": 8192,
+      "wasi": 8192
+    },
+    "cargo": [
+      "verified archive",
+      "native and WASI normalized consumers",
+      "strict native and WASI all-feature all-target Clippy"
+    ]
+  },
+  "minimum_individual_95_speedup_bounds": {
+    "native": 10.360960134517637,
+    "wasm": 10.153984615880614
+  },
+  "audit": {
+    "installed_carbon_xhigh": "unsupported",
+    "carbon_high": "print timeouts on design and implementation reviews",
+    "post_edit_neon": {
+      "status": "SUCCESS",
+      "response": "No: for nonzero allocation IDs, matching the ID in the address-index snapshot before `birth.visible()` rejects any replacement at a reused address, and cloning the exact descriptor `Arc` binds the subsequent `birth.is_live()` recheck and `shade_known` retirement/admission checks (alongside the retained callback reservation and old-only admission) to the original descriptor rather than the address slot. This relies on the lifetime assumptions that nonzero allocation IDs are never reused or wrapped while an in-flight mark can still target an old allocation, and that for raw id zero the independently live original owner keeps the original allocation alive with its address unrecycled at least until the snapshot lookup clones its `Arc` (violating either assumption could allow address reuse to redirect the mark to a replacement).\n"
+    },
+    "lifetime_checks": [
+      "identity::tests::partial_final_ranges_exhaust_without_wrapping_or_invalidating_reserved_ids",
+      "identity::tests::abandoned_ranges_are_not_recycled",
+      "collector::generation_tests::reserved_numeric_tracing_preserves_raw_owners_and_rejects_full_sweep_garbage"
+    ],
+    "independent_test_runner": {
+      "status": "SUCCESS",
+      "response": "**Command:**\n```bash\ncargo test --locked -p ristretto_gc --all-features --lib reserved_guard_trace_finishes_its_step_while_the_child_shard_is_held\n```\n\n**Exit code:** `0`\n\n**Observed output:**\n```text\n    Finished `test` profile [unoptimized] target(s) in 0.11s\n     Running unittests src/lib.rs (/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/logical/statistics/predictor/model-reuse/handoff/target/debug/build/ristretto_gc/22274e55c6276d86/out/ristretto_gc-22274e55c6276d86)\n\nrunning 1 test\ntest collector::index_progress_tests::reserved_guard_trace_finishes_its_step_while_the_child_shard_is_held ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 648 filtered out; finished in 0.01s\n```\n"
+    },
+    "diff_review_checked_against_source": [
+      "The old-only admission guard spans descriptor lookup, the cross-generation handoff and synchronous shading.",
+      "The diff reviewer suggested an old-only epoch proposal may have changed. Both before and after, trace_needs_epoch_proposal explicitly requires an old interval of zero.",
+      "lookup_identity compares the immutable ID before the birth-visible check. The old shard-locked lookup released its guard before shading."
+    ]
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "short-java": {
+    "before": {
+      "capacity": 4715.8870544184465,
+      "p999_us": 3136,
+      "failed": 0,
+      "unfinished": 0,
+      "completed": [
+        5000,
+        5000,
+        5000
+      ],
+      "oom": 0
+    },
+    "after": {
+      "capacity": 4771.929776342604,
+      "p999_us": 2880,
+      "failed": 0,
+      "unfinished": 0,
+      "completed": [
+        5000,
+        5000,
+        5000
+      ],
+      "oom": 0
+    }
+  },
+  "wasi-release/screen": {
+    "before": {
+      "capacity": 5731.490398034136,
+      "p999_us": 39424,
+      "failed": 0,
+      "unfinished": 0,
+      "completed": [
+        5000,
+        5000,
+        5000
+      ],
+      "oom": 0
+    },
+    "after": {
+      "capacity": 5781.6938434200365,
+      "p999_us": 35840,
+      "failed": 0,
+      "unfinished": 0,
+      "completed": [
+        5000,
+        5000,
+        5000
+      ],
+      "oom": 0
+    }
+  },
+  "long-java": {
+    "before": {
+      "capacity": null,
+      "p999_us": 2528.0,
+      "failed": 0,
+      "unfinished": 0,
+      "completed": [
+        60000,
+        60000
+      ],
+      "oom": 0
+    },
+    "after": {
+      "capacity": null,
+      "p999_us": 2752.0,
+      "failed": 0,
+      "unfinished": 0,
+      "completed": [
+        60000,
+        60000
+      ],
+      "oom": 0
+    }
+  }
+}

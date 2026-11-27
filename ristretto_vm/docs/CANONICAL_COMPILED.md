@@ -1,5 +1,7 @@
 # Restricted canonical native execution
 
+The JVM and its compiled tier now use the same collector. The commands below apply to the archived research runtime. [Current GC preview](../../GC_PREVIEW.md) · [Archived implementation](https://github.com/theseus-rs/ristretto/tree/0497123e05056546bc526ecc49c081f934f38d64/ristretto_vm_research).
+
 With `experimental-canonical-jit`, an admitted `canonical::Program` can prepare a
 `CompiledProgram`. Preparation checks every method against the request-only JIT
 capability. The ordinary VM dispatch policy is unchanged. Native compilation is

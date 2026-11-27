@@ -1,0 +1,26 @@
+{
+  "post-carbon": {
+    "status": "ERROR",
+    "response": "",
+    "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)"
+  },
+  "post-carbon-high": {
+    "status": "ERROR",
+    "response": "",
+    "error": "print timeout after 5m0s with the turn still in progress; the response is partial"
+  },
+  "post-brief": {
+    "status": "SUCCESS",
+    "response": "No, it is unsafe because the same-value `Release` RMW forces an order in the parent's modification order against the collector's `Acquire` clear\u2014either landing after the clear to re-set the parent bit, or landing before it to synchronize-with the clear so the leaf write happens-before the collector's leaf visit\u2014whereas a `Relaxed` load neither writes to the parent nor establishes a release-acquire edge. Counterexample: with leaf bit `L1` and parent bit `P` previously set by `W1`, writer `W2` sets leaf bit `L2` and returns early after its `Relaxed` load of `P` still reads `W1`'s pre-clear `1`, while the collector clears `P` with an `Acquire` RMW (synchronizing only with `W1`), visits the leaf observing only `L1` (missing `L2` because there is no happens-before edge from `W2` to the collector), drains `L1` without rearming `P`, and leaves `L2` stranded beneath an empty root that falsely passes closure under the exclusive mark gate.\n"
+  },
+  "post-disposal": {
+    "status": "SUCCESS",
+    "response": "",
+    "denied_actions": [
+      {
+        "action": "command",
+        "display_name": "Bash"
+      }
+    ]
+  }
+}

@@ -159,10 +159,11 @@ pub async fn new_instance_0<T: Thread + 'static>(
     }
     descriptor.push_str(")V");
 
-    let result = Value::from_object(
+    let result = Value::try_from_object_async(
         thread.vm()?.garbage_collector(),
-        Object::new(class.clone())?,
-    );
+        Object::new_in_async(thread.vm()?.garbage_collector(), class.clone()).await?,
+    )
+    .await?;
     let constructor = class.try_get_method("<init>", &descriptor)?;
     arguments.insert(0, result.clone());
     thread.execute(&class, &constructor, &arguments).await?;

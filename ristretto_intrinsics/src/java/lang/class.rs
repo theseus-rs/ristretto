@@ -527,12 +527,15 @@ pub async fn get_constant_pool_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let class_object = parameters.pop()?;
     let class = thread.class("sun.reflect.ConstantPool").await?;
-    let mut constant_pool = Object::new(class)?;
+    let mut constant_pool = Object::new_in_async(thread.vm()?.garbage_collector(), class).await?;
     constant_pool.set_value("constantPoolOop", class_object)?;
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        Reference::Object(constant_pool),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(constant_pool),
+        )
+        .await?,
+    ))
 }
 
 #[intrinsic_method(
@@ -545,12 +548,15 @@ pub async fn get_constant_pool_1<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let class_object = parameters.pop()?;
     let class = thread.class("jdk.internal.reflect.ConstantPool").await?;
-    let mut constant_pool = Object::new(class)?;
+    let mut constant_pool = Object::new_in_async(thread.vm()?.garbage_collector(), class).await?;
     constant_pool.set_value("constantPoolOop", class_object)?;
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        Reference::Object(constant_pool),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(constant_pool),
+        )
+        .await?,
+    ))
 }
 
 #[intrinsic_method("java/lang/Class.getDeclaredClasses0()[Ljava/lang/Class;", Any)]
@@ -596,7 +602,7 @@ pub async fn get_declared_classes_0<T: Thread + 'static>(
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let declared_classes = {
         let reference = Reference::try_from((class_array, declared_classes))?;
-        Value::new_object(thread.vm()?.garbage_collector(), reference)
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
     };
     Ok(Some(declared_classes))
 }
@@ -639,7 +645,7 @@ pub async fn get_declared_constructors_0<T: Thread + 'static>(
         }
         let parameter_types = {
             let reference = Reference::try_from((class_array.clone(), parameters))?;
-            Value::new_object(thread.vm()?.garbage_collector(), reference)
+            Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
         };
         let checked_exceptions = get_exceptions(&thread, &class, method).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
@@ -670,8 +676,11 @@ pub async fn get_declared_constructors_0<T: Thread + 'static>(
                     }
                     let method_annotations: &[i8] =
                         zerocopy::transmute_ref!(method_annotations.as_slice());
-                    annotations =
-                        Value::new_object(collector, Reference::from(method_annotations.to_vec()));
+                    annotations = Value::try_new_object_async(
+                        collector,
+                        Reference::from(method_annotations.to_vec()),
+                    )
+                    .await?;
                 }
                 Attribute::RuntimeVisibleParameterAnnotations {
                     parameter_annotations: runtime_parameter_annotations,
@@ -685,10 +694,11 @@ pub async fn get_declared_constructors_0<T: Thread + 'static>(
                     }
                     let method_parameter_annotations: &[i8] =
                         zerocopy::transmute_ref!(method_parameter_annotations.as_slice());
-                    parameter_annotations = Value::new_object(
+                    parameter_annotations = Value::try_new_object_async(
                         collector,
                         Reference::from(method_parameter_annotations.to_vec()),
-                    );
+                    )
+                    .await?;
                 }
                 _ => {}
             }
@@ -715,7 +725,7 @@ pub async fn get_declared_constructors_0<T: Thread + 'static>(
     let constructors_array_class = thread.class("[Ljava/lang/reflect/Constructor;").await?;
     let constructors = {
         let reference = Reference::try_from((constructors_array_class, constructors))?;
-        Value::new_object(thread.vm()?.garbage_collector(), reference)
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
     };
     Ok(Some(constructors))
 }
@@ -777,10 +787,11 @@ pub async fn get_declared_fields_0<T: Thread + 'static>(
                     }
                     let field_annotations: &[i8] =
                         zerocopy::transmute_ref!(field_annotations.as_slice());
-                    annotations = Value::new_object(
+                    annotations = Value::try_new_object_async(
                         thread.vm()?.garbage_collector(),
                         Reference::from(field_annotations.to_vec()),
-                    );
+                    )
+                    .await?;
                 }
                 _ => {}
             }
@@ -824,7 +835,7 @@ pub async fn get_declared_fields_0<T: Thread + 'static>(
     let fields_array_class = thread.class("[Ljava/lang/reflect/Field;").await?;
     let fields = {
         let reference = Reference::try_from((fields_array_class, fields))?;
-        Value::new_object(thread.vm()?.garbage_collector(), reference)
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
     };
     Ok(Some(fields))
 }
@@ -868,7 +879,7 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
         }
         let parameter_types = {
             let reference = Reference::try_from((class_array.clone(), parameters))?;
-            Value::new_object(thread.vm()?.garbage_collector(), reference)
+            Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
         };
         let return_type = if let Some(return_type) = method.return_type() {
             let class_name = return_type.class_name();
@@ -909,10 +920,11 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
                     }
                     let method_annotations: &[i8] =
                         zerocopy::transmute_ref!(method_annotations.as_slice());
-                    annotations = Value::new_object(
+                    annotations = Value::try_new_object_async(
                         thread.vm()?.garbage_collector(),
                         Reference::from(method_annotations.to_vec()),
-                    );
+                    )
+                    .await?;
                 }
                 Attribute::RuntimeVisibleParameterAnnotations {
                     parameter_annotations: runtime_parameter_annotations,
@@ -926,20 +938,22 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
                     }
                     let method_parameter_annotations: &[i8] =
                         zerocopy::transmute_ref!(method_parameter_annotations.as_slice());
-                    parameter_annotations = Value::new_object(
+                    parameter_annotations = Value::try_new_object_async(
                         thread.vm()?.garbage_collector(),
                         Reference::from(method_parameter_annotations.to_vec()),
-                    );
+                    )
+                    .await?;
                 }
                 Attribute::AnnotationDefault { element, .. } => {
                     let mut method_annotation_default = Vec::new();
                     element.to_bytes(&mut method_annotation_default)?;
                     let method_annotation_default: &[i8] =
                         zerocopy::transmute_ref!(method_annotation_default.as_slice());
-                    annotation_default = Value::new_object(
+                    annotation_default = Value::try_new_object_async(
                         thread.vm()?.garbage_collector(),
                         Reference::from(method_annotation_default.to_vec()),
-                    );
+                    )
+                    .await?;
                 }
                 _ => {}
             }
@@ -969,7 +983,7 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
     let methods_array_class = thread.class("[Ljava/lang/reflect/Method;").await?;
     let methods = {
         let reference = Reference::try_from((methods_array_class, methods))?;
-        Value::new_object(thread.vm()?.garbage_collector(), reference)
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
     };
     Ok(Some(methods))
 }
@@ -1048,7 +1062,7 @@ pub async fn get_enclosing_method_0<T: Thread + 'static>(
             let enclosing_information = vec![class, method_name, method_descriptor];
             let enclosing_information_array = {
                 let reference = Reference::try_from((object_array_class, enclosing_information))?;
-                Value::new_object(thread.vm()?.garbage_collector(), reference)
+                Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
             };
             return Ok(Some(enclosing_information_array));
         }
@@ -1085,7 +1099,7 @@ pub async fn get_exceptions<T: Thread + 'static>(
     }
     let exceptions = {
         let reference = Reference::try_from((class_array, exceptions))?;
-        Value::new_object(thread.vm()?.garbage_collector(), reference)
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
     };
     Ok(exceptions)
 }
@@ -1130,7 +1144,8 @@ pub async fn get_interfaces_0<T: Thread + 'static>(
 
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let reference = Reference::try_from((class_array, interfaces))?;
-    let interfaces = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let interfaces =
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
     Ok(Some(interfaces))
 }
 
@@ -1246,7 +1261,8 @@ pub async fn get_nest_members_0<T: Thread + 'static>(
 
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let reference = Reference::try_from((class_array, members))?;
-    let members_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let members_array =
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
     Ok(Some(members_array))
 }
 
@@ -1342,10 +1358,13 @@ pub async fn get_raw_annotations<T: Thread + 'static>(
         annotation.to_bytes(&mut bytes)?;
     }
     let bytes: &[i8] = zerocopy::transmute_ref!(bytes.as_slice());
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        Reference::from(bytes.to_vec()),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(
+            thread.vm()?.garbage_collector(),
+            Reference::from(bytes.to_vec()),
+        )
+        .await?,
+    ))
 }
 
 #[intrinsic_method("java/lang/Class.getRawTypeAnnotations()[B", Any)]
@@ -1378,10 +1397,13 @@ pub async fn get_raw_type_annotations<T: Thread + 'static>(
         annotation.to_bytes(&mut bytes)?;
     }
     let bytes: &[i8] = zerocopy::transmute_ref!(bytes.as_slice());
-    Ok(Some(Value::new_object(
-        thread.vm()?.garbage_collector(),
-        Reference::from(bytes.to_vec()),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(
+            thread.vm()?.garbage_collector(),
+            Reference::from(bytes.to_vec()),
+        )
+        .await?,
+    ))
 }
 
 #[intrinsic_method(
@@ -1392,6 +1414,8 @@ pub async fn get_record_components_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let vm = thread.vm()?;
+    let gc = vm.garbage_collector();
     let object = parameters.pop()?;
     let class = get_class_no_init(&thread, &object).await?;
     let class_object = class.to_object(&thread).await?;
@@ -1439,10 +1463,9 @@ pub async fn get_record_components_0<T: Thread + 'static>(
                                 runtime_annotation.to_bytes(&mut bytes)?;
                             }
                             let bytes: &[i8] = zerocopy::transmute_ref!(bytes.as_slice());
-                            annotations = Value::new_object(
-                                thread.vm()?.garbage_collector(),
-                                Reference::from(bytes.to_vec()),
-                            );
+                            annotations =
+                                Value::try_new_object_async(gc, Reference::from(bytes.to_vec()))
+                                    .await?;
                         }
                         Attribute::RuntimeVisibleTypeAnnotations {
                             type_annotations: runtime_annotations,
@@ -1456,10 +1479,9 @@ pub async fn get_record_components_0<T: Thread + 'static>(
                                 runtime_annotation.to_bytes(&mut bytes)?;
                             }
                             let bytes: &[i8] = zerocopy::transmute_ref!(bytes.as_slice());
-                            type_annotations = Value::new_object(
-                                thread.vm()?.garbage_collector(),
-                                Reference::from(bytes.to_vec()),
-                            );
+                            type_annotations =
+                                Value::try_new_object_async(gc, Reference::from(bytes.to_vec()))
+                                    .await?;
                         }
                         _ => {}
                     }
@@ -1481,7 +1503,7 @@ pub async fn get_record_components_0<T: Thread + 'static>(
                 // Create RecordComponent by setting fields directly (no public constructor)
                 let record_component_class =
                     thread.class("java/lang/reflect/RecordComponent").await?;
-                let mut component = Object::new(record_component_class)?;
+                let mut component = Object::new_in_async(gc, record_component_class).await?;
                 component.set_value("clazz", object.clone())?;
                 component.set_value("name", name_object)?;
                 component.set_value("type", type_object)?;
@@ -1490,17 +1512,15 @@ pub async fn get_record_components_0<T: Thread + 'static>(
                 component.set_value("annotations", annotations)?;
                 component.set_value("typeAnnotations", type_annotations)?;
 
-                record_components.push(Value::new_object(
-                    thread.vm()?.garbage_collector(),
-                    Reference::Object(component),
-                ));
+                record_components
+                    .push(Value::try_new_object_async(gc, Reference::Object(component)).await?);
             }
         }
     }
 
     let record_component_array_class = thread.class("[Ljava/lang/reflect/RecordComponent;").await?;
     let reference = Reference::try_from((record_component_array_class, record_components))?;
-    let result_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let result_array = Value::try_new_object_async(gc, reference).await?;
     Ok(Some(result_array))
 }
 
@@ -1537,7 +1557,7 @@ async fn create_accessor_method<T: Thread + 'static>(
         let method_name_value = accessor_name.to_object(thread).await?;
         let parameter_types = {
             let reference = Reference::try_from((class_array.clone(), Vec::<Value>::new()))?;
-            Value::new_object(thread.vm()?.garbage_collector(), reference)
+            Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?
         };
 
         let return_type_class_name = expected_return_type.class_name();
@@ -1577,10 +1597,11 @@ async fn create_accessor_method<T: Thread + 'static>(
                     }
                     let method_annotations: &[i8] =
                         zerocopy::transmute_ref!(method_annotations.as_slice());
-                    annotations = Value::new_object(
+                    annotations = Value::try_new_object_async(
                         thread.vm()?.garbage_collector(),
                         Reference::from(method_annotations.to_vec()),
-                    );
+                    )
+                    .await?;
                 }
                 Attribute::RuntimeVisibleParameterAnnotations {
                     parameter_annotations: runtime_parameter_annotations,
@@ -1594,20 +1615,22 @@ async fn create_accessor_method<T: Thread + 'static>(
                     }
                     let method_parameter_annotations: &[i8] =
                         zerocopy::transmute_ref!(method_parameter_annotations.as_slice());
-                    parameter_annotations = Value::new_object(
+                    parameter_annotations = Value::try_new_object_async(
                         thread.vm()?.garbage_collector(),
                         Reference::from(method_parameter_annotations.to_vec()),
-                    );
+                    )
+                    .await?;
                 }
                 Attribute::AnnotationDefault { element, .. } => {
                     let mut method_annotation_default = Vec::new();
                     element.to_bytes(&mut method_annotation_default)?;
                     let method_annotation_default: &[i8] =
                         zerocopy::transmute_ref!(method_annotation_default.as_slice());
-                    annotation_default = Value::new_object(
+                    annotation_default = Value::try_new_object_async(
                         thread.vm()?.garbage_collector(),
                         Reference::from(method_annotation_default.to_vec()),
-                    );
+                    )
+                    .await?;
                 }
                 _ => {}
             }
@@ -2265,6 +2288,7 @@ mod tests {
         let class_object = class_object.as_object_ref()?;
         let class_name = class_object.value("name")?.as_string()?;
         assert_eq!(class_name.as_str(), "int");
+        drop(class_object);
 
         let class = thread
             .class("[Ljava/util/concurrent/ConcurrentHashMap$Segment;")

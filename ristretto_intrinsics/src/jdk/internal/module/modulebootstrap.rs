@@ -110,8 +110,9 @@ async fn create_populated_layer<T: Thread + 'static>(
 
     // Create the ModuleLayer shell (fields set later to break circular ref)
     let layer_class = thread.class("java/lang/ModuleLayer").await?;
-    let layer_object = Object::new(layer_class.clone())?;
-    let layer_value = Value::from_object(gc, layer_object);
+    let layer_object =
+        Object::new_in_async(thread.vm()?.garbage_collector(), layer_class.clone()).await?;
+    let layer_value = Value::try_from_object_async(gc, layer_object).await?;
 
     // Create Module objects and register with the VM
     let module_class = thread.class("java/lang/Module").await?;
@@ -173,7 +174,8 @@ async fn create_module_objects<T: Thread + 'static>(
 
     for rm in resolved_config.modules() {
         let desc = rm.descriptor();
-        let mut module_object = Object::new(module_class.clone())?;
+        let mut module_object =
+            Object::new_in_async(thread.vm()?.garbage_collector(), module_class.clone()).await?;
 
         let name_str = thread.intern_string(&desc.name).await?;
         module_object.set_value_unchecked("name", name_str.clone())?;
@@ -184,7 +186,7 @@ async fn create_module_objects<T: Thread + 'static>(
             module_object.set_value_unchecked("descriptor", java_desc.clone())?;
         }
 
-        let module_value = Value::from_object(gc, module_object);
+        let module_value = Value::try_from_object_async(gc, module_object).await?;
 
         name_entries.push((string_hash_code(&desc.name), name_str, module_value.clone()));
 
@@ -350,8 +352,9 @@ async fn create_configuration_object<T: Thread + 'static>(
     let gc = vm.garbage_collector();
 
     let config_class = thread.class("java/lang/module/Configuration").await?;
-    let config_object = Object::new(config_class)?;
-    let config_value = Value::from_object(gc, config_object);
+    let config_object =
+        Object::new_in_async(thread.vm()?.garbage_collector(), config_class).await?;
+    let config_value = Value::try_from_object_async(gc, config_object).await?;
 
     // Build ResolvedModule objects and the nameToModule map
     let (config_name_to_module, resolved_module_map) =
@@ -414,7 +417,8 @@ async fn create_resolved_modules<T: Thread + 'static>(
             // but Object::new does not enforce abstract-class checks. This is intentional:
             // we only need the `descriptor` field (accessed via the final `descriptor()`
             // method), and the abstract `open()` method is never called during bootstrap.
-            let mut mref_object = Object::new(mref_cls.clone())?;
+            let mut mref_object =
+                Object::new_in_async(thread.vm()?.garbage_collector(), mref_cls.clone()).await?;
             if let Some(java_desc) = java_descriptors.get(&desc.name) {
                 mref_object.set_value_unchecked("descriptor", java_desc.clone())?;
             }
@@ -433,12 +437,13 @@ async fn create_resolved_modules<T: Thread + 'static>(
                 };
                 mref_object.set_value_unchecked("hash", Value::Int(hash))?;
             }
-            let mref_value = Value::from_object(gc, mref_object);
+            let mref_value = Value::try_from_object_async(gc, mref_object).await?;
 
-            let mut rm_object = Object::new(rm_cls.clone())?;
+            let mut rm_object =
+                Object::new_in_async(thread.vm()?.garbage_collector(), rm_cls.clone()).await?;
             rm_object.set_value_unchecked("cf", config_value.clone())?;
             rm_object.set_value_unchecked("mref", mref_value)?;
-            let rm_value = Value::from_object(gc, rm_object);
+            let rm_value = Value::try_from_object_async(gc, rm_object).await?;
 
             resolved_module_map.insert(desc.name.clone(), rm_value.clone());
 
@@ -538,7 +543,8 @@ async fn register_services_catalog_on_layer<T: Thread + 'static>(
 
         // Create ServicesCatalog object directly (bypassing constructor and clinit)
         let catalog_class = thread.class("jdk/internal/module/ServicesCatalog").await?;
-        let mut catalog_object = Object::new(catalog_class)?;
+        let mut catalog_object =
+            Object::new_in_async(thread.vm()?.garbage_collector(), catalog_class).await?;
 
         // Create ConcurrentHashMap(32) for the map field
         let chm_value = thread
@@ -550,7 +556,7 @@ async fn register_services_catalog_on_layer<T: Thread + 'static>(
             .await?;
         catalog_object.set_value_unchecked("map", chm_value.clone())?;
 
-        let catalog_value = Value::from_object(gc, catalog_object);
+        let catalog_value = Value::try_from_object_async(gc, catalog_object).await?;
 
         // Build service entries: Map<String, List<ServiceProvider>>
         let sp_class = thread
@@ -564,11 +570,15 @@ async fn register_services_catalog_on_layer<T: Thread + 'static>(
                     let service = to_dotted(&provides.service);
                     let service_providers = providers_by_service.entry(service).or_default();
                     for provider_name in &provides.implementations {
-                        let mut sp_obj = Object::new(sp_class.clone())?;
+                        let mut sp_obj = Object::new_in_async(
+                            thread.vm()?.garbage_collector(),
+                            sp_class.clone(),
+                        )
+                        .await?;
                         sp_obj.set_value_unchecked("module", module_value.clone())?;
                         let pn_str = thread.intern_string(&to_dotted(provider_name)).await?;
                         sp_obj.set_value_unchecked("providerName", pn_str)?;
-                        let sp_val = Value::from_object(gc, sp_obj);
+                        let sp_val = Value::try_from_object_async(gc, sp_obj).await?;
                         service_providers.push(sp_val);
                     }
                 }
@@ -720,7 +730,8 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
 
-    let mut md_object = Object::new(descriptor_class.clone())?;
+    let mut md_object =
+        Object::new_in_async(thread.vm()?.garbage_collector(), descriptor_class.clone()).await?;
 
     // Set name
     let name_val = thread.intern_string(&desc.name).await?;
@@ -890,7 +901,7 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
         md_object.set_value_unchecked("hash", Value::Int(module_descriptor_hash_code(desc)))?;
     }
 
-    Ok(Value::from_object(gc, md_object))
+    Ok(Value::try_from_object_async(gc, md_object).await?)
 }
 
 /// Creates a `ModuleDescriptor$Requires` object directly.
@@ -904,7 +915,8 @@ async fn create_requires_direct<T: Thread + 'static>(
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
 
-    let mut obj = Object::new(requires_class.clone())?;
+    let mut obj =
+        Object::new_in_async(thread.vm()?.garbage_collector(), requires_class.clone()).await?;
 
     let name_val = thread.intern_string(&req.name).await?;
     obj.set_value_unchecked("name", name_val)?;
@@ -948,7 +960,7 @@ async fn create_requires_direct<T: Thread + 'static>(
         }
     }
 
-    Ok(Value::from_object(gc, obj))
+    Ok(Value::try_from_object_async(gc, obj).await?)
 }
 
 /// Creates a `ModuleDescriptor$Exports` object directly.
@@ -961,7 +973,8 @@ async fn create_exports_direct<T: Thread + 'static>(
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
 
-    let mut obj = Object::new(exports_class.clone())?;
+    let mut obj =
+        Object::new_in_async(thread.vm()?.garbage_collector(), exports_class.clone()).await?;
 
     let source_val = thread.intern_string(&to_dotted(&export.package)).await?;
     obj.set_value_unchecked("source", source_val)?;
@@ -980,7 +993,7 @@ async fn create_exports_direct<T: Thread + 'static>(
         }
     }
 
-    Ok(Value::from_object(gc, obj))
+    Ok(Value::try_from_object_async(gc, obj).await?)
 }
 
 /// Creates a `ModuleDescriptor$Opens` object directly.
@@ -993,7 +1006,8 @@ async fn create_opens_direct<T: Thread + 'static>(
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
 
-    let mut obj = Object::new(opens_class.clone())?;
+    let mut obj =
+        Object::new_in_async(thread.vm()?.garbage_collector(), opens_class.clone()).await?;
 
     let source_val = thread.intern_string(&to_dotted(&open.package)).await?;
     obj.set_value_unchecked("source", source_val)?;
@@ -1012,7 +1026,7 @@ async fn create_opens_direct<T: Thread + 'static>(
         }
     }
 
-    Ok(Value::from_object(gc, obj))
+    Ok(Value::try_from_object_async(gc, obj).await?)
 }
 
 /// Creates a `ModuleDescriptor$Provides` object directly.
@@ -1024,7 +1038,8 @@ async fn create_provides_direct<T: Thread + 'static>(
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
 
-    let mut obj = Object::new(provides_class.clone())?;
+    let mut obj =
+        Object::new_in_async(thread.vm()?.garbage_collector(), provides_class.clone()).await?;
 
     let svc_val = thread.intern_string(&to_dotted(&prov.service)).await?;
     obj.set_value_unchecked("service", svc_val)?;
@@ -1038,7 +1053,7 @@ async fn create_provides_direct<T: Thread + 'static>(
     let providers_list = create_array_list(thread, providers).await?;
     obj.set_value_unchecked("providers", providers_list)?;
 
-    Ok(Value::from_object(gc, obj))
+    Ok(Value::try_from_object_async(gc, obj).await?)
 }
 
 /// Creates a `HashSet` containing Requires.Modifier enum values from flags.
@@ -1107,11 +1122,12 @@ async fn create_array_list<T: Thread + 'static>(
     let list_class = thread.class("java/util/ArrayList").await?;
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
-    let elements = Value::new_object(gc, Reference::try_from((array_class, values))?);
-    let mut list = Object::new(list_class)?;
+    let elements =
+        Value::try_new_object_async(gc, Reference::try_from((array_class, values))?).await?;
+    let mut list = Object::new_in_async(thread.vm()?.garbage_collector(), list_class).await?;
     list.set_value_unchecked("elementData", elements)?;
     list.set_value_unchecked("size", Value::Int(size))?;
-    Ok(Value::from_object(gc, list))
+    Ok(Value::try_from_object_async(gc, list).await?)
 }
 
 async fn create_copy_on_write_array_list<T: Thread + 'static>(
@@ -1125,12 +1141,17 @@ async fn create_copy_on_write_array_list<T: Thread + 'static>(
     let lock_class = thread.class("java/lang/Object").await?;
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
-    let elements = Value::new_object(gc, Reference::try_from((array_class, values))?);
-    let lock = Value::from_object(gc, Object::new(lock_class)?);
-    let mut list = Object::new(list_class)?;
+    let elements =
+        Value::try_new_object_async(gc, Reference::try_from((array_class, values))?).await?;
+    let lock = Value::try_from_object_async(
+        gc,
+        Object::new_in_async(thread.vm()?.garbage_collector(), lock_class).await?,
+    )
+    .await?;
+    let mut list = Object::new_in_async(thread.vm()?.garbage_collector(), list_class).await?;
     list.set_value_unchecked("lock", lock)?;
     list.set_value_unchecked("array", elements)?;
-    Ok(Value::from_object(gc, list))
+    Ok(Value::try_from_object_async(gc, list).await?)
 }
 
 async fn create_hashed_set<T: Thread + 'static>(
@@ -1146,9 +1167,9 @@ async fn create_hashed_set<T: Thread + 'static>(
     let map = create_hashed_map(thread, entries).await?;
 
     let vm = thread.vm()?;
-    let mut set = Object::new(hash_set_class)?;
+    let mut set = Object::new_in_async(thread.vm()?.garbage_collector(), hash_set_class).await?;
     set.set_value_unchecked("map", map)?;
-    Ok(Value::from_object(vm.garbage_collector(), set))
+    Ok(Value::try_from_object_async(vm.garbage_collector(), set).await?)
 }
 
 async fn create_hashed_map<T: Thread + 'static>(
@@ -1157,9 +1178,9 @@ async fn create_hashed_map<T: Thread + 'static>(
 ) -> Result<Value> {
     let map_class = thread.class("java/util/HashMap").await?;
     let vm = thread.vm()?;
-    let mut map = Object::new(map_class)?;
+    let mut map = Object::new_in_async(thread.vm()?.garbage_collector(), map_class).await?;
     map.set_value_unchecked("loadFactor", Value::Float(0.75))?;
-    let map = Value::from_object(vm.garbage_collector(), map);
+    let map = Value::try_from_object_async(vm.garbage_collector(), map).await?;
     populate_hashed_map(thread, &map, entries).await?;
     Ok(map)
 }
@@ -1184,7 +1205,8 @@ async fn populate_hashed_map<T: Thread + 'static>(
         .checked_next_power_of_two()
         .unwrap_or(1 << 30)
         .min(1 << 30);
-    let mut buckets = vec![Value::Object(None); capacity];
+    let mut buckets =
+        ristretto_types::array::allocate_array_in_async(gc, capacity, Value::Object(None)).await?;
 
     for (hash, key, value) in entries {
         let hash = spread_hash(hash);
@@ -1193,16 +1215,16 @@ async fn populate_hashed_map<T: Thread + 'static>(
             ristretto_types::Error::InternalError("invalid hash bucket".to_string())
         })?;
         let next = std::mem::replace(bucket, Value::Object(None));
-        let mut node = Object::new(node_class.clone())?;
+        let mut node = Object::new_in_async(gc, node_class.clone()).await?;
         node.set_value_unchecked("hash", Value::Int(hash))?;
         node.set_value_unchecked("key", key)?;
         node.set_value_unchecked("value", value)?;
         node.set_value_unchecked("next", next)?;
-        *bucket = Value::from_object(gc, node);
+        *bucket = Value::try_from_object_async(gc, node).await?;
     }
 
     let table = Reference::try_from((node_array_class, buckets))?;
-    let table = Value::new_object(gc, table);
+    let table = Value::try_new_object_async(gc, table).await?;
     let mut map_object = map.as_object_mut()?;
     map_object.set_value_unchecked("table", table)?;
     map_object.set_value_unchecked("size", Value::Int(i32::try_from(size)?))?;
@@ -1354,7 +1376,12 @@ async fn value_hash_code<T: Thread + 'static>(thread: &Arc<T>, value: &Value) ->
 }
 
 fn identity_hash_code(value: &Value) -> Result<i32> {
-    let hash_code = value.as_reference()?.hash_code() as u64;
+    let Value::Object(Some(reference)) = value else {
+        return Err(ristretto_types::Error::InternalError(
+            "identity hash requires an object".into(),
+        ));
+    };
+    let hash_code = u64::from_ne_bytes(reference.as_handle_i64().to_ne_bytes());
     #[expect(clippy::cast_possible_truncation)]
     let hash_code = (hash_code ^ (hash_code >> 32)) as u32;
     Ok(zerocopy::transmute!(hash_code))

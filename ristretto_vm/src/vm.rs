@@ -21,8 +21,7 @@ use ristretto_classfile::{
 };
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    Class, ClassLoader, ClassLoaderType, ClassPath, ClassPathEntry, Object, Reference, Value,
-    runtime,
+    Class, ClassLoader, ClassLoaderType, ClassPath, ClassPathEntry, Object, Value, runtime,
 };
 use ristretto_gc::{GarbageCollector, Statistics};
 use ristretto_types::NativeMemory;
@@ -36,24 +35,9 @@ use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, OnceLock, Weak};
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, warn};
-
-/// Run `future` to completion, wrapping it in a `tokio::task::LocalSet` on
-/// `wasi`. The wasi runtime is single-threaded and certain wasm-only code
-/// paths (notably `Thread.start_0`) dispatch via `tokio::task::spawn_local`,
-/// which requires an active `LocalSet`. On non-wasi targets this is a
-/// transparent passthrough.
-#[cfg(target_os = "wasi")]
-async fn run_local<F: Future>(future: F) -> F::Output {
-    tokio::task::LocalSet::new().run_until(future).await
-}
-
-#[cfg(not(target_os = "wasi"))]
-async fn run_local<F: Future>(future: F) -> F::Output {
-    future.await
-}
 
 /// The offset to add to the major version to get the class file version.  Java 1.0 has a class
 /// file major version of 45, so the class file major version is the Java version (1) + the
@@ -65,6 +49,7 @@ pub(crate) const CLASS_FILE_MAJOR_VERSION_OFFSET: u16 = 44;
 pub struct VM {
     /// Weak reference to self to avoid reference cycles
     vm: Weak<VM>,
+    local_scheduler: crate::local_scheduler::LocalScheduler,
     /// VM configuration
     configuration: Configuration,
     /// Module system for runtime module state management.
@@ -87,8 +72,11 @@ pub struct VM {
     method_registry: MethodRegistry,
     /// The JIT compiler (per-VM instance with its own cache and background compilation)
     compiler: Option<Compiler>,
+    #[cfg(feature = "execution-profile")]
+    pub(crate) execution_recorder: Arc<crate::execution_profile::Recorder>,
     /// Metadata shared by JIT runtime contexts in this VM.
     jit_runtime: SharedRuntime,
+    emergency_oom: OnceLock<Value>,
     /// Counter for generating unique hidden class name suffixes
     hidden_class_counter: AtomicU64,
     /// Per-VM native memory manager.
@@ -131,16 +119,18 @@ impl Drop for VM {
         // cleans up objects. Daemon tasks hold Gc<T> pointers to GC managed memory;
         // if the GC frees those objects first, the task cancellation code would access
         // freed memory (use after free).
-        #[cfg(not(target_family = "wasm"))]
         if let Some(handles) = self.thread_handles.try_write_sync() {
             for handle in handles.values() {
-                if let Some(jh) = &handle.join_handle {
-                    jh.abort();
-                }
+                handle.abort();
             }
         }
 
-        // Stop the GC collector thread and clean up remaining objects.
+        self.local_scheduler.close();
+        if let Ok(registry) = ristretto_types::ClassRegistry::for_vm(self) {
+            registry.release_heap_roots();
+        }
+        self.garbage_collector.release_vm_roots();
+        // Owning handles held by cancelled tasks keep their objects alive until cancellation completes.
         if let Err(error) = self.garbage_collector.stop() {
             warn!("Failed to stop garbage collector: {error}");
         }
@@ -156,86 +146,103 @@ impl VM {
     /// if the configured class loader already belongs to another hierarchy or the VM cannot be
     /// created
     pub async fn new(configuration: Configuration) -> Result<Arc<Self>> {
-        run_local(async move {
-            let (java_home, java_version, bootstrap_class_loader) =
-                Self::create_bootstrap_loader(&configuration).await?;
-            startup_trace!("[vm] bootstrap class loader");
+        let local_scheduler = crate::local_scheduler::LocalScheduler::new();
+        let result = local_scheduler
+            // Keep the bootstrap state off callers' future stacks on every target.
+            .run(Box::pin(async move {
+                let (java_home, java_version, bootstrap_class_loader) =
+                    Self::create_bootstrap_loader(&configuration).await?;
+                startup_trace!("[vm] bootstrap class loader");
 
-            debug!(
-                "Java home: {java_home}; version: {java_version}",
-                java_home = java_home.to_string_lossy()
-            );
-            let java_major_version: u16 = java_version.split('.').next().unwrap_or("0").parse()?;
-            let java_class_file_version = Self::compute_class_file_version(
-                java_major_version,
-                configuration.preview_features(),
-            )?;
-            debug!("Class file version {java_class_file_version}");
+                debug!(
+                    "Java home: {java_home}; version: {java_version}",
+                    java_home = java_home.to_string_lossy()
+                );
+                let java_major_version: u16 =
+                    java_version.split('.').next().unwrap_or("0").parse()?;
+                let java_class_file_version = Self::compute_class_file_version(
+                    java_major_version,
+                    configuration.preview_features(),
+                )?;
+                debug!("Class file version {java_class_file_version}");
 
-            let (class_loader, main_class) =
-                Self::create_class_loader(&configuration, &bootstrap_class_loader).await?;
-            startup_trace!("[vm] system class loader");
+                let (class_loader, main_class) =
+                    Self::create_class_loader(&configuration, &bootstrap_class_loader).await?;
+                startup_trace!("[vm] system class loader");
 
-            let method_registry = MethodRegistry::new(&java_class_file_version)?;
-            startup_trace!("[vm] method registry");
+                let method_registry = MethodRegistry::new(&java_class_file_version)?;
+                startup_trace!("[vm] method registry");
 
-            let compiler = Self::create_compiler(&configuration);
-            startup_trace!("[vm] jit compiler");
+                let compiler = Self::create_compiler(&configuration);
+                #[cfg(feature = "execution-profile")]
+                let execution_recorder = compiler.as_ref().map_or_else(
+                    || Arc::new(crate::execution_profile::Recorder::default()),
+                    |compiler| compiler.execution_recorder.clone(),
+                );
+                startup_trace!("[vm] jit compiler");
 
-            let module_system =
-                ModuleSystem::new(&configuration, &java_home, java_major_version).await?;
-            startup_trace!("[vm] module system");
+                let module_system =
+                    ModuleSystem::new(&configuration, &java_home, java_major_version).await?;
+                startup_trace!("[vm] module system");
 
-            let module_config = module_system.resolved_configuration_arc();
-            let mut current_class_loader = Some(class_loader.clone());
-            while let Some(current) = current_class_loader {
-                current.set_module_configuration(Some(module_config.clone()));
-                current_class_loader = current.parent().await;
-            }
-            startup_trace!("[vm] class loader module config");
+                let module_config = module_system.resolved_configuration_arc();
+                let mut current_class_loader = Some(class_loader.clone());
+                while let Some(current) = current_class_loader {
+                    current.set_module_configuration(Some(module_config.clone()));
+                    current_class_loader = current.parent().await;
+                }
+                startup_trace!("[vm] class loader module config");
 
-            let garbage_collector = configuration
-                .garbage_collector()
-                .cloned()
-                .unwrap_or_else(GarbageCollector::new);
+                let garbage_collector = configuration
+                    .garbage_collector()
+                    .cloned()
+                    .unwrap_or_else(GarbageCollector::new);
 
-            let vm = Arc::new_cyclic(|vm| VM {
-                vm: vm.clone(),
-                configuration,
-                class_loader: Arc::new(RwLock::new(class_loader)),
-                garbage_collector,
-                main_class,
-                java_home,
-                java_version,
-                java_major_version,
-                string_factory: StringFactory::new(&java_class_file_version),
-                java_class_file_version,
-                method_registry,
-                compiler,
-                jit_runtime: SharedRuntime::new(),
-                hidden_class_counter: AtomicU64::new(1),
-                next_thread_id: AtomicU64::new(1),
-                next_nio_fd: AtomicI32::new(ristretto_types::FIRST_NIO_FD),
-                native_memory: NativeMemory::new(),
-                resource_manager: ResourceManager::new(),
-                thread_handles: HandleManager::new(),
-                file_handles: HandleManager::new(),
-                #[cfg(not(target_family = "wasm"))]
-                socket_handles: HandleManager::new(),
-                member_handles: HandleManager::new(),
-                string_pool: StringPool::new(),
-                call_site_cache: CallSiteCache::new(),
-                method_ref_cache: MethodRefCache::new(),
-                field_ref_cache: FieldRefCache::new(),
-                monitor_registry: MonitorRegistry::new(),
-                module_system,
-            });
-            startup_trace!("[vm] vm allocation");
+                let vm = Arc::new_cyclic(|vm| VM {
+                    vm: vm.clone(),
+                    local_scheduler,
+                    configuration,
+                    class_loader: Arc::new(RwLock::new(class_loader)),
+                    garbage_collector,
+                    main_class,
+                    java_home,
+                    java_version,
+                    java_major_version,
+                    string_factory: StringFactory::new(&java_class_file_version),
+                    java_class_file_version,
+                    method_registry,
+                    compiler,
+                    #[cfg(feature = "execution-profile")]
+                    execution_recorder,
+                    jit_runtime: SharedRuntime::new(),
+                    emergency_oom: OnceLock::new(),
+                    hidden_class_counter: AtomicU64::new(1),
+                    next_thread_id: AtomicU64::new(1),
+                    next_nio_fd: AtomicI32::new(ristretto_types::FIRST_NIO_FD),
+                    native_memory: NativeMemory::new(),
+                    resource_manager: ResourceManager::new(),
+                    thread_handles: HandleManager::new(),
+                    file_handles: HandleManager::new(),
+                    #[cfg(not(target_family = "wasm"))]
+                    socket_handles: HandleManager::new(),
+                    member_handles: HandleManager::new(),
+                    string_pool: StringPool::new(),
+                    call_site_cache: CallSiteCache::new(),
+                    method_ref_cache: MethodRefCache::new(),
+                    field_ref_cache: FieldRefCache::new(),
+                    monitor_registry: MonitorRegistry::new(),
+                    module_system,
+                });
+                startup_trace!("[vm] vm allocation");
 
-            vm.initialize().await?;
-            Ok(vm)
-        })
-        .await
+                vm.initialize().await?;
+                Ok(vm)
+            }))
+            .await;
+        if result.is_err() {
+            local_scheduler.close();
+        }
+        result
     }
 
     /// Creates the bootstrap class loader.
@@ -444,6 +451,10 @@ impl VM {
         self.garbage_collector.collect();
     }
 
+    pub(crate) fn out_of_memory_error(&self) -> Option<Value> {
+        self.emergency_oom.get().cloned()
+    }
+
     /// Get VM statistics
     pub fn statistics(&self) -> Statistics {
         self.garbage_collector.statistics().unwrap_or_default()
@@ -457,6 +468,111 @@ impl VM {
     /// Get the JIT Compiler
     pub(crate) fn compiler(&self) -> Option<&Compiler> {
         self.compiler.as_ref()
+    }
+
+    /// Whether this VM can dispatch compiled methods on its current runtime.
+    /// Unsupported methods can still execute through the interpreter.
+    #[must_use]
+    pub fn is_jit_enabled(&self) -> bool {
+        self.compiler
+            .as_ref()
+            .is_some_and(|compiler| !compiler.is_interpreted())
+    }
+
+    /// Explicitly prepare a method for experimental reference-bearing JIT dispatch.
+    ///
+    /// Requires the opt-in feature, an enabled native JIT and synchronous compilation.
+    /// Preparation admits only the experimental bytecode capability subset; callees
+    /// use their normal dispatch policy unless separately prepared. This does not
+    /// qualify production eligibility or canonical-collector frame roots.
+    ///
+    /// # Errors
+    /// Returns class/method resolution or compilation errors, capability rejection,
+    /// or an error if an intrinsic would intercept the requested compiled method.
+    #[cfg(feature = "experimental-reference-dispatch")]
+    pub async fn prepare_experimental_jit(
+        &self,
+        class_name: &str,
+        method_name: &str,
+        descriptor: &str,
+    ) -> Result<()> {
+        let compiler = self.compiler().ok_or_else(|| {
+            InternalError("Native JIT is unavailable for experimental preparation".to_owned())
+        })?;
+        let class = self.class(class_name).await?;
+        let method = class.try_get_method(method_name, descriptor)?;
+        if self
+            .method_registry()
+            .method(class.name(), method.name(), method.descriptor())
+            .is_some()
+        {
+            return Err(InternalError(
+                "An intrinsic intercepts the requested method".to_owned(),
+            ));
+        }
+        compiler.prepare_experimental(&class, &method)
+    }
+
+    /// Snapshots lifetime execution/compilation coverage in an instrumented build.
+    /// This diagnostic record does not qualify workload coverage or performance.
+    #[cfg(feature = "execution-profile")]
+    #[must_use]
+    pub fn execution_profile(&self) -> crate::execution_profile::ExecutionProfile {
+        self.execution_recorder.snapshot()
+    }
+
+    /// Start a labeled diagnostic counter interval without resetting lifetime totals.
+    /// Snapshots do not stop execution or wait for compilation. Use explicit caller
+    /// boundaries; this does not infer the benchmark's warmup or measurement phase.
+    #[cfg(feature = "execution-profile")]
+    #[must_use]
+    pub fn execution_profile_checkpoint(
+        &self,
+        label: impl Into<String>,
+    ) -> crate::execution_profile::ExecutionCheckpoint {
+        self.execution_recorder.checkpoint(label.into())
+    }
+
+    /// Finish a diagnostic interval owned by this VM, retaining method-instance
+    /// identity and compiled-code presence at the starting snapshot. Code presence
+    /// alone does not establish dispatch readiness or steady-state compilation.
+    ///
+    /// # Errors
+    /// Returns an error for a foreign checkpoint or a decreasing/wrapped counter.
+    #[cfg(feature = "execution-profile")]
+    pub fn execution_profile_since(
+        &self,
+        checkpoint: crate::execution_profile::ExecutionCheckpoint,
+    ) -> Result<crate::execution_profile::ExecutionInterval> {
+        self.execution_recorder.since(checkpoint)
+    }
+
+    /// Arms one explicit `GcTelemetry` measurement window with bounded retained evidence.
+    /// Snapshot work occurs outside the returned Java timestamps. Instrumented
+    /// method-entry overhead remains present and is not performance-qualified.
+    /// # Errors
+    /// Rejects rearming, invalid limits, or an existing profile beyond the limits.
+    #[cfg(all(
+        feature = "experimental-execution-measurement",
+        target_os = "linux",
+        target_has_atomic = "64"
+    ))]
+    pub fn arm_execution_measurement(
+        &self,
+        limits: crate::execution_measurement::Limits,
+    ) -> Result<()> {
+        self.execution_recorder.arm_measurement(limits)
+    }
+
+    /// Takes the terminal or incomplete measurement packet once, without invoking Java.
+    #[cfg(all(
+        feature = "experimental-execution-measurement",
+        target_os = "linux",
+        target_has_atomic = "64"
+    ))]
+    #[must_use]
+    pub fn take_execution_measurement(&self) -> crate::execution_measurement::Capture {
+        self.execution_recorder.measurement.take()
     }
 
     /// Get the next unique suffix for a hidden class name.
@@ -594,6 +710,15 @@ impl VM {
                 startup_trace!("[vm] boot layer registered with loaders");
             }
         }
+
+        let emergency = self
+            .object(
+                "java.lang.OutOfMemoryError",
+                "Ljava/lang/String;",
+                &["Java heap space"],
+            )
+            .await?;
+        let _ = self.emergency_oom.set(emergency);
 
         Ok(())
     }
@@ -791,7 +916,7 @@ impl VM {
         let java_version = self.java_class_file_version();
 
         let thread_class = thread.class("java.lang.Thread").await?;
-        let mut new_thread = Object::new(thread_class)?;
+        let mut new_thread = Object::new_in_async(&self.garbage_collector, thread_class).await?;
         new_thread.set_value("eetop", Value::Long(thread_id))?;
         new_thread.set_value("tid", Value::Long(thread_id))?;
         let thread_name: Value = "main".to_object(&thread).await?;
@@ -806,14 +931,15 @@ impl VM {
             new_thread.set_value("threadStatus", Value::Int(4))?; // Runnable
         } else {
             let field_holder_class = thread.class("java.lang.Thread$FieldHolder").await?;
-            let mut field_holder = Object::new(field_holder_class)?;
+            let mut field_holder =
+                Object::new_in_async(&self.garbage_collector, field_holder_class).await?;
             field_holder.set_value("daemon", Value::Int(0))?;
             field_holder.set_value("group", thread_group)?;
             field_holder.set_value("priority", Value::Int(5))?;
             field_holder.set_value("stackSize", Value::Long(0))?;
             field_holder.set_value("threadStatus", Value::Int(4))?; // Runnable
             let field_holder =
-                Value::new_object(&self.garbage_collector, Reference::Object(field_holder));
+                Value::try_from_object_async(&self.garbage_collector, field_holder).await?;
 
             new_thread.set_value("holder", field_holder)?;
             new_thread.set_value("interrupted", Value::Int(0))?;
@@ -821,15 +947,18 @@ impl VM {
             // Initialize interruptLock which is used by NIO's blockedOn()
             // (normally set by field initializer in <init>, but we skip <init>)
             let object_class = thread.class("java.lang.Object").await?;
-            let interrupt_lock = Object::new(object_class)?;
+            let interrupt_lock =
+                Object::new_in_async(&self.garbage_collector, object_class).await?;
             new_thread.set_value(
                 "interruptLock",
-                Value::from_object(&self.garbage_collector, interrupt_lock),
+                Value::try_from_object_async(&self.garbage_collector, interrupt_lock).await?,
             )?;
         }
 
         thread
-            .set_java_object(Value::from_object(&self.garbage_collector, new_thread))
+            .set_java_object(
+                Value::try_from_object_async(&self.garbage_collector, new_thread).await?,
+            )
             .await;
         self.thread_handles
             .insert(thread.id(), ThreadHandle::from(thread))
@@ -860,11 +989,12 @@ impl VM {
     where
         S: AsRef<str> + Debug + Send,
     {
-        run_local(async move {
-            let thread = self.primordial_thread().await?;
-            thread.class(class_name).await
-        })
-        .await
+        self.local_scheduler
+            .run(async move {
+                let thread = self.primordial_thread().await?;
+                thread.class(class_name).await
+            })
+            .await
     }
 
     /// Invoke the main method of the main class associated with the VM. Before Java 25, the
@@ -881,55 +1011,58 @@ impl VM {
     where
         S: AsRef<OsStr> + Debug,
     {
-        run_local(async move {
-            let Some(main_class_name) = &self.main_class else {
-                return Err(InternalError("No main class specified".into()));
-            };
-            let main_class = self.class(&main_class_name).await?;
-            let Some(mut target) = main_class.resolve_main_method(self.java_major_version)? else {
-                return Err(InternalError(
-                    ["No main method found for ", main_class_name].concat(),
-                ));
-            };
-
-            let thread = self.primordial_thread().await?;
-            let mut arguments = Vec::with_capacity(2);
-            if !target.method.is_static() {
-                if main_class.is_interface()
-                    || main_class
-                        .class_file()
-                        .access_flags
-                        .contains(ClassAccessFlags::ABSTRACT)
-                {
+        self.local_scheduler
+            .run(async move {
+                let Some(main_class_name) = &self.main_class else {
+                    return Err(InternalError("No main class specified".into()));
+                };
+                let main_class = self.class(&main_class_name).await?;
+                let Some(mut target) = main_class.resolve_main_method(self.java_major_version)?
+                else {
                     return Err(InternalError(
-                        ["Cannot instantiate main class ", main_class_name].concat(),
+                        ["No main method found for ", main_class_name].concat(),
                     ));
+                };
+
+                let thread = self.primordial_thread().await?;
+                let mut arguments = Vec::with_capacity(2);
+                if !target.method.is_static() {
+                    if main_class.is_interface()
+                        || main_class
+                            .class_file()
+                            .access_flags
+                            .contains(ClassAccessFlags::ABSTRACT)
+                    {
+                        return Err(InternalError(
+                            ["Cannot instantiate main class ", main_class_name].concat(),
+                        ));
+                    }
+
+                    let constructor = main_class.object_initializer("()V");
+                    if constructor.is_none_or(|constructor| constructor.is_private()) {
+                        return Err(InternalError(
+                            [
+                                "No non-private no-argument constructor found for ",
+                                main_class_name,
+                            ]
+                            .concat(),
+                        ));
+                    }
+                    arguments.push(thread.object(main_class_name, "", &[] as &[Value]).await?);
+                    // Separately compiled hierarchies can expose an abstract entry point.
+                    target = main_class.select_concrete_method(&target)?;
                 }
 
-                let constructor = main_class.object_initializer("()V");
-                if constructor.is_none_or(|constructor| constructor.is_private()) {
-                    return Err(InternalError(
-                        [
-                            "No non-private no-argument constructor found for ",
-                            main_class_name,
-                        ]
-                        .concat(),
-                    ));
+                if target.method.descriptor() == "([Ljava/lang/String;)V" {
+                    arguments
+                        .push(ristretto_types::JavaObject::to_object(parameters, &*thread).await?);
                 }
-                arguments.push(thread.object(main_class_name, "", &[] as &[Value]).await?);
-                // Separately compiled hierarchies can expose an abstract entry point.
-                target = main_class.select_concrete_method(&target)?;
-            }
 
-            if target.method.descriptor() == "([Ljava/lang/String;)V" {
-                arguments.push(ristretto_types::JavaObject::to_object(parameters, &*thread).await?);
-            }
-
-            thread
-                .execute(&target.declaring_class, &target.method, &arguments)
-                .await
-        })
-        .await
+                thread
+                    .execute(&target.declaring_class, &target.method, &arguments)
+                    .await
+            })
+            .await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
@@ -948,11 +1081,12 @@ impl VM {
         C: AsRef<str> + Debug + Send + Sync,
         M: AsRef<str> + Debug + Send + Sync,
     {
-        run_local(async move {
-            let thread = self.primordial_thread().await?;
-            thread.invoke(&class, &method, parameters).await
-        })
-        .await
+        self.local_scheduler
+            .run(async move {
+                let thread = self.primordial_thread().await?;
+                thread.invoke(&class, &method, parameters).await
+            })
+            .await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
@@ -971,11 +1105,12 @@ impl VM {
         C: AsRef<str> + Debug + Send + Sync,
         M: AsRef<str> + Debug + Send + Sync,
     {
-        run_local(async move {
-            let thread = self.primordial_thread().await?;
-            thread.try_invoke(&class, &method, parameters).await
-        })
-        .await
+        self.local_scheduler
+            .run(async move {
+                let thread = self.primordial_thread().await?;
+                thread.try_invoke(&class, &method, parameters).await
+            })
+            .await
     }
 
     /// Create a new VM Object by invoking the constructor of the specified class.
@@ -993,11 +1128,12 @@ impl VM {
         C: AsRef<str> + Debug + Send + Sync,
         M: AsRef<str> + Debug + Send + Sync,
     {
-        run_local(async move {
-            let thread = self.primordial_thread().await?;
-            thread.object(class_name, descriptor, parameters).await
-        })
-        .await
+        self.local_scheduler
+            .run(async move {
+                let thread = self.primordial_thread().await?;
+                thread.object(class_name, descriptor, parameters).await
+            })
+            .await
     }
 
     /// The string pool is used to store and intern strings for the VM.
@@ -1088,17 +1224,34 @@ impl VM {
         Ok(())
     }
 
-    /// Wait for all non-daemon threads to complete (WASM version; no-op).
-    ///
+    /// Drives cooperative non-daemon tasks to completion, then cancels daemon tasks.
     /// # Errors
-    ///
-    /// This implementation never returns an error; the `Result` is kept for signature
-    /// consistency with the non-wasm implementation.
+    /// Reserved for consistency with native task joining.
     #[cfg(target_family = "wasm")]
-    #[expect(clippy::unused_async, clippy::unused_async_trait_impl)]
     pub async fn wait_for_non_daemon_threads(&self) -> Result<()> {
-        // WASM uses spawn_local which doesn't support joining
-        Ok(())
+        self.local_scheduler
+            .run(async {
+                loop {
+                    let running = self
+                        .thread_handles
+                        .read()
+                        .await
+                        .values()
+                        .any(|handle| !handle.daemon && handle.abort_handle.is_some());
+                    if !running {
+                        break;
+                    }
+                    tokio::task::yield_now().await;
+                }
+                for handle in self.thread_handles.read().await.values() {
+                    if handle.daemon {
+                        handle.abort();
+                    }
+                }
+                tokio::task::yield_now().await;
+                Ok(())
+            })
+            .await
     }
 }
 

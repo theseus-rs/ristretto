@@ -1,0 +1,28 @@
+{
+  "arms": {
+    "before": {
+      "capacity": null,
+      "p999_us": 39936.0,
+      "failed": 0,
+      "unfinished": 0,
+      "completed": [
+        60000,
+        60000
+      ],
+      "oom": 0
+    },
+    "after": {
+      "capacity": null,
+      "p999_us": 45056.0,
+      "failed": 0,
+      "unfinished": 0,
+      "completed": [
+        60000,
+        60000
+      ],
+      "oom": 0
+    }
+  },
+  "p999_ratio": 1.1282051282051282,
+  "passed": false
+}

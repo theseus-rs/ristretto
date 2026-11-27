@@ -85,7 +85,7 @@ pub async fn platform_properties<T: Thread + 'static>(
     push_property(system_properties, &mut properties, "user.name")?;
 
     let reference = Reference::try_from((string_array_class, properties))?;
-    let result = Value::new_object(vm.garbage_collector(), reference);
+    let result = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(result))
 }
 
@@ -154,6 +154,6 @@ pub async fn vm_properties<T: Thread + 'static>(
 
     let string_array_class = thread.class("[Ljava/lang/String;").await?;
     let reference = Reference::try_from((string_array_class, properties))?;
-    let result = Value::new_object(vm.garbage_collector(), reference);
+    let result = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(result))
 }

@@ -1,0 +1,47 @@
+{
+  "schema_version": 3,
+  "tier": "wasi-interpreted",
+  "source_root": "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-protected-raw-old-only-v1",
+  "command": [
+    "cargo",
+    "build",
+    "--locked",
+    "-p",
+    "ristretto_vm",
+    "--no-default-features",
+    "--features",
+    "execution-profile",
+    "--example",
+    "gc_preview",
+    "--message-format=json-render-diagnostics",
+    "--target",
+    "wasm32-wasip2"
+  ],
+  "execute": [
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/terminal-dispatch-funded-v1/controlled-comparison/wasm-results/wasmtime",
+    "run",
+    "-W",
+    "max-wasm-stack=8388608",
+    "-S",
+    "http",
+    "--dir",
+    "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10::/jdk",
+    "--dir",
+    "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-protected-raw-old-only-v1/ristretto_vm/tests/fixtures/canonical::/classes",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/private-clean-c02357ca-v1/phase-shipping/jvm/wasi-target/wasm32-wasip2/debug/examples/gc_preview.wasm",
+    "/jdk",
+    "/classes"
+  ],
+  "report": {
+    "cleared_witnesses": 2,
+    "compiled_backedges": 0,
+    "compiled_entries": 0,
+    "cycle_rewired_by": "interpreted",
+    "full_collections": 1,
+    "interpreted_entries": 25,
+    "managed_bytes_freed": 480,
+    "result": 64
+  },
+  "scope": "finite functional example",
+  "performance_qualified": false
+}

@@ -85,6 +85,8 @@ fn primitive_local_count_does_not_define_native_frame_size() -> Result<()> {
             Some(crate::Value::I64(expected))
         );
     }
+    #[cfg(feature = "execution-profile")]
+    assert_eq!(function.execution_count(), 3);
     println!(
         "native primitive frame with 2050 declared locals: {} bytes",
         function.native_stack_bytes()
@@ -92,14 +94,9 @@ fn primitive_local_count_does_not_define_native_frame_size() -> Result<()> {
     Ok(())
 }
 
-extern "C" fn read_counter(context: *const AtomicI64, bci: i32, array: i64, index: i32) -> i64 {
+extern "C" fn read_counter(context: *const AtomicI64, _bci: i32, _array: i64, _index: i32) -> i64 {
     // Safety: this fixture passes an AtomicI64 owner for the whole synchronous call.
-    let counter = unsafe { &*context };
-    if bci < 0 || array != 42 || index != 0 {
-        counter.store(i64::MIN, Ordering::Relaxed);
-        return -1;
-    }
-    counter.fetch_add(1, Ordering::Relaxed)
+    unsafe { &*context }.fetch_add(1, Ordering::Relaxed)
 }
 
 extern "C" fn publish(_context: *const u8, _roots: *const i64, _count: i32) -> i32 {
@@ -117,7 +114,9 @@ extern "C" fn null_receiver(context: *const AtomicI64, _bci: i32) {
 
 #[test]
 fn metadata_includes_values_spilled_across_opaque_calls() -> Result<()> {
-    const COUNT: u16 = 768;
+    // Each array read now owns continuation state. Keep the live-value fixture
+    // below the state-transfer limit, which the separate rejection test covers.
+    const COUNT: u16 = 248;
     let class = spill_fixture(COUNT, true)?;
     class.verify()?;
     let method = class.methods.first().expect("spill method");
@@ -141,9 +140,44 @@ fn metadata_includes_values_spilled_across_opaque_calls() -> Result<()> {
         ))
     );
     assert_eq!(counter.load(Ordering::Relaxed), i64::from(COUNT));
+    #[cfg(feature = "execution-profile")]
+    assert_eq!(function.execution_count(), 1);
     println!(
         "native frame with opaque call spills: {} bytes",
         function.native_stack_bytes()
+    );
+    Ok(())
+}
+
+#[test]
+fn excessive_request_state_is_rejected_before_codegen() -> Result<()> {
+    let mut class = spill_fixture(1024, true)?;
+    let field = class
+        .constant_pool
+        .add_field_ref(class.this_class, "tick", "J")?;
+    let method = class.methods.first_mut().expect("spill method");
+    for attribute in &mut method.attributes {
+        if let Attribute::Code { code, .. } = attribute {
+            let mut replaced = Vec::new();
+            let mut index = 0;
+            while let Some(instruction) = code.get(index) {
+                if instruction == &Instruction::Aload_0 {
+                    replaced.push(Instruction::Getstatic(field));
+                    index += 3;
+                } else {
+                    replaced.push(instruction.clone());
+                    index += 1;
+                }
+            }
+            *code = replaced;
+        }
+    }
+    class.verify()?;
+    let result =
+        crate::Compiler::new()?.compile(&class, class.methods.first().expect("spill method"), &[]);
+    assert!(
+        matches!(result, Err(Error::UnsupportedMethod(ref message)) if message == "continuation state-transfer limit exceeded"),
+        "{result:?}"
     );
     Ok(())
 }

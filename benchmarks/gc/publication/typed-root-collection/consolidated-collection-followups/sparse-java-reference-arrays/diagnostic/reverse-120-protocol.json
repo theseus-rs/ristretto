@@ -1,0 +1,16 @@
+{
+  "diagnostic_only": true,
+  "parent_first": true,
+  "same_original_seed": 251130337,
+  "seconds": 120,
+  "warmup": 10,
+  "workers": 2,
+  "cpus": [
+    8,
+    10
+  ],
+  "rate": 500,
+  "source": "identical frozen JVM binaries and Java classfiles",
+  "decision": "Retain the original qualification result independently of the diagnostic outcome.",
+  "host_observation": "Per-CPU ticks include the sibling hardware threads. Count concurrent rustc processes."
+}

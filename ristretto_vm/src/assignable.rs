@@ -1,6 +1,5 @@
 use crate::Result;
 use crate::thread::Thread;
-use ristretto_classfile::JavaStr;
 use ristretto_classloader::Class;
 use std::sync::Arc;
 
@@ -25,51 +24,16 @@ impl Assignable for Arc<Class> {
             return Ok(true);
         }
 
-        // Handle array types
+        // Array covariance is recursive over resolved component identities. Rank
+        // comparisons and descriptor suffixes cannot distinguish, for example,
+        // Cloneable[] <- int[][], and name lookup loses hidden/defining-loader types.
         if other.is_array() && self.is_array() {
-            // For object arrays, check if dimensions are compatible
-            let self_dimensions = self.array_dimensions();
-            let other_dimensions = other.array_dimensions();
-
-            if self_dimensions == other_dimensions {
-                let other_name = other.name();
-                let self_is_primitive = !self_name.ends_with(';');
-                let other_is_primitive = !other_name.ends_with(';');
-
-                if self_is_primitive && other_is_primitive {
-                    // For primitive arrays, they must be exactly the same type
-                    return Ok(self_name == other_name);
-                }
-
-                if self_is_primitive != other_is_primitive {
-                    return Ok(false);
-                }
-
-                // Both are object arrays; check component type compatibility recursively
-                let (Some(self_component), Some(other_component)) =
-                    (self.component_type(), other.component_type())
-                else {
-                    return Ok(false);
-                };
-
-                // Check if self_component is assignable from other_component.
-                let self_component_class = thread
-                    .load_referenced_class(self, &JavaStr::cow_from_str(self_component))
-                    .await?;
-                let other_component_class = thread
-                    .load_referenced_class(other, &JavaStr::cow_from_str(other_component))
-                    .await?;
-                return Box::pin(
-                    self_component_class.is_assignable_from(thread, &other_component_class),
-                )
-                .await;
-            } else if self_dimensions < other_dimensions && self_name == "[Ljava/lang/Object;" {
-                // Multi-dimensional arrays (including primitive) can be assigned to Object[]
-                // because each sub-array is an Object
-                return Ok(true);
+            let target = thread.array_component_class(self).await?;
+            let source = thread.array_component_class(other).await?;
+            if target.is_primitive() || source.is_primitive() {
+                return Ok(Arc::ptr_eq(&target, &source));
             }
-
-            return Ok(false);
+            return Box::pin(target.is_assignable_from(thread, &source)).await;
         }
 
         // Check inheritance hierarchy

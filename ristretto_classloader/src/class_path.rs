@@ -186,6 +186,30 @@ mod tests {
     use crate::Result;
     use std::path::PathBuf;
 
+    #[cfg(all(feature = "url", target_family = "wasm"))]
+    #[tokio::test]
+    async fn url_archives_report_the_wasm_platform_limit() {
+        use crate::Error::{ArchiveError, ClassNotFound};
+
+        let url = "https://example.invalid/classes.jar";
+        let entry = ClassPathEntry::new(url);
+        assert!(matches!(entry, ClassPathEntry::Jar(_)));
+        let reason = format!("URL based archives are not supported on wasm: {url}");
+        assert!(
+            matches!(entry.class_names().await, Err(ArchiveError(message)) if message == reason)
+        );
+        assert!(
+            matches!(entry.read_class("Remote").await, Err(ArchiveError(message)) if message == reason)
+        );
+        let path = ClassPath::new(vec![entry]);
+        assert!(
+            matches!(path.class_names().await, Err(ArchiveError(message)) if message == reason)
+        );
+        assert!(
+            matches!(path.read_class("Remote").await, Err(ClassNotFound(name)) if name == "Remote")
+        );
+    }
+
     #[cfg(target_os = "windows")]
     const PATH_SEPARATOR: &str = ";";
     #[cfg(not(target_os = "windows"))]
@@ -259,7 +283,7 @@ mod tests {
         let class_path_entries = [
             classes_directory.to_string_lossy().to_string(),
             classes_jar.to_string_lossy().to_string(),
-            #[cfg(feature = "url")]
+            #[cfg(all(feature = "url", not(target_family = "wasm")))]
             "https//repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar".to_string(),
         ];
 
@@ -274,7 +298,7 @@ mod tests {
                 .is_some_and(|url| url.starts_with("file:") && url.ends_with('/'))
         );
 
-        #[cfg(feature = "url")]
+        #[cfg(all(feature = "url", not(target_family = "wasm")))]
         {
             let class_file = class_path_entry
                 .read_class("org/springframework/boot/SpringApplication")
@@ -338,7 +362,7 @@ mod tests {
         let class_path_entries = [
             classes_directory.to_string_lossy().to_string(),
             classes_jar.to_string_lossy().to_string(),
-            #[cfg(feature = "url")]
+            #[cfg(all(feature = "url", not(target_family = "wasm")))]
             "https//repo1.maven.org/maven2/org/springframework/boot/spring-boot/3.3.0/spring-boot-3.3.0.jar".to_string(),
         ];
 
@@ -347,7 +371,7 @@ mod tests {
         let class_names = class_path_entry.class_names().await?;
         assert!(class_names.contains(&"HelloWorld".to_string()));
 
-        #[cfg(feature = "url")]
+        #[cfg(all(feature = "url", not(target_family = "wasm")))]
         {
             assert!(
                 class_names.contains(&"org/springframework/boot/SpringApplication".to_string())

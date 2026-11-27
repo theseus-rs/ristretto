@@ -296,7 +296,7 @@ mod tests {
         let new_array = || {
             Value::new_object(
                 vm.garbage_collector(),
-                Reference::IntArray(vec![99; 1].into_boxed_slice()),
+                Reference::IntArray(vec![99; 1].into()),
             )
         };
         let read = new_array();
@@ -349,7 +349,7 @@ mod tests {
         let new_array = || {
             Value::new_object(
                 vm.garbage_collector(),
-                Reference::IntArray(vec![0; 2].into_boxed_slice()),
+                Reference::IntArray(vec![0; 2].into()),
             )
         };
         let read = new_array();

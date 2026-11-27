@@ -34,6 +34,9 @@ zerocopy = { workspace = true }
 socket2 = { workspace = true }
 tokio = { workspace = true, features = ["net"] }
 
+[target.'cfg(target_family = "wasm")'.dependencies]
+futures-util = { workspace = true }
+
 [dev-dependencies]
 ristretto_test_util = { path = "../ristretto_test_util" }
 tempfile = { workspace = true }

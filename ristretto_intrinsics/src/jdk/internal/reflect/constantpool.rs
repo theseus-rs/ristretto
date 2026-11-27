@@ -219,7 +219,7 @@ pub async fn get_member_ref_info_at_0<T: Thread + 'static>(
     let string_class = thread.class("[Ljava/lang/String;").await?;
     let string_array = vec![class_name, name, descriptor];
     let reference = Reference::try_from((string_class, string_array))?;
-    let results = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let results = Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
     Ok(Some(results))
 }
 
@@ -256,7 +256,8 @@ pub async fn get_method_at_0<T: Thread + 'static>(
     }
     let class = thread.class("[Ljava/lang/Class;").await?;
     let reference = Reference::try_from((class, parameters_classes))?;
-    let class_parameters = Value::new_object(thread.vm()?.garbage_collector(), reference);
+    let class_parameters =
+        Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
 
     let method = if method_name == CONSTRUCTOR_NAME {
         thread
@@ -381,7 +382,7 @@ pub async fn get_name_and_type_ref_info_at_0<T: Thread + 'static>(
     let string_class = thread.class("[Ljava/lang/String;").await?;
     let string_array = vec![name, descriptor];
     let result_ref = Reference::try_from((string_class, string_array))?;
-    let results = Value::new_object(thread.vm()?.garbage_collector(), result_ref);
+    let results = Value::try_new_object_async(thread.vm()?.garbage_collector(), result_ref).await?;
     Ok(Some(results))
 }
 

@@ -1,0 +1,14 @@
+{
+  "sha256": {
+    "before": "d2a71d3d22591b529ee073bcba30eb0fbf4888d9bf100b3e777dbb87dfd74d31",
+    "after": "0974f1eaffe5554d0be333a1dfd579175323e35747807a1b88885dbeeb534b24"
+  },
+  "runner": {
+    "path": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/logical/statistics/reuse/direct-wasm/wasmtime",
+    "sha256": "983e57573a320cf44c93ccaa571a25640cf38b15e8e14160aa7bb919336caae8",
+    "version": "wasmtime 50.0.1 (c307ec81d 2026-10-29)"
+  },
+  "raw_sha256": "f476243b5e50f5afaa1ef501b6d6e5706769b08002a33813c798bfcd5c7dc24d",
+  "harness_sha256": "b69f912152c50ca12a9d983445cc359a0ccaaec5492f7960c0d7f0bf153369d2",
+  "schedule_sha256": "bf61dc55fba2e05c0d7d1dfa383c2a9b5ab24552388429f3d6ea66610ae5aea5"
+}

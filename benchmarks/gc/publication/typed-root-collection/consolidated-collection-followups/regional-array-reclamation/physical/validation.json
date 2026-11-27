@@ -1,0 +1,173 @@
+{
+  "revision": "b9d5e953796e80284164eb43ade4d8f1a82fb173",
+  "release": {
+    "native-clippy": "d66eac41728d7b7afef98424a3cd575235d59a157401f994d5d8dcc1f5d085cf",
+    "wasi-clippy": "e89f2d7ad35d0a61bdae951802609947cbdd3b5c7898c0ad0afe96736944f351",
+    "gc-package": "70b6a67c2418c97dffbeecd5951f666ecd633c7b95d60fabcce034740c802f92",
+    "consumer-native": "0f8cd3b04ef06eeb2aaecf272061324cb83aa00ecd26adeb8001b7573161bd49",
+    "consumer-wasi": "5e465cc894f4ebeb210c6dddcf7b9ed205a65337dc2e6b382d73c504fceb0c27",
+    "miri-drops": "16a676651cbcb1977b849853576008d04479ae9180800ed927a6fc16577835f5",
+    "miri-locks": "a41a31ab3a70d60effae49d5a5749af4ec2211b4ff92875fbd93ec51ee3368da",
+    "release-tests": "d740036b069818814aad7e266dfbfdc21fe3073b21cf78453024e4a09a2b4145"
+  },
+  "tests": {
+    "native": {
+      "passed": 1023,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 461,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "audit": {
+    "attempts": [
+      {
+        "attempt": "audit-gemini-4-carbon-high",
+        "status": "ERROR",
+        "error": "print timeout after 5m0s with the turn still in progress; the response is partial",
+        "response_sha256": null
+      },
+      {
+        "attempt": "audit-gemini-4-carbon-xhigh",
+        "status": "ERROR",
+        "error": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)",
+        "response_sha256": null
+      },
+      {
+        "attempt": "audit-gemini-4-neon-high",
+        "status": "SUCCESS",
+        "error": null,
+        "response_sha256": "64e1df2cc58ebeb7b58ea868bfa454dc0fec81097bba73b089bbb7fc422fc2e6"
+      }
+    ]
+  },
+  "workspace_graphs": 14,
+  "previews": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "reproducer": {
+    "native-debug": {
+      "binary_sha256": "49d96182fd029b635ea3fb9fbdd03583867e0b5ea9cb1c3482452dc1ba78d939",
+      "iterations": 1024,
+      "stats": {
+        "live_objects": 12277,
+        "managed_bytes": 58458826,
+        "workers": 2,
+        "candidate": true,
+        "jit_enabled": true,
+        "collections_completed": 59
+      }
+    },
+    "wasi-debug": {
+      "binary_sha256": "f6f938ea011761b4dee21c4129a69a81545b4ff1a7e7e8fbda13f0c16c51d8aa",
+      "iterations": 1024,
+      "stats": {
+        "live_objects": 12769,
+        "managed_bytes": 59804657,
+        "workers": 0,
+        "candidate": true,
+        "jit_enabled": false,
+        "collections_completed": 2
+      }
+    },
+    "class_sha256": "fa79b8b9a2d6621df701be321cd6a40976b16ad616aff0a324478c19e9cda1d8"
+  },
+  "complete_cycles": {
+    "native": 11.195985085016948,
+    "wasm": 10.601841097733665
+  },
+  "comparison": {
+    "0": {
+      "Ristretto": {
+        "metric": "ops_per_second",
+        "median": null,
+        "failures": 3,
+        "unfinished": null
+      },
+      "G1": {
+        "metric": "ops_per_second",
+        "median": 929845.3827863388,
+        "failures": 0,
+        "unfinished": 0
+      },
+      "ZGC": {
+        "metric": "ops_per_second",
+        "median": 537962.6445493208,
+        "failures": 0,
+        "unfinished": 0
+      }
+    },
+    "100": {
+      "Ristretto": {
+        "metric": "p999_us",
+        "median": null,
+        "failures": 3,
+        "unfinished": null
+      },
+      "G1": {
+        "metric": "p999_us",
+        "median": 27,
+        "failures": 0,
+        "unfinished": 0
+      },
+      "ZGC": {
+        "metric": "p999_us",
+        "median": 122,
+        "failures": 0,
+        "unfinished": 0
+      }
+    },
+    "500": {
+      "Ristretto": {
+        "metric": "p999_us",
+        "median": null,
+        "failures": 3,
+        "unfinished": null
+      },
+      "G1": {
+        "metric": "p999_us",
+        "median": 23,
+        "failures": 0,
+        "unfinished": 0
+      },
+      "ZGC": {
+        "metric": "p999_us",
+        "median": 19,
+        "failures": 0,
+        "unfinished": 0
+      }
+    }
+  }
+}

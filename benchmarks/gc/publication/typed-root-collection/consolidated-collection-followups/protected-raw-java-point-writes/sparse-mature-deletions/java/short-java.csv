@@ -1,0 +1,13 @@
+runtime,fork,rate,status,completed,unfinished,ops_s,p999_us,p9999_us,oom_kills
+ristretto-candidate-jit,1,500,ok,5000,0,500.09629549207256,3072,4992,0
+ristretto-candidate-jit-before,1,500,ok,5000,0,500.0871677937997,2688,4800,0
+ristretto-candidate-jit,1,0,ok,30107,0,3010.423500127572,34304,40960,0
+ristretto-candidate-jit-before,1,0,ok,23453,0,2342.8237142871576,41472,50176,0
+ristretto-candidate-jit-before,2,0,ok,29046,0,2904.5795052870108,35840,43520,0
+ristretto-candidate-jit,2,0,ok,32974,0,3297.371382443509,30208,37888,0
+ristretto-candidate-jit-before,2,500,ok,5000,0,500.0812945654641,2944,10240,0
+ristretto-candidate-jit,2,500,ok,5000,0,500.0223734010934,2944,4032,0
+ristretto-candidate-jit-before,3,500,ok,5000,0,500.09589843949436,3840,12416,0
+ristretto-candidate-jit,3,500,ok,5000,0,500.0781727700534,2496,4672,0
+ristretto-candidate-jit,3,0,ok,33959,0,3395.265821385031,30208,38912,0
+ristretto-candidate-jit-before,3,0,ok,33219,0,3321.4964458212744,31232,41984,0

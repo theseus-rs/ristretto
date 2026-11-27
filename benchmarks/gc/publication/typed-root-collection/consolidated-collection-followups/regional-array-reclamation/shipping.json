@@ -1,0 +1,40 @@
+{
+  "revision": "b72fdcdd941a68e4181e41022c39f7bf408799aa",
+  "workspace_graphs": 14,
+  "release_tool_tests": 12,
+  "negative_source": {
+    "path": "ristretto_vm/src/canonical/compiled_heap.rs",
+    "sha256": "f216d9fe335a87000ec0cfa04d0df9c88e7209414882d19c91904023ec0fc009",
+    "original_revision": "8e277a3958870105b69f8dde4f4c2c6f0ff7bf9a",
+    "archive_member": "ristretto_vm-0.35.0/src/canonical/compiled_heap.rs",
+    "unreferenced": true,
+    "results": {
+      "previous_workspace": "accepted",
+      "workspace": "rejected",
+      "normalized_wasi_consumer": "rejected before build"
+    }
+  },
+  "archive_consumers": [
+    "native VM/JIT",
+    "wasm32-wasip2 transitive VM"
+  ],
+  "log_sha256": {
+    "graphs.log": "de1fb06b01b5ecb46b0fb14ce05603a9923cc8cc564debf657b5acff7854f517",
+    "package-rejected.log": "9a30de7b4bb0f1b5c432735a4e398261560f3f25e7057ea513ab61a43746db98",
+    "packaged-native.log": "318f898f7422e37a53eeb29014cf495762becdfdc0144772e93d00c51bd038e8",
+    "packaged-wasi.log": "f70bd980bc8866903b8e180ea0a073420b9eb4433c0ba10792b31018c387aaa0",
+    "parent-accepted.log": "dee27e3e063a3f9c6a87624c89515f81fd8d30e4b6c82d723d144b3cd9c6e824",
+    "release-tests.log": "6ac94086e51203e45e64724d9149dd255e0adc972ec67aa74a02221bd121de86",
+    "workspace-rejected.log": "03a8a0210c2bdc34adf52c708809b25eff0be88280458a7014a26dd892722059"
+  },
+  "audit": {
+    "model": "gemini-4-neon",
+    "effort": "high",
+    "status": "SUCCESS",
+    "response_sha256": "d8f805720ca4875e6eaf72553f86f7dcb8db035d38a280ca06d1c7d85864cf61"
+  },
+  "normalized_crates": {
+    "ristretto_gc-0.35.0.crate": "65868fa91d75f5a7508a51192cf7139a48caff5e52675f31e2c80b83e5ca5465",
+    "ristretto_vm-0.35.0.crate": "05674dc7288a1cb6416f72f6d98c358d354d5150f5c179fd7671504e0dff7fc3"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "rows": {
+    "parent": {
+      "commit": "2e9795b8",
+      "mechanisms": "82191feb4856d3a1325ca017daefdf796aa5c6a6a21245f0ad3d1bd6e0c233f0",
+      "allocation_counts": "d6ee369f687f7782feb84f41f7713f98c3461ff4e2ef577cdc45d67e8d12489c"
+    },
+    "small": {
+      "commit": "2e02c15c",
+      "mechanisms": "35f7070aa2dd1e4422ef35954d85729e548da46d80fbb9e1804a9a340100e0c1",
+      "allocation_counts": "f9356b2d59baf81ed35b21e86e40fd198587b287097e838265f38508957d5ea7"
+    }
+  },
+  "columns": {
+    "parent": {
+      "commit": "2e9795b8",
+      "mechanisms": "82191feb4856d3a1325ca017daefdf796aa5c6a6a21245f0ad3d1bd6e0c233f0",
+      "allocation_counts": "d6ee369f687f7782feb84f41f7713f98c3461ff4e2ef577cdc45d67e8d12489c"
+    },
+    "small": {
+      "commit": "fa70a56d",
+      "mechanisms": "63f7ad2287c0e43b71162d9d0d420d36ae279aafb7c5240e4816e509c4a8752c",
+      "allocation_counts": "9269f09fe7a76fa85de4b0c4ee16db28023235d0802e1934aab08744d263539c"
+    }
+  },
+  "dense": {
+    "parent": {
+      "commit": "2e9795b8",
+      "mechanisms": "82191feb4856d3a1325ca017daefdf796aa5c6a6a21245f0ad3d1bd6e0c233f0",
+      "allocation_counts": "d6ee369f687f7782feb84f41f7713f98c3461ff4e2ef577cdc45d67e8d12489c"
+    },
+    "small": {
+      "commit": "39e5c8a5",
+      "mechanisms": "1f9d8ada95c381e5d2ed6c0e58679fd5990143871d247be30f52e3ce3338919e",
+      "allocation_counts": "a423c1842b2e83b14e12411f585e598f5842266db68f188d09be187548f25c12"
+    }
+  }
+}

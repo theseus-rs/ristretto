@@ -209,7 +209,7 @@ pub async fn get_threads<T: Thread + 'static>(
 
     let thread_class = thread.class("java/lang/Thread").await?;
     let reference = Reference::try_from((thread_class, threads))?;
-    let threads = Value::new_object(vm.garbage_collector(), reference);
+    let threads = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     Ok(Some(threads))
 }
 
@@ -221,7 +221,7 @@ pub fn holds_lock<T: Thread + 'static>(
     let Some(reference) = parameters.pop_reference()? else {
         return Err(JavaError::NullPointerException(None).into());
     };
-    let monitor_id = crate::get_monitor_id(&reference.read());
+    let monitor_id = crate::get_monitor_id(&reference);
     if let Some(id) = monitor_id {
         let vm = thread.vm()?;
         let monitor = vm.monitor_registry().monitor(id);
@@ -509,7 +509,6 @@ pub async fn start_0<T: Thread + 'static>(
     // First, get the VM to generate a unique internal thread ID
     let vm = thread.vm()?;
 
-    #[cfg_attr(target_family = "wasm", expect(unused_variables))]
     let (thread_class, internal_thread_id, is_daemon) = {
         let mut thread_object = thread_object.as_object_mut()?;
         let thread_class = thread_object.class().clone();
@@ -568,8 +567,10 @@ pub async fn start_0<T: Thread + 'static>(
     {
         // Execution can release its last VM reference before termination bookkeeping.
         // Keep the Java heap alive until the task finishes accessing its thread object.
-        let spawn_vm = vm.clone();
+        let spawn_vm = Arc::downgrade(&vm);
+        let keep_vm = (!is_daemon).then(|| vm.clone());
         let join_handle = tokio::spawn(async move {
+            let _keep_vm = keep_vm;
             let result = spawn_thread
                 .execute(&run.declaring_class, &run.method, &[thread_value])
                 .await;
@@ -611,8 +612,10 @@ pub async fn start_0<T: Thread + 'static>(
             // then the thread dies and notifies before wait() is called, causing a lost
             // notification.
             if let Value::Object(Some(ref reference)) = thread_object {
-                let monitor_id = crate::get_monitor_id(&reference.read());
-                if let Some(id) = monitor_id {
+                let monitor_id = crate::get_monitor_id(reference);
+                if let Some(id) = monitor_id
+                    && let Some(spawn_vm) = spawn_vm.upgrade()
+                {
                     let monitor = spawn_vm.monitor_registry().monitor(id);
                     let thread_id = spawn_thread.id();
                     if monitor.acquire(thread_id).await.is_ok() {
@@ -642,84 +645,57 @@ pub async fn start_0<T: Thread + 'static>(
         tokio::task::yield_now().await;
     }
 
-    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
+    #[cfg(target_family = "wasm")]
     {
-        let spawn_vm = vm.clone();
-        let spawn_thread_id = internal_thread_id;
-        wasm_bindgen_futures::spawn_local(async move {
-            let _ = spawn_thread
-                .execute(&run.declaring_class, &run.method, &[thread_value])
-                .await;
-
-            // Set thread status to TERMINATED and eetop to 0 after execution
-            if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
-                error!("Failed to set thread status to TERMINATED: {error}");
-            }
-            if let Ok(mut thread_obj) = thread_object.as_object_mut()
-                && let Err(error) = thread_obj.set_value("eetop", Value::Long(0))
-            {
-                error!("Failed to set eetop to 0: {error}");
-            }
-
-            // Remove the thread from the VM's thread handles
-            // (WASM doesn't support JoinHandles, so we clean up here)
-            let thread_handles = spawn_vm.thread_handles();
-            thread_handles.remove(&spawn_thread_id).await;
-        });
-
-        // Register the thread handle without a JoinHandle for WASM
-        let thread_handle = ThreadHandle::from(new_thread);
-        let thread_handles = vm.thread_handles();
-        thread_handles
-            .insert(internal_thread_id, thread_handle)
-            .await?;
-    }
-
-    #[cfg(all(target_family = "wasm", target_os = "wasi"))]
-    {
-        let spawn_vm = vm.clone();
-        let spawn_thread_id = internal_thread_id;
-        tokio::task::spawn_local(async move {
-            let _ = spawn_thread
-                .execute(&run.declaring_class, &run.method, &[thread_value])
-                .await;
-
-            if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
-                error!("Failed to set thread status to TERMINATED: {error}");
-            }
-            if let Ok(mut thread_obj) = thread_object.as_object_mut()
-                && let Err(error) = thread_obj.set_value("eetop", Value::Long(0))
-            {
-                error!("Failed to set eetop to 0: {error}");
-            }
-
-            // Per the JVM specification, Thread.exit() calls notifyAll() on the
-            // Thread object so Thread.join() callers are woken via the monitor.
-            if let Value::Object(Some(ref reference)) = thread_object {
-                let monitor_id = crate::get_monitor_id(&reference.read());
-                if let Some(id) = monitor_id
-                    && let Ok(monitor_vm) = spawn_thread.vm()
-                {
-                    let monitor = monitor_vm.monitor_registry().monitor(id);
-                    let thread_id = spawn_thread.id();
-                    if monitor.acquire(thread_id).await.is_ok() {
-                        let _ = monitor.notify_all(thread_id);
-                        let _ = monitor.release(thread_id);
-                    }
+        use futures_util::future::{AbortHandle, Abortable};
+        let spawn_vm = Arc::downgrade(&vm);
+        let keep_vm = (!is_daemon).then(|| vm.clone());
+        let (abort_handle, registration) = AbortHandle::new_pair();
+        let task = Abortable::new(
+            async move {
+                let _keep_vm = keep_vm;
+                let _ = spawn_thread
+                    .execute(&run.declaring_class, &run.method, &[thread_value])
+                    .await;
+                if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
+                    error!("Failed to set thread status to TERMINATED: {error}");
                 }
-            }
-
-            let thread_handles = spawn_vm.thread_handles();
-            thread_handles.remove(&spawn_thread_id).await;
-        });
-
-        let thread_handle = ThreadHandle::from(new_thread);
-        let thread_handles = vm.thread_handles();
-        thread_handles
+                if let Ok(mut thread_obj) = thread_object.as_object_mut()
+                    && let Err(error) = thread_obj.set_value("eetop", Value::Long(0))
+                {
+                    error!("Failed to set eetop to 0: {error}");
+                }
+                if let Some(spawn_vm) = spawn_vm.upgrade() {
+                    if let Value::Object(Some(ref reference)) = thread_object {
+                        let monitor_id = crate::get_monitor_id(reference);
+                        if let Some(id) = monitor_id {
+                            let monitor = spawn_vm.monitor_registry().monitor(id);
+                            let thread_id = spawn_thread.id();
+                            if monitor.acquire(thread_id).await.is_ok() {
+                                let _ = monitor.notify_all(thread_id);
+                                let _ = monitor.release(thread_id);
+                            }
+                        }
+                    }
+                    spawn_vm.thread_handles().remove(&internal_thread_id).await;
+                }
+            },
+            registration,
+        );
+        let mut thread_handle = ThreadHandle::from(new_thread);
+        thread_handle.daemon = is_daemon;
+        thread_handle.abort_handle = Some(abort_handle);
+        vm.thread_handles()
             .insert(internal_thread_id, thread_handle)
             .await?;
-
-        tokio::task::yield_now().await;
+        #[cfg(target_os = "unknown")]
+        wasm_bindgen_futures::spawn_local(async move {
+            let _ = task.await;
+        });
+        #[cfg(target_os = "wasi")]
+        tokio::task::spawn_local(async move {
+            let _ = task.await;
+        });
     }
 
     Ok(None)

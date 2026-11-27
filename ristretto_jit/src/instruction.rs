@@ -50,6 +50,12 @@ pub(crate) struct ThrowContext<'a> {
     pub exception_table: &'a [ExceptionTableEntry],
     /// The program counter of the instruction currently being emitted.
     pub program_counter: usize,
+    /// Typed handler matching can suspend separately from the throwing instruction.
+    pub continuation: Option<(
+        &'a crate::compiler::continuation::Continuation,
+        Value,
+        cranelift::codegen::ir::StackSlot,
+    )>,
 }
 
 fn single_inst_result(function_builder: &FunctionBuilder<'_>, instruction: Inst) -> Result<Value> {
@@ -83,10 +89,9 @@ fn emit_value_return(
     Ok(())
 }
 
+mod allocation;
 mod array;
 mod branch;
-mod byte;
-mod char;
 mod convert;
 mod debug;
 mod double;
@@ -107,15 +112,13 @@ mod nop;
 mod object;
 mod push;
 mod reference;
-mod short;
 mod stack;
 mod r#static;
 mod wide;
 
+pub(crate) use allocation::*;
 pub(crate) use array::*;
 pub(crate) use branch::*;
-pub(crate) use byte::*;
-pub(crate) use char::*;
 pub(crate) use convert::*;
 pub(crate) use debug::*;
 pub(crate) use double::*;
@@ -123,7 +126,7 @@ pub(crate) use exception::*;
 pub(crate) use field::*;
 pub(crate) use float::*;
 pub(crate) use integer::*;
-// pub(crate) use invoke::*;
+pub(crate) use invoke::*;
 // pub(crate) use invokedynamic::*;
 pub(crate) use ldc::*;
 pub(crate) use long::*;
@@ -132,7 +135,6 @@ pub(crate) use nop::*;
 pub(crate) use object::*;
 pub(crate) use push::*;
 pub(crate) use reference::*;
-pub(crate) use short::*;
 pub(crate) use stack::*;
 pub(crate) use r#static::*;
 pub(crate) use wide::*;

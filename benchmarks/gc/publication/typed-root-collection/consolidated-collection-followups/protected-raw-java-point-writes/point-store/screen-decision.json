@@ -1,0 +1,13 @@
+{
+  "medians": {
+    "ristretto-candidate-jit": 3365.043534232991,
+    "ristretto-candidate-jit-before": 3533.9429247184594
+  },
+  "ratio": 0.9522065313211237,
+  "completed": [
+    5000,
+    5000,
+    5000
+  ],
+  "pass_screen": true
+}

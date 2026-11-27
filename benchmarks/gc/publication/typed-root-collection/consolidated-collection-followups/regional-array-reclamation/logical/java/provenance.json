@@ -1,0 +1,35 @@
+{
+  "runtime_revision": "f4cdf10f1a42f70b5a1cfcd00990f05f6a89312c",
+  "harness_revision": "f4cdf10f1a42f70b5a1cfcd00990f05f6a89312c",
+  "binary_sha256": "7142a915a2e4826c5793e75b9656ba651ba664c17ed8d43bd5f7e9037a97ecfe",
+  "source_sha256": "d03aa6138ad8aef19103939485651b7e334309fec03cfdb97bedf5bff00ce94c",
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "raw_sha256": "e20225532c862c661d978ab225b2adddd39156c0de9ff926a658539c5bb68970",
+  "schedule_sha256": "6fdb19d0054036600bc1ad9c1a7fe41b2b2c4a40a3468a0581e69436f8eac0c0",
+  "inputs_unchanged": true,
+  "seed": 251130139,
+  "rates": [
+    0,
+    100,
+    500
+  ],
+  "cpus": [
+    8,
+    10
+  ],
+  "cpu_quota": 2,
+  "rss_mib": 512,
+  "heap_mib": 64,
+  "workers": 2,
+  "warmup_s": 5,
+  "seconds": 10,
+  "repeats": 3,
+  "classes": {
+    "GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "GcBench.class": "43bb33e4d45bd8255bef94901703b0b52e3a6db399f84f0d282e3084839e620c"
+  }
+}

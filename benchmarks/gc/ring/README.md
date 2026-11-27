@@ -1,6 +1,8 @@
 # Finite HotSpot ring baseline
 
 Use a HotSpot JDK with G1 and ZGC on Linux. Put its `java` and `javac` on PATH.
+The Ristretto catalog comparison in this directory used the [archived source](https://github.com/theseus-rs/ristretto/blob/0497123e05056546bc526ecc49c081f934f38d64/benchmarks/gc/ring_compare). For current JVM measurements see the [GC plan](../../../ristretto_gc/PLAN.md).
+
 The Bash driver uses jq, GNU coreutils, taskset, and Perl's Time::HiRes.
 Run the driver in a cgroup v2 with enforced CPU and memory limits. For example,
 
@@ -48,13 +50,15 @@ are in `processes[].samples`.
 To regenerate existing outputs, pass `-f` or `--overwrite`.
 
 To include Ristretto on the same two CPUs and in the same 1 GiB cgroup, build
-the ring example on the Git revision being measured. The example embeds both
+the archived ring example in a clean worktree at the revision being measured
+(e.g. `git worktree add --detach ../ristretto-ring 0497123e`, then
+`cd ../ristretto-ring`). The example embeds both
 Java classes. Record the four absolute executable paths for the capture.
 
 ```sh
 export RISTRETTO_GC_BENCH_REVISION=$(git rev-parse HEAD)
-cargo build --locked --release -p ristretto_vm --no-default-features --features experimental-canonical-jit --example canonical_ring_samples
-cargo build --locked --release -p ristretto_vm --no-default-features --features experimental-canonical-runtime --target wasm32-wasip2 --example canonical_ring_samples
+cargo build --locked --release -p ristretto_vm_research --no-default-features --features experimental-canonical-jit --example canonical_ring_samples
+cargo build --locked --release -p ristretto_vm_research --no-default-features --features experimental-canonical-runtime --target wasm32-wasip2 --example canonical_ring_samples
 systemd-run --user --scope -p MemoryMax=1G -p CPUQuota=200% \
   python3 benchmarks/gc/ring/compare.py comparison.json \
   --native target/release/examples/canonical_ring_samples \

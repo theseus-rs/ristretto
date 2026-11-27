@@ -1,0 +1,32 @@
+{
+  "revision": "9a6e0f591fb36be5258a4c53fe2a5f6f8a37a70a",
+  "binary_sha256": "6d68be50a8f6c10dc047eade3301ae8daa29375a61cb372618893b74c2d2cb8f",
+  "source_archive_sha256": "e30f6e4d844ea285426a386d301cad0c711569b8d0d88cd4ff7e344f9e9576bf",
+  "artifact_hashes": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "b4532f8c7186f8505ba38d1edc05d7ee072eec67b490d7382d173cd8a3b4144a",
+    "gc_compare": "6d68be50a8f6c10dc047eade3301ae8daa29375a61cb372618893b74c2d2cb8f"
+  },
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "rustc": "rustc 1.100.0 (0ef1bc386 2026-11-09)",
+  "java": "openjdk version \"25.0.5\" 2026-10-20 LTS\nOpenJDK Runtime Environment Corretto-25.0.5.0.10 (build 25.0.5+10-LTS)\nOpenJDK 64-Bit Server VM Corretto-25.0.5.0.10 (build 25.0.5+10-LTS, mixed mode, sharing)",
+  "options": {
+    "cpus": [
+      4,
+      6
+    ],
+    "rss_mib": 512,
+    "cpu_quota": 2.0,
+    "seconds": 10,
+    "warmup": 5,
+    "workers": 2,
+    "heap_mib": 64,
+    "seed": 141079,
+    "repeats": 3
+  },
+  "raw_measurements_sha256": "bcae3c77b9ddb1b4ea172dd95d249c505c2e5459cb51682b0e84409566027201"
+}

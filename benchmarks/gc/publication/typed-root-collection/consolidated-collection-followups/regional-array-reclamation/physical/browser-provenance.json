@@ -1,0 +1,39 @@
+{
+  "chrome": "Google Chrome 156.0.8078.79",
+  "hashes": {
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/browser-results/frozen/sources.tar.gz": "41b814c39083731f3bf4edb18c9d047c733f06a53c102e1c61e5be6e14e41bfe",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/browser-results/frozen/index.html": "4870396dd8e0d6e86e9f555fa5b272a3a46b39228b78aaa8cad7a3f817d677c5",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/browser-results/frozen/browser.js": "421a5dcd81335148b3654fcbc1eaa4b46d5a3a19a60b62af8c96f66fbb41f2c3",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/browser-results/frozen/workload.provenance.json": "41f98ba5c9eea26356e4591792b33be1a1c94cd2ba02c304ddd0ec62cfde27f6",
+    "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/browser-results/frozen/workload.wasm": "7de963efe079448058de2fb5de814320caadbf2d72dce7acc7a95dfb725a1786",
+    "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-regional-array-tail-return-v1/benchmarks/gc/browser.py": "67ec001346616a99706ee1302e6e5b8f3466718c27e78944be4df45e049f9991",
+    "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-regional-array-tail-return-v1/benchmarks/gc/cgroups.py": "dbdcba2a65dd0918ed274e6647b52da7886bc7c7f43eb823b358e841e36276ee",
+    "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-regional-array-tail-return-v1/benchmarks/gc/run.py": "83e3f0b2fa1ea2dc65af2547069c39994efe71453a3be436b1056176279496b3",
+    "/opt/google/chrome/google-chrome": "aea09d69ce7f24d5901f6bfb15dd44d0c856e793e0a498f8d8393ec7d2c308ec",
+    "/opt/google/chrome/chrome": "da143614d917f346b02c1b29587cc13bf891d4b73faf2bea7b20cbd8fa61510f"
+  },
+  "options": {
+    "wasm": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/browser-frozen/gc_browser.wasm",
+    "chrome": "/opt/google/chrome/google-chrome",
+    "output": "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/root-retention-removal-f8cb08cf-v1/suffix/browser-results",
+    "cgroup_parent": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service",
+    "cpus": "0,2",
+    "cpu_quota": 2.0,
+    "rss_mib": 512,
+    "heap_mib": 16,
+    "seconds": 2.0,
+    "warmup": 1.0,
+    "rate": 2000,
+    "poll_budget": 64,
+    "repeats": 3,
+    "seed": 251130107,
+    "no_sandbox": false,
+    "plot": true
+  },
+  "qualification": false,
+  "raw_sha256": "816c7634b3cfe848245b40e347eb7bd23fdd295d633b40e8dd020d771e212019",
+  "graph": {
+    "browser.svg": "f93c32f267959b3d99cc09d14561dbba4d6b0a9ce3c1c2950684415de14442d0",
+    "browser.png": "bcba4ac2f87d0318d447640f896199506abc1e162f8dfbe615cb4c7f0e1380c1"
+  }
+}

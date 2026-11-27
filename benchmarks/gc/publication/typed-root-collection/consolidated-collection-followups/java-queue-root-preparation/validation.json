@@ -1,0 +1,107 @@
+{
+  "source": "ae69327856d11082218842a7bc3dcfecf0f3dd5b",
+  "control": "6da00006",
+  "tests": {
+    "native": {
+      "passed": 989,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 451,
+      "failed": 0,
+      "ignored": 0
+    },
+    "jvm_reference_integration": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    },
+    "miri": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "schedules": {
+    "native_parent_processes": 10,
+    "native_candidate_processes": 100,
+    "native_candidate_schedules_per_process": 16,
+    "wasi_candidate_processes": 20,
+    "wasi_schedules_per_process": 4,
+    "parent_patch_sha256": "a6dd8e349e0c25502d5162b0675b1b2a1238b733e0a810db775760a14502e346",
+    "binaries": {
+      "control.test": "106c37da07577dcafb60c8e179165c000adc3d81d507ed7f17c74e7cde7fbdad",
+      "candidate.test": "04388bd52d77e41cba44378f6a0d28ffa79fbc2c5af57ad2ec2922ae3ef60346",
+      "candidate.wasm": "73ffb946b888ecbfc601714a57238af63c5b3c1496ba92c7d505722a1db6dbf2"
+    }
+  },
+  "java": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "checks": {
+    "clippy-native": "a579026ee53124810d4f7fe1ef965e9a0a3188d18500ce0ed8cfe6967b4de159",
+    "clippy-wasi": "d9b12564b48a44143415f842b2f3ccf83e6ffd5815047ab8414c1b0629c150b4",
+    "package": "1dec34fbe9fb8b11c7f4ad569cbd3e9ad47e9d8e35b2f8c01113c1d24e036adb",
+    "consumer-native": "5d9ebb354bb77413b79b848726e3983d236ef872bb657d0e7dc5bf002d756c7f",
+    "consumer-wasi": "e7d5f00909578e27b52ee9db85b4004857606ee78dd80d114cadf72560ab52fd",
+    "playground": "ef7bd13044dfc52fb5b930380fc40c2c27ad86f3020df3db88c17b551cf87fe8"
+  },
+  "review": {
+    "carbon_design": {
+      "effort": "high",
+      "response_sha256": "8fb160b4b1e5ba5033a03375c5ade82dfc9515956e81e71abdd63c8033a01a56"
+    },
+    "carbon_commit": {
+      "effort": "high",
+      "response_sha256": "b41e3378d351700df539c05042371994f2aafef1d64f20b86dbddd6c22cf2cbc"
+    },
+    "neon_tests": {
+      "effort": "high",
+      "response_sha256": "79235e5fbc7d4e87b14cb4d4a015d47c0f3fe76b78130ab67feb1fb1f7d7b937"
+    }
+  },
+  "shipping_configurations": 14,
+  "browser": {
+    "offered": 36000,
+    "unfinished_per_fork": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4,
+      0
+    ],
+    "module_sha256": "4f4efc40cbaf5ef4e9c5339088c4b6c9374d1b53fa4d074cf2607bd6593d5d71",
+    "source_archive_sha256": "1a7da0bf59b2ba12f2d8e6d0e0e51eef8468a9815995e1ac0d0e52a80416fbed"
+  }
+}

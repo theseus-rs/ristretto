@@ -1,0 +1,266 @@
+[
+  {
+    "target": "native",
+    "shape": "null",
+    "before_ns": 21552.5,
+    "after_ns": 2212.0,
+    "speedup": 9.802733121914043,
+    "lower_95": 9.62707423580786,
+    "upper_95": 9.867300626755997,
+    "layout": {
+      "before": {
+        "managed_bytes": [
+          131392
+        ],
+        "reference_size": [
+          232
+        ],
+        "value_size": [
+          32
+        ]
+      },
+      "after": {
+        "managed_bytes": [
+          131392
+        ],
+        "reference_size": [
+          232
+        ],
+        "value_size": [
+          32
+        ]
+      }
+    }
+  },
+  {
+    "target": "native",
+    "shape": "endpoints",
+    "before_ns": 21690.0,
+    "after_ns": 3469.75,
+    "speedup": 6.283679728761183,
+    "lower_95": 6.229579297383259,
+    "upper_95": 6.524162011173185,
+    "layout": {
+      "before": {
+        "managed_bytes": [
+          131684
+        ],
+        "reference_size": [
+          232
+        ],
+        "value_size": [
+          32
+        ]
+      },
+      "after": {
+        "managed_bytes": [
+          131684
+        ],
+        "reference_size": [
+          232
+        ],
+        "value_size": [
+          32
+        ]
+      }
+    }
+  },
+  {
+    "target": "native",
+    "shape": "alias",
+    "before_ns": 56690.75,
+    "after_ns": 57505.5,
+    "speedup": 0.9739428596285091,
+    "lower_95": 0.9659731083391926,
+    "upper_95": 0.996405802062385,
+    "layout": {
+      "before": {
+        "managed_bytes": [
+          131684
+        ],
+        "reference_size": [
+          232
+        ],
+        "value_size": [
+          32
+        ]
+      },
+      "after": {
+        "managed_bytes": [
+          131684
+        ],
+        "reference_size": [
+          232
+        ],
+        "value_size": [
+          32
+        ]
+      }
+    }
+  },
+  {
+    "target": "native",
+    "shape": "unique",
+    "before_ns": 1609928.25,
+    "after_ns": 1609536.75,
+    "speedup": 0.9955588320219664,
+    "lower_95": 0.9877490334513701,
+    "upper_95": 1.0057784838071033,
+    "layout": {
+      "before": {
+        "managed_bytes": [
+          1327716
+        ],
+        "reference_size": [
+          232
+        ],
+        "value_size": [
+          32
+        ]
+      },
+      "after": {
+        "managed_bytes": [
+          1327716
+        ],
+        "reference_size": [
+          232
+        ],
+        "value_size": [
+          32
+        ]
+      }
+    }
+  },
+  {
+    "target": "wasm",
+    "shape": "null",
+    "before_ns": 37033.75,
+    "after_ns": 3499.5,
+    "speedup": 10.627142948375921,
+    "lower_95": 10.512287334593573,
+    "upper_95": 10.684962512377988,
+    "layout": {
+      "before": {
+        "managed_bytes": [
+          98496
+        ],
+        "reference_size": [
+          136
+        ],
+        "value_size": [
+          24
+        ]
+      },
+      "after": {
+        "managed_bytes": [
+          98496
+        ],
+        "reference_size": [
+          136
+        ],
+        "value_size": [
+          24
+        ]
+      }
+    }
+  },
+  {
+    "target": "wasm",
+    "shape": "endpoints",
+    "before_ns": 38061.75,
+    "after_ns": 5316.5,
+    "speedup": 7.131844121401746,
+    "lower_95": 7.071064106132294,
+    "upper_95": 7.22657951478088,
+    "layout": {
+      "before": {
+        "managed_bytes": [
+          98668
+        ],
+        "reference_size": [
+          136
+        ],
+        "value_size": [
+          24
+        ]
+      },
+      "after": {
+        "managed_bytes": [
+          98668
+        ],
+        "reference_size": [
+          136
+        ],
+        "value_size": [
+          24
+        ]
+      }
+    }
+  },
+  {
+    "target": "wasm",
+    "shape": "alias",
+    "before_ns": 94209.75,
+    "after_ns": 93814.75,
+    "speedup": 0.9995496931874475,
+    "lower_95": 0.9834718172574003,
+    "upper_95": 1.0098544256834305,
+    "layout": {
+      "before": {
+        "managed_bytes": [
+          98668
+        ],
+        "reference_size": [
+          136
+        ],
+        "value_size": [
+          24
+        ]
+      },
+      "after": {
+        "managed_bytes": [
+          98668
+        ],
+        "reference_size": [
+          136
+        ],
+        "value_size": [
+          24
+        ]
+      }
+    }
+  },
+  {
+    "target": "wasm",
+    "shape": "unique",
+    "before_ns": 1972150.5,
+    "after_ns": 1966378.25,
+    "speedup": 0.9972388435047919,
+    "lower_95": 0.9911825837388991,
+    "upper_95": 1.0031614702402458,
+    "layout": {
+      "before": {
+        "managed_bytes": [
+          803180
+        ],
+        "reference_size": [
+          136
+        ],
+        "value_size": [
+          24
+        ]
+      },
+      "after": {
+        "managed_bytes": [
+          803180
+        ],
+        "reference_size": [
+          136
+        ],
+        "value_size": [
+          24
+        ]
+      }
+    }
+  }
+]

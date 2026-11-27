@@ -1,0 +1,128 @@
+{
+  "source": "899d8a92f2caf19fa55884e74cbbb62398f8b3b5",
+  "schedules": {
+    "test": "collector::reference_tests::idle_step_delivers_remaining_handlers_after_a_reentrant_handler_drains_the_queue",
+    "control_processes": 10,
+    "candidate_processes": 100,
+    "candidate_configurations_per_process": 4,
+    "control_stops_at_first_assertion": true,
+    "control_tests_patch_sha256": "a09728813d7c95a1f3f01e0923448ce18e03d4fa203f59fb63aab358ac8f389f",
+    "binaries": {
+      "candidate": "0e63cb2b0c932350ea9f922122f69001c84e599ad6a8c8438eb07c01b03a6925",
+      "control": "4ad9b61b2c08812cb196f0dd6e20e7d7fd308a960239537633e287eee602969d"
+    },
+    "control_source": "e0f2b29c1bec6ddcc0500b3910d400e3042f1d40",
+    "observations": [
+      "reentrant callback consumed sole reference and completed a full cycle",
+      "peer step woke all 130 handlers before release",
+      "idle result matched reentrant request"
+    ]
+  },
+  "tests": {
+    "native": {
+      "passed": 983,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 449,
+      "failed": 0,
+      "ignored": 0
+    },
+    "native_java_references": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    },
+    "miri_reentrant_handler": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "checks": {
+    "clippy-native": "fa75af305f911611fae64b285b5365cef96ad6fcc44c9c83f9b1aecbb2970f2b",
+    "clippy-wasi": "6abbaf2e02a74e680b7f58e86794993141b8f509d4273c7a1d5cb06227dc8d25",
+    "package": "f999303f4a6ba940f0395ab73a6a6aa48ec316597a21a05959421b8328ff7bcd",
+    "consumer-native": "e1b44de2096cd308077b217be8f5740f303d14f64dbadf94196192d009b3c401",
+    "consumer-wasi": "58034ed207110215051eee45bc575bfa634bf2df67b268127205cd7f768eaff6",
+    "playground": "88be6f3f407d44b7552ba6472871d907f96ca5a6968bf537da792ba3505089a0"
+  },
+  "java": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "shipping_cargo_graphs": 14,
+  "review": {
+    "carbon": {
+      "model": "gemini-4-carbon",
+      "effort": "high",
+      "response_sha256": "f6815e010a7d39eb038d63300a560834636105c16525b48178e680ee13f17b7b"
+    },
+    "neon": {
+      "model": "gemini-4-neon",
+      "effort": "high",
+      "response_sha256": "5e6de153f2da2211fbffa70935c1fedca97bec34d9542163f2605e74b3883f51"
+    }
+  },
+  "browser": {
+    "trial_count": 9,
+    "frozen_module_sha256": "b2d2aeaa9ff3b06be57107118c8e032980c9a5a2516edebf6beb9913c2fbefe9",
+    "source_archive_sha256": "6faac1464e7eda0241444d082a076f1e0e38a4bceea05f7c71b851b5987cd157",
+    "offered_per_fork": 4000,
+    "unfinished_per_fork": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "stale_epoch_control": {
+    "source": "899d8a92f2caf19fa55884e74cbbb62398f8b3b5",
+    "proposals": [
+      512,
+      4096
+    ],
+    "synchronous_releases": {
+      "native": [
+        512,
+        4096
+      ],
+      "wasi": [
+        512,
+        4096
+      ]
+    },
+    "patch_sha256": "b6b10a3f4828503f567e258785b79cdd6534c8136d3e1f04199c22655c488043"
+  }
+}

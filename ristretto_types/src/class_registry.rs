@@ -14,8 +14,8 @@ use tokio::sync::Mutex;
 /// alive also preserves classes' weak references to their defining loaders.
 #[derive(Debug, Default)]
 pub struct ClassRegistry {
-    mirrors: RwLock<AHashMap<usize, Arc<Class>>>,
-    loaders: Mutex<AHashMap<usize, Arc<ClassLoader>>>,
+    mirrors: RwLock<AHashMap<ristretto_gc::ObjectId, Arc<Class>>>,
+    loaders: Mutex<AHashMap<ristretto_gc::ObjectId, Arc<ClassLoader>>>,
     initiated_classes: RwLock<AHashMap<i64, InitiatingLoaderClasses>>,
 }
 
@@ -27,6 +27,15 @@ struct InitiatingLoaderClasses {
 }
 
 impl ClassRegistry {
+    /// Releases mirror and static roots when their owning VM shuts down.
+    /// Classes without instances must participate as well as allocation metadata owners.
+    pub fn release_heap_roots(&self) {
+        let classes: Vec<_> = self.mirrors.read().values().cloned().collect();
+        for class in classes {
+            ristretto_gc::HeapOwner::release_heap_roots(&*class);
+        }
+    }
+
     /// Get the registry owned by this VM.
     ///
     /// # Errors
@@ -38,9 +47,7 @@ impl ClassRegistry {
     /// Associate a class with its canonical Java mirror.
     pub fn register_mirror(&self, mirror: &Value, class: Arc<Class>) {
         if let Value::Object(Some(reference)) = mirror {
-            self.mirrors
-                .write()
-                .insert(reference.as_ptr() as usize, class);
+            self.mirrors.write().insert(reference.identity(), class);
         }
     }
 
@@ -49,10 +56,7 @@ impl ClassRegistry {
         let Value::Object(Some(reference)) = mirror else {
             return None;
         };
-        self.mirrors
-            .read()
-            .get(&(reference.as_ptr() as usize))
-            .cloned()
+        self.mirrors.read().get(&(reference.identity())).cloned()
     }
 
     /// Find a successful resolution by initiating loader and binary class name.
@@ -63,10 +67,10 @@ impl ClassRegistry {
         };
         self.initiated_classes
             .read()
-            .get(&loader.as_ptr_i64())?
+            .get(&loader.as_handle_i64())?
             .classes
             .get(name)
-            .map(|class| Value::Object(Some(class.clone_gc())))
+            .map(|class| Value::Object(Some(class.rooted_clone())))
     }
 
     /// Record a successful resolution using its binary class name before initialization.
@@ -83,7 +87,7 @@ impl ClassRegistry {
         };
         self.initiated_classes
             .write()
-            .entry(loader.as_ptr_i64())
+            .entry(loader.as_handle_i64())
             .or_insert_with(|| InitiatingLoaderClasses {
                 _loader: collector.create_root_guard(loader.clone()),
                 classes: AHashMap::default(),
@@ -148,7 +152,7 @@ impl ClassRegistry {
                 "missing bootstrap class loader".to_string(),
             ));
         };
-        let id = reference.as_ptr() as usize;
+        let id = reference.identity();
         let registry = Self::for_vm(&*vm)?;
         if let Some(loader) = registry.loaders.lock().await.get(&id).cloned() {
             return Ok(loader);

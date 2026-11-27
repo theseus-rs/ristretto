@@ -1,0 +1,73 @@
+{
+  "configurations": [
+    "counted",
+    "reader_admitted",
+    "scalar_allocated",
+    "conditional_allocated",
+    "fresh_ticket_completed",
+    "polls"
+  ],
+  "test_patch_sha256": "a6dd8e349e0c25502d5162b0675b1b2a1238b733e0a810db775760a14502e346",
+  "rows": [
+    {
+      "process": 1,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 2,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 3,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 4,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 5,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 6,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 7,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 8,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 9,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    },
+    {
+      "process": 10,
+      "exit_code": 101,
+      "observed": "[(false, false, true, false, false, 2048), (true, true, true, true, false, 2048)]",
+      "matches_expected": true
+    }
+  ]
+}

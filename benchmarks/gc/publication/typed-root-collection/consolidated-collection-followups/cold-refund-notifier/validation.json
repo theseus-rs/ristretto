@@ -1,0 +1,67 @@
+{
+  "candidate": "f7d32751fd33650bf59ed271846e876eed3606dd",
+  "shipping_parent": "ab7a3000",
+  "suite": {
+    "native": {
+      "passed": 1831,
+      "failed": 0,
+      "ignored": 15
+    },
+    "wasi": {
+      "passed": 1233,
+      "failed": 0,
+      "ignored": 9
+    }
+  },
+  "clippy": [
+    "native",
+    "wasi"
+  ],
+  "schedules": {
+    "tests": 3,
+    "processes": 100,
+    "schedules": 700,
+    "binary_sha256": "39d22f6c55003f00c4b442964e8d33dc76ffe2f10e4d090d23c570d5f9b27015",
+    "source": "9115dad78684b50b91a04757283d8544c011286d"
+  },
+  "workerless_poll": {
+    "processes": 100,
+    "schedules": 200,
+    "source": "ba9f155dec62dc7040565fd0ec6ae192eb64e17a",
+    "binary_sha256": "1a00883d1310db5bc191c0bbbd97e45e55308c79d7ad60b09a692688586d2046"
+  },
+  "preview": {
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "graphs_at_measured_revision": 18,
+  "release_tests": 12
+}

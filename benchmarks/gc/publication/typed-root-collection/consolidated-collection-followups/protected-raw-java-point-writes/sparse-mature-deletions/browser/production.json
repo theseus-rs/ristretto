@@ -1,0 +1,94 @@
+{
+  "revision": "c051ed39326913534d8b8b280323970632db077f",
+  "cargo_target_dir": "external CARGO_TARGET_DIR; checked-in workspace target directory held invalid sentinels",
+  "sentinel_sha256": {
+    "ristretto_playground_engine.wasm": "9681749599eadab2140e7368096fac4e1a9588c765f3b264e38cc4c73fc22701",
+    "ristretto_playground.wasm": "9681749599eadab2140e7368096fac4e1a9588c765f3b264e38cc4c73fc22701"
+  },
+  "selected_sha256": {
+    "ristretto_playground_engine.wasm": "d7194faea71efdeaee8ffcc526f75d34ae14ae55e7c24913c6afb796e099ab62",
+    "ristretto_playground.wasm": "6ac6adc8ca3ec43cb7a53643e65edd1c9320ef1486246a3fe8bc503ae0ab3195"
+  },
+  "packaged_wasm_modules_sha256": {
+    "runner.core.wasm": "e92922c1637493a959a79ef3dd2f51c2ccdddfb8844aa67231098b2890289c8a",
+    "runner.core2.wasm": "82b45732e344f418ded10feead46270bcbf5b598ad11e7c31723b750753771a5",
+    "runner.core3.wasm": "300d9396d405a926abfd96f72287bc4d1ac8c2eac7d14c8f888af954aa3d0631"
+  },
+  "build": "npm run build:runtime; npm run build",
+  "jdk_versions": [
+    "Java 1.8.0_504 \u2615",
+    "Java 11.0.32.1 \u2615",
+    "Java 17.0.20.1 \u2615",
+    "Java 21.0.12.1 \u2615",
+    "Java 25.0.4.1 \u2615"
+  ],
+  "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)",
+  "production_workers": [
+    {
+      "fork": 1,
+      "browser": "153.0.8010.12",
+      "completion": {
+        "bytesFreed": 10473075,
+        "completed": 13,
+        "liveBytesAfter": 3853065,
+        "liveBytesBefore": 2291474,
+        "objectsSwept": 54059
+      },
+      "worker_sha256": "bc4c48fdcf091f75d9ae51a0ea704d5d2bad0a1829a1540e05890f4e38c74959",
+      "fixture_sha256": "7bef65d33b7d3bed1c925806e46ad6bc3077ca9807f61a79033e919741dd0cfb",
+      "measurement": {
+        "maxWorkerReplyGapMs": 22.799999713897705,
+        "p95WorkerReplyGapMs": 19.59999990463257,
+        "p99WorkerReplyGapMs": 21.09999990463257,
+        "javaWindowMs": 1742.0999999046326,
+        "scheduledPings": 109,
+        "workerRepliesDuringJava": 109,
+        "unansweredPings": 0
+      }
+    },
+    {
+      "fork": 2,
+      "browser": "153.0.8010.12",
+      "completion": {
+        "bytesFreed": 10473075,
+        "completed": 13,
+        "liveBytesAfter": 3853065,
+        "liveBytesBefore": 2291474,
+        "objectsSwept": 54059
+      },
+      "worker_sha256": "bc4c48fdcf091f75d9ae51a0ea704d5d2bad0a1829a1540e05890f4e38c74959",
+      "fixture_sha256": "7bef65d33b7d3bed1c925806e46ad6bc3077ca9807f61a79033e919741dd0cfb",
+      "measurement": {
+        "maxWorkerReplyGapMs": 24.09999990463257,
+        "p95WorkerReplyGapMs": 19.699999809265137,
+        "p99WorkerReplyGapMs": 21.59999990463257,
+        "javaWindowMs": 1717.1000003814697,
+        "scheduledPings": 107,
+        "workerRepliesDuringJava": 107,
+        "unansweredPings": 0
+      }
+    },
+    {
+      "fork": 3,
+      "browser": "153.0.8010.12",
+      "completion": {
+        "bytesFreed": 10473075,
+        "completed": 13,
+        "liveBytesAfter": 3853065,
+        "liveBytesBefore": 2291474,
+        "objectsSwept": 54059
+      },
+      "worker_sha256": "bc4c48fdcf091f75d9ae51a0ea704d5d2bad0a1829a1540e05890f4e38c74959",
+      "fixture_sha256": "7bef65d33b7d3bed1c925806e46ad6bc3077ca9807f61a79033e919741dd0cfb",
+      "measurement": {
+        "maxWorkerReplyGapMs": 23.699999809265137,
+        "p95WorkerReplyGapMs": 22.199999809265137,
+        "p99WorkerReplyGapMs": 23.699999809265137,
+        "javaWindowMs": 1355,
+        "scheduledPings": 84,
+        "workerRepliesDuringJava": 84,
+        "unansweredPings": 0
+      }
+    }
+  ]
+}

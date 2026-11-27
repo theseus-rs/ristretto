@@ -1,0 +1,1 @@
+{"shapes":["alternating","burst","retained"],"trials":24,"operations":8192,"warmups":2,"rounds":7,"seed":251127217,"cpu":10,"gate":{"alternating_lower_95_min":1.03,"other_lower_95_min":0.9523809523809523,"max_node_size_growth":0},"decision":"Direct queue selection precedes the full collection and Java qualification. The Java workload uses the shipping array tracer."}

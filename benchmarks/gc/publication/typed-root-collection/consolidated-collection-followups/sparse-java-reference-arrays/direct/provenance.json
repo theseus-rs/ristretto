@@ -1,0 +1,22 @@
+{
+  "before": "46d0afec1a71fedc98d4ce0c29203375dc5609af",
+  "after": "c0e078937b48d57067a0e7af17444d9096f14690",
+  "fixture_sha256": "b40525c51ac6f579a92fcd5a9de086859c48db682488066005a0a61068e495e4",
+  "raw_sha256": "cab6c885896c99044b6bb042c43f0a843622b4d18aae14c2a7cb906830b991be",
+  "binaries": {
+    "native": {
+      "before": "16e582448258a83880ed746a2edab1182ce765cb2c3d083559c5c90ed485d4a9",
+      "after": "87409274d8e147537d7a4ead947d1c87b40e853b75ba8638d2d748a6db4bf25b"
+    },
+    "wasm": {
+      "before": "ae5fff374c7e8c6056d6c3842a58457f4ebd8312d6c0989c882071309c0c3fba",
+      "after": "4167ef106f34bb59f4cf2ab39a3d3e9a53abf06fbcf898f619a349be60a380cf"
+    }
+  },
+  "dependencies_sha256": "d09f9fd64350793ee7a83350417406dadee175b03f61d57f1700e6a4323cbb18",
+  "seed": 251130319,
+  "processes": 384,
+  "cpu": 10,
+  "native_compiler": "rustc 1.100.0 (0ef1bc386 2026-11-09)\nbinary: rustc\ncommit-hash: 0ef1bc386059596dada8fb65b50425aab2ea637a\ncommit-date: 2026-11-09\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0\nLLVM version: 23.1.5\n",
+  "wasmtime": "wasmtime 50.0.1 (c307ec81d 2026-10-29)"
+}

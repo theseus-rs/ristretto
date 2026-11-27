@@ -1,0 +1,19 @@
+{
+  "seed": 251127691,
+  "processes": 400,
+  "visits": 3200,
+  "binaries": {
+    "parent-default": "3bd0a4de18ee46f8405741380547ce4b8166ec5e190ac353083c664d6ea94cc9",
+    "parent-experimental": "a091b49dd29e197e31ea6c50df2dc20583ae598bc6fb653ef2e906b976141619",
+    "trie-default": "809976d565e43a9c17290142af864affbe3170c730e210aed56a9cc633407c30",
+    "trie-experimental": "b4a0ffa244a974480c88718616ea1de884f2a76a1a790cb9dafedec3b35fe89a"
+  },
+  "fixture_sha256": "6546cfef30fa1528fe406d50ca38f19b429442be2e12ca5fe801952588c76967",
+  "candidate": "c051ed39326913534d8b8b280323970632db077f",
+  "parent": "dd8c2f98",
+  "cpus": [
+    16,
+    18
+  ],
+  "profile": "cargo test --no-run, debug=0, incremental=0"
+}

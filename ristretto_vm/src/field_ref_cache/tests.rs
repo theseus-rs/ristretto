@@ -104,7 +104,7 @@ async fn instance_slots_distinguish_descriptors_and_hidden_fields() -> Result<()
     thread
         .load_referenced_class(&child, child.java_name())
         .await?;
-    let mut object = Object::new(child.clone())?;
+    let object = ristretto_gc::sync::RwLock::new(Reference::Object(Object::new(child.clone())?));
     for (descriptor, value) in [("I", Value::Int(42)), ("J", Value::Long(99))] {
         let (caller, index) = reference(
             &thread,
@@ -115,8 +115,8 @@ async fn instance_slots_distinguish_descriptors_and_hidden_fields() -> Result<()
         )
         .await?;
         let resolved = resolve_field_ref(&caller, index).await?;
-        resolved.put(&mut object, value.clone())?;
-        assert_eq!(resolved.get(&object)?, value);
+        resolved.put(&mut object.write(), value.clone())?;
+        assert_eq!(resolved.get(object.read().as_object_ref()?)?, value);
         let second_frame = frame(&thread, caller.class(), "test")?;
         assert!(Arc::ptr_eq(
             &resolved,
@@ -127,8 +127,14 @@ async fn instance_slots_distinguish_descriptors_and_hidden_fields() -> Result<()
             if descriptor == "I" { &base } else { &child }
         ));
     }
-    assert_eq!(object.value_at_slot(0)?, Value::Int(42));
-    assert_eq!(object.value_at_slot(1)?, Value::Long(99));
+    assert_eq!(
+        object.read().as_object_ref()?.value_at_slot(0)?,
+        Value::Int(42)
+    );
+    assert_eq!(
+        object.read().as_object_ref()?.value_at_slot(1)?,
+        Value::Long(99)
+    );
     assert!(!base.is_initialized()?);
     assert!(!child.is_initialized()?);
     assert_eq!(vm.field_ref_cache().len(), initial_cache_size + 2);
@@ -292,9 +298,10 @@ async fn protected_receiver_is_checked_on_every_access() -> Result<()> {
     )
     .await?;
     let resolved = resolve_field_ref(&caller, index).await?;
-    let mut valid = Object::new(caller.class().clone())?;
-    resolved.put(&mut valid, Value::Int(42))?;
-    assert_eq!(resolved.get(&valid)?, Value::Int(42));
+    let valid =
+        ristretto_gc::sync::RwLock::new(Reference::Object(Object::new(caller.class().clone())?));
+    resolved.put(&mut valid.write(), Value::Int(42))?;
+    assert_eq!(resolved.get(valid.read().as_object_ref()?)?, Value::Int(42));
     let invalid = Object::new(base)?;
     assert!(matches!(
         resolved.get(&invalid),
@@ -365,9 +372,10 @@ async fn null_receivers_and_invalid_values_fail_on_cached_access() -> Result<()>
         try_field(&caller, &mut stack, index, &Instruction::Getfield(index)),
         Err(JavaError(NullPointerException(_)))
     ));
-    let mut object = Object::new(caller.class().clone())?;
-    assert!(resolved.put(&mut object, Value::Long(42)).is_err());
-    assert_eq!(resolved.get(&object)?, Value::Int(0));
+    let object =
+        ristretto_gc::sync::RwLock::new(Reference::Object(Object::new(caller.class().clone())?));
+    assert!(resolved.put(&mut object.write(), Value::Long(42)).is_err());
+    assert_eq!(resolved.get(object.read().as_object_ref()?)?, Value::Int(0));
     assert!(matches!(
         resolved.check_kind(true),
         Err(JavaError(IncompatibleClassChangeError(_)))
@@ -471,9 +479,14 @@ async fn stores_narrow_integer_values() -> Result<()> {
                 resolved.put_static(Value::Int(input))?;
                 assert_eq!(resolved.get_static()?, Value::Int(expected));
             } else {
-                let mut object = Object::new(caller.class().clone())?;
-                resolved.put(&mut object, Value::Int(input))?;
-                assert_eq!(resolved.get(&object)?, Value::Int(expected));
+                let object = ristretto_gc::sync::RwLock::new(Reference::Object(Object::new(
+                    caller.class().clone(),
+                )?));
+                resolved.put(&mut object.write(), Value::Int(input))?;
+                assert_eq!(
+                    resolved.get(object.read().as_object_ref()?)?,
+                    Value::Int(expected)
+                );
             }
         }
     }
@@ -517,12 +530,13 @@ async fn receiver_cache_preserves_protected_checks_across_receiver_types() -> Re
         )?;
         child.set_parent(Some(caller.class().clone()))?;
         child.finalize_field_layout()?;
-        let mut object = Object::new(child.clone())?;
-        resolved.put(&mut object, Value::Int(i))?;
+        let object =
+            ristretto_gc::sync::RwLock::new(Reference::Object(Object::new(child.clone())?));
+        resolved.put(&mut object.write(), Value::Int(i))?;
         assert!(resolved.receivers.contains(&child));
-        assert_eq!(resolved.get(&object)?, Value::Int(i));
-        assert!(resolved.put(&mut object, Value::Long(0)).is_err());
-        assert_eq!(resolved.get(&object)?, Value::Int(i));
+        assert_eq!(resolved.get(object.read().as_object_ref()?)?, Value::Int(i));
+        assert!(resolved.put(&mut object.write(), Value::Long(0)).is_err());
+        assert_eq!(resolved.get(object.read().as_object_ref()?)?, Value::Int(i));
         assert!(matches!(
             resolved.get(&invalid),
             Err(JavaError(IllegalAccessError(_)))
@@ -607,10 +621,15 @@ async fn receiver_cache_supports_concurrent_publication() -> Result<()> {
                 let resolved = &resolved;
                 scope.spawn(move || -> Result<()> {
                     for class in classes {
-                        let mut object = Object::new(class.clone())?;
+                        let object = ristretto_gc::sync::RwLock::new(Reference::Object(
+                            Object::new(class.clone())?,
+                        ));
                         for value in 0..10 {
-                            resolved.put(&mut object, Value::Int(value))?;
-                            assert_eq!(resolved.get(&object)?, Value::Int(value));
+                            resolved.put(&mut object.write(), Value::Int(value))?;
+                            assert_eq!(
+                                resolved.get(object.read().as_object_ref()?)?,
+                                Value::Int(value)
+                            );
                         }
                     }
                     Ok(())

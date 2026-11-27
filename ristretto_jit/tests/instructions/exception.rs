@@ -36,6 +36,31 @@ fn exception_entry(
     }
 }
 
+#[test]
+fn exception_handler_discards_the_throwing_operand_stack() -> Result<()> {
+    let instructions = vec![
+        Instruction::Iconst_5,   // 0: must not become a handler operand
+        Instruction::Aload_0,    // 1
+        Instruction::Athrow,     // 2
+        Instruction::Pop,        // 3: the handler receives only the throwable
+        Instruction::Bipush(42), // 4
+        Instruction::Ireturn,    // 6
+    ];
+    let function = create_function_with_exception_table(
+        ConstantPool::default(),
+        "(Ljava/lang/Throwable;)I",
+        &instructions,
+        vec![exception_entry(0, 3, 3, 0)],
+    )?;
+    let context = TestContext::new();
+    assert_eq!(
+        function.execute(&[Value::Ptr(77)], context.as_ptr())?,
+        Some(Value::I32(42))
+    );
+    assert_eq!(context.pending_exception(), 0);
+    Ok(())
+}
+
 /// A thrown exception is caught by a catch-all handler covering its PC; the handler runs
 /// and returns a sentinel int, and the pending exception slot is cleared.
 #[test]
@@ -214,4 +239,101 @@ fn getfield_npe_caught_by_handler() -> Result<()> {
     assert_eq!(value, Value::I32(99));
     assert_eq!(ctx.pending_exception(), 0);
     Ok(())
+}
+
+#[test]
+fn duplicate_typed_entries_have_distinct_resume_sites_at_the_throw_bci() -> Result<()> {
+    use ristretto_jit::ExecutionStep;
+    use std::num::NonZeroU32;
+    let function = create_function_with_exception_table(
+        ConstantPool::default(),
+        "(Ljava/lang/Throwable;)Ljava/lang/Throwable;",
+        &[
+            Instruction::Aload_0,
+            Instruction::Athrow,
+            Instruction::Areturn,
+        ],
+        vec![
+            exception_entry(0, 2, 2, 123),
+            exception_entry(0, 2, 2, 123),
+            exception_entry(0, 2, 2, 0),
+        ],
+    )?;
+    let ctx = TestContext::new();
+    let mut activation = function.activation(&[Value::Ptr(7)])?;
+    for _ in 0..2 {
+        let ExecutionStep::ExceptionMatch(request) =
+            activation.resume_with_context(NonZeroU32::MIN, ctx.as_ptr())?
+        else {
+            panic!("missing typed match request");
+        };
+        assert_eq!(request.index, 123);
+        assert_eq!(request.bci, 1);
+        assert_eq!(activation.suspended_bci(), Some(1));
+        assert_eq!(activation.call_arguments()?, []);
+        assert_eq!(activation.remaining_budget()?, None);
+        activation.complete_call(0)?;
+    }
+    assert_eq!(
+        activation.resume_with_context(NonZeroU32::MIN, ctx.as_ptr())?,
+        ExecutionStep::Yielded
+    );
+    assert_eq!(activation.suspended_bci(), Some(2));
+    assert_eq!(
+        activation.resume_with_context(NonZeroU32::MIN, ctx.as_ptr())?,
+        ExecutionStep::Returned(Some(Value::Ptr(7)))
+    );
+    Ok(())
+}
+
+#[test]
+fn handler_resolution_failure_propagates_past_later_catch_all() -> Result<()> {
+    use ristretto_jit::ExecutionStep;
+    use std::num::NonZeroU32;
+    let function = create_function_with_exception_table(
+        ConstantPool::default(),
+        "(Ljava/lang/Throwable;)Ljava/lang/Throwable;",
+        &[
+            Instruction::Aload_0,
+            Instruction::Athrow,
+            Instruction::Areturn,
+        ],
+        vec![exception_entry(0, 2, 2, 123), exception_entry(0, 2, 2, 0)],
+    )?;
+    let ctx = TestContext::new();
+    let mut activation = function.activation(&[Value::Ptr(7)])?;
+    assert!(matches!(
+        activation.resume_with_context(NonZeroU32::MIN, ctx.as_ptr())?,
+        ExecutionStep::ExceptionMatch(_)
+    ));
+    activation.complete_call(-1)?;
+    assert_eq!(
+        activation.resume_with_context(NonZeroU32::MIN, ctx.as_ptr())?,
+        ExecutionStep::Returned(None)
+    );
+    assert_eq!(
+        ctx.pending_exception(),
+        7,
+        "propagation must not take the pending owner"
+    );
+    Ok(())
+}
+
+#[test]
+fn handler_continuation_expansion_is_bounded_before_creating_sites() {
+    let mut instructions = vec![Instruction::Nop; 256];
+    instructions.extend([
+        Instruction::Aload_0,
+        Instruction::Athrow,
+        Instruction::Areturn,
+    ]);
+    let result = create_function_with_exception_table(
+        ConstantPool::default(),
+        "(Ljava/lang/Throwable;)Ljava/lang/Throwable;",
+        &instructions,
+        vec![exception_entry(0, 258, 258, 123); 256],
+    );
+    assert!(
+        matches!(result, Err(ristretto_jit::Error::UnsupportedMethod(message)) if message.contains("exception continuation expansion"))
+    );
 }

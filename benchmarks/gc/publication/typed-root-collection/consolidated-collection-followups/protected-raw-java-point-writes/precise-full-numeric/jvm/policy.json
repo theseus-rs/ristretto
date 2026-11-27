@@ -1,0 +1,28 @@
+{
+  "parent": "f97f8a99b77601eb060037d49debdf648195321f",
+  "candidate": "2c93df61e47e43ddb14d504803ed9fea86a158d4",
+  "workers": 2,
+  "cpu_quota": 2,
+  "heap_mib": 64,
+  "rss_mib": 512,
+  "cpus": [
+    16,
+    18
+  ],
+  "rates": [
+    0,
+    500
+  ],
+  "minimum_native_capacity_ratio": 0.95,
+  "long_forks_per_runtime": 2,
+  "short_forks_per_runtime_rate": 3,
+  "short_completions": 5000,
+  "long_completions": 60000,
+  "max_long_median_p999_ratio": 1.1,
+  "minimum_full_collection_lower_95": 10,
+  "seeds": {
+    "short_native": 251127509,
+    "long_native": 251127511,
+    "short_wasi": 251127513
+  }
+}

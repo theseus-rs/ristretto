@@ -1,0 +1,92 @@
+{
+  "source": "64f6f7362ef9107e13818d9b71870699f0f7b148",
+  "schedules": {
+    "candidate_runs": 400,
+    "control_runs": 40,
+    "candidate_revision": "64f6f7362ef9107e13818d9b71870699f0f7b148",
+    "control_revision": "c90be6b4e6f4ede814698b28f342748a509078d8",
+    "binary_sha256": {
+      "candidate": "098bdb44b0e306d7a93b3efb5979488a8dd2cae2fff872b585a77d770c72a9fc",
+      "control": "73eb1510fb6db35f580ecafb87f444de4004784549fd05b0e4954194eaa8c641"
+    },
+    "control_patch_sha256": "434b9aa91f549f93fddb8400ff3bc74de3b376a175f206016a3fd7823ef987df",
+    "control_failure_signatures": {
+      "collector::phase_tests::an_idle_step_can_finish_during_publication_and_preserves_the_next_request": "idle with a publisher",
+      "collector::pause_recorder_tests::idle_steps_do_not_acquire_publication": "left: 2048",
+      "collector::reference_tests::construction_contention::conditional_construction_and_young_reclamation_pass_a_parked_mature_shard": "left: [(false, false), (false, false)]",
+      "collector::phase_tests::detached_birth_epoch_destruction_allows_the_next_full_collection": "left: [(false, false, false), (true, false, false), (true, false, false)]"
+    }
+  },
+  "tests": {
+    "native": {
+      "passed": 983,
+      "failed": 0,
+      "ignored": 1
+    },
+    "wasi": {
+      "passed": 449,
+      "failed": 0,
+      "ignored": 0
+    },
+    "native_java_references": {
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0
+    }
+  },
+  "checks": {
+    "clippy-native": "ab7d28564d49def9da3f76fe1e4194c4fb82af81888a4afaf4bb3aece102a35a",
+    "final-wasi-clippy": "91367add24910e72761e631b65d9ed1827b2e163b188d47a4a4a63159a03df48",
+    "package": "a9940b97d632630557eb6f0ebf6ef31ef68e286a459b54cd7020cf673dd9cab6",
+    "consumer-native": "ed03d132efa23dc44751884022f9dc42cf39451e83c90f72aac7332b107617e2",
+    "consumer-wasi": "7abd73bc4c58f53f58173056af625d9b8c7d52f5b3e328d52a727b54468c66f9",
+    "playground": "66822a23d371395f4e743fa8570d7859ce2cdd3409cda51074bf4faf01661093"
+  },
+  "java": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "shipping_cargo_graphs": 14,
+  "review": {
+    "carbon_xhigh": "invalid model selection (--model \"gemini-4-carbon\" --effort \"xhigh\"): gemini-4-carbon has no \"xhigh\" effort (available: low, medium, high)",
+    "carbon_design": "ERROR",
+    "carbon_post": "ERROR",
+    "neon_verification": "The test passed.\n\n- **Test:** `collector::phase_tests::detached_birth_epoch_destruction_allows_the_next_full_collection` \u2014 **ok**\n- **Overall result:** ok (exit code 0, finished in 0.00s)\n- **Counts:** 1 passed, 0 failed, 0 ignored, 0 measured, and 598 filtered out.\n",
+    "carbon_inline": {
+      "status": "SUCCESS",
+      "response_sha256": "582518e1634f9db5d99d3c50fc32fcc924dec19e405115bd1c8f34acadd780a1",
+      "scope": "Drop ordering and weak-root checks from supplied source excerpts. Explicit clear is an independent atomic store."
+    }
+  },
+  "browser": {
+    "trial_count": 9,
+    "frozen_module_sha256": "cf52346cdad09e0cab80fea822395883008d14a52b10cfc87842a01a26addf65",
+    "source_archive_sha256": "7fbb79dbafbde6c7d23a251b4a2959a6e42b3e755f6d07db3ff3bf6886f562a4",
+    "requests_per_fork": 4000
+  }
+}

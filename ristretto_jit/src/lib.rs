@@ -23,8 +23,11 @@
 //!
 //! Current limitations include:
 //!
-//! - Method invocation instructions (`invokestatic`, `invokevirtual`, `invokespecial`,
-//!   `invokeinterface`, `invokedynamic`) are not yet supported
+//! - `invokestatic`, `invokespecial`, `invokevirtual` and `invokeinterface` have experimental native lowering
+//!   through the VM runtime bridge or owning call continuations;
+//!   production eligibility still excludes calls and reference operations. Static primitive
+//!   control flow is supported; native loops use owning, resumable activations.
+//! - `invokedynamic` remains unsupported.
 
 #![allow(unsafe_code)]
 #![cfg_attr(
@@ -149,13 +152,32 @@ mod wasm_compiler;
 ))]
 pub use compiler::Compiler;
 pub use error::{Error, Result};
+
+/// The production compiler's first reason for leaving a method interpreted.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CompilationRejection {
+    /// Stable restriction used by the VM execution profiler.
+    pub reason: &'static str,
+    /// Original JVM byte offset and opcode when an instruction was rejected.
+    pub bytecode: Option<(usize, u8)>,
+}
+
 pub use function::{
     Activation, AllocationKind, AllocationRequest, ArrayAccessKind, ArrayAccessRequest,
-    ArrayStoreRequest, CallKind, CallRequest, ExecutionStep, FieldAccess, FieldRequest, Function,
-    TypeCheckKind, TypeCheckRequest,
+    ArrayStoreRequest, CallKind, CallRequest, ConstantRequest, ExceptionMatchRequest,
+    ExecutionStep, FieldAccess, FieldRequest, Function, MonitorKind, MonitorRequest, TypeCheckKind,
+    TypeCheckRequest,
 };
 pub(crate) use jit_value::JitValue;
 pub use value::Value;
+
+/// Maximum identities in the experimental compiled-frame root transfer ABI.
+/// Larger reference-bearing frames remain unsupported until their stack use is qualified.
+pub const FRAME_ROOT_CAPACITY: usize = 4096;
+
+/// Maximum logical arguments (including an instance receiver) in the experimental compiled-call ABI. Each argument
+/// occupies one eight-byte cell; long/double still count as two Java local slots.
+pub const CALL_ARGUMENT_CAPACITY: usize = 255;
 #[cfg(any(
     target_family = "wasm",
     target_endian = "big",
@@ -165,6 +187,3 @@ pub use value::Value;
     target_os = "solaris"
 ))]
 pub use wasm_compiler::Compiler;
-
-/// Maximum reference cells published by one experimental generated frame.
-pub const FRAME_ROOT_CAPACITY: usize = 4096;

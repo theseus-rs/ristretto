@@ -62,7 +62,9 @@ fn sum() -> Result<ClassFile<'static>> {
 #[test]
 fn scalar_yields_and_resumes_without_replaying_bytecodes() -> Result<()> {
     let class = sum()?;
-    assert!(!Compiler::can_compile(&class.methods[0]));
+    // The complete local compiler also qualifies bounded primitive loops for
+    // ordinary dispatch. Request-only dispatch remains a distinct owning API.
+    assert!(Compiler::can_compile(&class.methods[0]));
     let function = compile(&class)?;
     assert!(function.requests_only());
     assert!(function.supports_cooperation());

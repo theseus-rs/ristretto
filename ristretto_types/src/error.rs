@@ -25,10 +25,10 @@ pub enum Error {
     ClassFileError(#[from] ristretto_classfile::Error),
     /// An error occurred in class loading
     #[error(transparent)]
-    ClassLoaderError(#[from] ristretto_classloader::Error),
+    ClassLoaderError(ristretto_classloader::Error),
     /// An error occurred in garbage collection
     #[error(transparent)]
-    GcError(#[from] ristretto_gc::Error),
+    GcError(ristretto_gc::Error),
     /// An error occurred while compiling
     #[error(transparent)]
     JitError(#[from] ristretto_jit::Error),
@@ -86,6 +86,26 @@ pub enum Error {
     /// Unsupported class file version
     #[error("Unsupported class file version: {0}")]
     UnsupportedClassFileVersion(u16),
+}
+
+impl From<ristretto_gc::Error> for Error {
+    fn from(error: ristretto_gc::Error) -> Self {
+        match error {
+            ristretto_gc::Error::OutOfMemory => {
+                JavaError::OutOfMemoryError("Java heap space".into()).into()
+            }
+            error => Self::GcError(error),
+        }
+    }
+}
+
+impl From<ristretto_classloader::Error> for Error {
+    fn from(error: ristretto_classloader::Error) -> Self {
+        match error {
+            ristretto_classloader::Error::GcError(error) => error.into(),
+            error => Self::ClassLoaderError(error),
+        }
+    }
 }
 
 /// Convert [`std::io::Error` errors](std::io::Error) to [`InternalError`](Error::InternalError)

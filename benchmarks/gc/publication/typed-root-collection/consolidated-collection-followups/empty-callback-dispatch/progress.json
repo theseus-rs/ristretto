@@ -1,0 +1,36 @@
+{
+  "candidate": "6af915cb",
+  "forced_parent_failure": "empty receiver required another assistant dispatch",
+  "candidate_runs": {
+    "parked_cleanup_keeps_its_charge_until_physical_release": {
+      "binary_sha256": "bead87a777912f0f836edac43a7ba2c39d91812b2b36cba54c7939462689fe74",
+      "trials": 100,
+      "passed": 100,
+      "failures": []
+    },
+    "collector::native_callbacks::tests::parked_callback_with_no_queued_sibling_needs_no_assistant_turn": {
+      "binary_sha256": "18db1f1ebff09d2cb301959ac9e4096de12d36b4f5693008efc40e38f38724bb",
+      "trials": 100,
+      "passed": 100,
+      "failures": []
+    },
+    "collector::native_callbacks::tests::terminal_allocation_observes_pressure_service_before_denial": {
+      "binary_sha256": "18db1f1ebff09d2cb301959ac9e4096de12d36b4f5693008efc40e38f38724bb",
+      "trials": 100,
+      "passed": 100,
+      "failures": []
+    },
+    "collector::native_callbacks::tests::cancelled_terminal_dispatch_leaves_a_subsequent_allocation_eligible": {
+      "binary_sha256": "18db1f1ebff09d2cb301959ac9e4096de12d36b4f5693008efc40e38f38724bb",
+      "trials": 100,
+      "passed": 100,
+      "failures": []
+    },
+    "collector::native_callbacks::tests::a_contended_callback_receiver_cannot_hold_terminal_allocation_open": {
+      "binary_sha256": "18db1f1ebff09d2cb301959ac9e4096de12d36b4f5693008efc40e38f38724bb",
+      "trials": 100,
+      "passed": 100,
+      "failures": []
+    }
+  }
+}

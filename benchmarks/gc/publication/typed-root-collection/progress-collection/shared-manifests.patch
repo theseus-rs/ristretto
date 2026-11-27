@@ -1,0 +1,28 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index ab15e8a8..94214ffd 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3325,0 +3326 @@ dependencies = [
++ "futures-util",
+@@ -3409,0 +3411 @@ dependencies = [
++ "portable-atomic",
+@@ -3410,0 +3413 @@ dependencies = [
++ "ristretto_test_util",
+@@ -3477,0 +3481 @@ dependencies = [
++ "serde",
+@@ -3486,0 +3491 @@ dependencies = [
++ "futures-util",
+@@ -3520,0 +3526 @@ dependencies = [
++ "ristretto_test_util",
+@@ -3524,0 +3531,2 @@ dependencies = [
++ "smallvec",
++ "stacker",
+diff --git a/Cargo.toml b/Cargo.toml
+index 293c4196..47e827fc 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -1,0 +2,4 @@
++exclude = [
++    "ristretto_gc/validation/catalog/catalog-tagged-prototype",
++    "ristretto_gc/validation/catalog/catalog-tagged-pool-prototype",
++]

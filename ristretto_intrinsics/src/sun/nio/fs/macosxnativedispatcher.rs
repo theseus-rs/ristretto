@@ -11,7 +11,7 @@ use ristretto_types::{Thread, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/fs/MacOSXNativeDispatcher.normalizepath([CI)[C", Any)]
-pub fn normalizepath<T: Thread + 'static>(
+pub async fn normalizepath<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,10 +61,13 @@ pub fn normalizepath<T: Thread + 'static>(
     };
 
     let vm = thread.vm()?;
-    Ok(Some(Value::new_object(
-        vm.garbage_collector(),
-        Reference::CharArray(normalized.into_boxed_slice()),
-    )))
+    Ok(Some(
+        Value::try_new_object_async(
+            vm.garbage_collector(),
+            Reference::CharArray(normalized.into()),
+        )
+        .await?,
+    ))
 }
 
 #[cfg(test)]
@@ -76,7 +79,7 @@ mod tests {
     #[tokio::test]
     async fn test_normalizepath_default_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = normalizepath(thread, Parameters::default());
+        let result = normalizepath(thread, Parameters::default()).await;
         assert!(matches!(
             result,
             Err(ristretto_types::Error::ParametersUnderflow)
@@ -96,7 +99,7 @@ mod tests {
         params.push(char_array.clone());
         params.push_int(0); // NFC form
 
-        let result = normalizepath(thread, params);
+        let result = normalizepath(thread, params).await;
         assert!(result.is_ok());
         let value = result.unwrap();
         assert!(value.is_some());
@@ -114,7 +117,7 @@ mod tests {
         params.push(char_array);
         params.push_int(0); // NFC form
 
-        let result = normalizepath(thread, params);
+        let result = normalizepath(thread, params).await;
         assert!(result.is_ok());
         let value = result.unwrap();
         assert!(value.is_some());
@@ -131,7 +134,7 @@ mod tests {
         params.push(char_array);
         params.push_int(0); // NFC form
 
-        let result = normalizepath(thread, params);
+        let result = normalizepath(thread, params).await;
         assert!(result.is_ok());
         let value = result.unwrap();
         assert!(value.is_some());

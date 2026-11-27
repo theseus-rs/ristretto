@@ -1,0 +1,41 @@
+{
+  "artifacts": {
+    "classes/GcBench$Node.class": "f62cc2460323bf1f7619449f2ec743b19fc19b2f624d71ce4b378e92936c50b7",
+    "classes/GcBench$1.class": "37a133a91055859e2a097884456c4cd865477093511a9b7a0e7b2f0cd0f782ba",
+    "classes/GcTelemetry.class": "82796dec3193fa53aae6da4d54cb6b14c50e8d78f1b3fff6b986c0a94364a7c4",
+    "classes/GcBench$Histogram.class": "adafc9486d5335dbe1eee3792f89b278d950f821dacafa5b3f77442f043d451a",
+    "classes/GcBench.class": "43bb33e4d45bd8255bef94901703b0b52e3a6db399f84f0d282e3084839e620c",
+    "gc_compare.wasm": "d0ea84d38e4914138d30c8ed573eaed0f21523cddbd9ddaf1d1961c17c1d2fe8",
+    "gc_compare.wasm.provenance.json": "0f5d83b4e1d508588bca20ce393ec02337f42b71c7cf817043be1d189a2dd0af",
+    "gc_compare.wasm.sources.tar.gz": "4aaaf3d502490ca1f3ebd74fdcc6ea2848b65795536789101e57ee98520e7e7c",
+    "gc_compare.wasm-before": "ae71ffd48eafd13d79ceefc4fd1ef202ae814ec5655ade72bbde9cd61df21a57",
+    "gc_compare.wasm-before.provenance.json": "e0ef220e4febea919b2158ce58f5230318a01d03c85ef6238de0b8770d394a34",
+    "gc_compare.wasm-before.sources.tar.gz": "2d9d0742c0dfd3454c161a2d40900be6d0e09d428abb916441cc0a5a428e0070"
+  },
+  "jdk_modules_sha256": "d23b5342cb4a87e58c3640124094999455b8eef079a64f0531c5c0192c536c83",
+  "java_sha256": "f49fdbfc138a0a6af5c577a5aa649a7b4b76764a0b0fbc3b36ac730ed7206638",
+  "raw_sha256": "dd26cb94e679e6fd32fb73f8e5d2eb46d07ed5f1951f9b1f6e7c0d64eac92ae2",
+  "schedule_sha256": "367c6b6ea9fc0eb73c46e192407d8870290c03e53023857eaf38c6ceb730fa8a",
+  "harness": "c051ed39326913534d8b8b280323970632db077f",
+  "settings": {
+    "cpus": [
+      8,
+      10
+    ],
+    "cpu_quota": 2.0,
+    "rss_mib": 512,
+    "heap_mib": 64,
+    "repeats": 3,
+    "rates": [
+      0,
+      500
+    ],
+    "runtimes": [
+      "wasm-candidate-before",
+      "wasm-candidate"
+    ],
+    "seconds": 10,
+    "warmup": 4,
+    "seed": 251127687
+  }
+}

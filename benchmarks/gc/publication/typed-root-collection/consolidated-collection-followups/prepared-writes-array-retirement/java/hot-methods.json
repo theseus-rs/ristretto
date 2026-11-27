@@ -1,0 +1,116 @@
+{
+  "scope": "main invocation, including main-class loading, warmup and reporting",
+  "limitations": [
+    "per-method snapshot cuts are not an atomic VM-wide measurement boundary",
+    "concurrent calls and queued compilation are not awaited or stopped",
+    "compilation time is charged when compilation finishes, including work begun earlier",
+    "diagnostic recorder overhead and retained metadata exclude timing qualification"
+  ],
+  "methods": [
+    {
+      "class": "GcBench$Histogram",
+      "name": "record",
+      "descriptor": "(J)V",
+      "interpreter_entries": 40902,
+      "compiled_entries": 0,
+      "rejection_reason": "non_static_method",
+      "rejected_bytecode": null
+    },
+    {
+      "class": "GcBench",
+      "name": "checkReferenceArray",
+      "descriptor": "([Ljava/lang/Object;I)I",
+      "interpreter_entries": 29118,
+      "compiled_entries": 0,
+      "rejection_reason": "unqualified_instruction",
+      "rejected_bytecode": [
+        0,
+        42
+      ]
+    },
+    {
+      "class": "GcBench",
+      "name": "operation",
+      "descriptor": "(IJI)I",
+      "interpreter_entries": 29054,
+      "compiled_entries": 0,
+      "rejection_reason": "unqualified_instruction",
+      "rejected_bytecode": [
+        51,
+        187
+      ]
+    },
+    {
+      "class": "GcBench$Node",
+      "name": "<init>",
+      "descriptor": "(ILGcBench$Node;)V",
+      "interpreter_entries": 29054,
+      "compiled_entries": 0,
+      "rejection_reason": "non_static_method",
+      "rejected_bytecode": null
+    },
+    {
+      "class": "GcBench",
+      "name": "audit",
+      "descriptor": "(I)V",
+      "interpreter_entries": 2,
+      "compiled_entries": 0,
+      "rejection_reason": "unqualified_instruction",
+      "rejected_bytecode": [
+        14,
+        178
+      ]
+    },
+    {
+      "class": "GcBench$Histogram",
+      "name": "<init>",
+      "descriptor": "()V",
+      "interpreter_entries": 2,
+      "compiled_entries": 0,
+      "rejection_reason": "non_static_method",
+      "rejected_bytecode": null
+    },
+    {
+      "class": "GcBench$Histogram",
+      "name": "<init>",
+      "descriptor": "(LGcBench$1;)V",
+      "interpreter_entries": 2,
+      "compiled_entries": 0,
+      "rejection_reason": "non_static_method",
+      "rejected_bytecode": null
+    },
+    {
+      "class": "GcBench$Histogram",
+      "name": "print",
+      "descriptor": "()V",
+      "interpreter_entries": 2,
+      "compiled_entries": 0,
+      "rejection_reason": "non_static_method",
+      "rejected_bytecode": null
+    },
+    {
+      "class": "GcBench",
+      "name": "<clinit>",
+      "descriptor": "()V",
+      "interpreter_entries": 1,
+      "compiled_entries": 0,
+      "rejection_reason": "unqualified_instruction",
+      "rejected_bytecode": [
+        3,
+        189
+      ]
+    },
+    {
+      "class": "GcBench",
+      "name": "arrivals",
+      "descriptor": "(JJ)J",
+      "interpreter_entries": 1,
+      "compiled_entries": 0,
+      "rejection_reason": "unqualified_instruction",
+      "rejected_bytecode": [
+        4,
+        109
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "parent": "f462e61ca477e2b6e6330b563369171f0e23d214",
+  "workers": 2,
+  "cpu_quota": 2,
+  "heap_mib": 64,
+  "rss_mib": 512,
+  "cpus": [
+    20,
+    22
+  ],
+  "rates": [
+    0,
+    500
+  ],
+  "minimum_native_capacity_ratio": 0.95,
+  "long_forks_per_runtime": 2,
+  "short_forks_per_runtime_rate": 3,
+  "short_completions": 5000,
+  "long_completions": 60000,
+  "max_long_median_p999_ratio": 1.1,
+  "minimum_full_collection_lower_95": 10,
+  "seeds": {
+    "short_native": 251127683,
+    "long_native": 251127685,
+    "short_wasi": 251127687
+  },
+  "wasi_sustained_reference": "f462e61c",
+  "wasi_sustained_seed": 251127689,
+  "max_wasi_sustained_p999_ratio": 1.1,
+  "maximum_default_sparse_2048_first_requested": 65536,
+  "maximum_default_sparse_2048_first_allocations": 128,
+  "maximum_experimental_sparse_2048_first_requested": 131072,
+  "maximum_dense_first_size_ratio": 1.05,
+  "required_steady_sparse_allocations": 0,
+  "required_ordinary_proposals": 1,
+  "minimum_wasi_capacity_ratio": 0.95,
+  "candidate": "c051ed39326913534d8b8b280323970632db077f"
+}

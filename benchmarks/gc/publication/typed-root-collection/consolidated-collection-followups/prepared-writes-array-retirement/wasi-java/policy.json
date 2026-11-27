@@ -1,0 +1,18 @@
+{
+  "parent": "df71e5a2",
+  "candidate": "58fe29491157b92cdff27d3cd6811cc2d75e52f1",
+  "profile": "release",
+  "target": "wasm32-wasip2",
+  "cpu": [
+    0,
+    2
+  ],
+  "quota": 2,
+  "rss_mib": 512,
+  "heap_mib": 64,
+  "scheduled_rate": 500,
+  "duration_s": 5,
+  "warmup_s": 2,
+  "repeats": 2,
+  "seed": 251127443
+}

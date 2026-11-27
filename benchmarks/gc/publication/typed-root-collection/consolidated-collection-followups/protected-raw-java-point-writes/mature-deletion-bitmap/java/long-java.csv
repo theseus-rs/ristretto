@@ -1,0 +1,5 @@
+runtime,fork,rate,status,completed,unfinished,ops_s,p999_us,p9999_us,oom_kills
+ristretto-candidate-jit-before,1,500,ok,60000,0,500.00384804628135,2752,3872,0
+ristretto-candidate-jit,1,500,ok,60000,0,500.0028714331568,3264,4352,0
+ristretto-candidate-jit,2,500,ok,60000,0,500.00806201749015,2528,4608,0
+ristretto-candidate-jit-before,2,500,ok,60000,0,500.00777495006446,2976,4032,0
