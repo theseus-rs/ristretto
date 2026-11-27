@@ -107,3 +107,11 @@ The first native run and its five misses remain above for comparison.
 [Replication policy](exact-charge-cycles/isolated-native/policy.json) ·
 [Native estimates](exact-charge-cycles/isolated-native/results.csv) ·
 [Native process data](exact-charge-cycles/isolated-native/native.jsonl.gz)
+
+## Ready host arrays under pressure
+
+The host-buffer recovery candidate fixed premature exhaustion in the forced
+lease schedule. Its bundled native JVM capacity was 93.68% of control against
+the 95% floor, so the alpha keeps the exact-charge fix and the existing
+recovery implementation. [Reproducer, 116 process observations, complete-cycle
+graphs and release decision](host-array-retirement/README.md)

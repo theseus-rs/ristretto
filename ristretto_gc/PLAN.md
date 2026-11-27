@@ -26,6 +26,12 @@ scheduled arrivals were unfinished. A forced host-array reclamation schedule
 still reproduces premature exhaustion. Counted publication remains opt-in.
 [Stock controls, heap snapshots and capped recovery](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/README.md).
 
+The host-buffer experiment retained the full heap charge until physical release.
+It fixed the workerless 4,097-element donor schedule under bounded polls and
+passed all 36 complete-cycle timing conditions. The native bundled JVM ran at
+93.68% of control capacity, below the 95% floor, so the candidate is withheld.
+[Reproducer, ordinary launcher controls, and measured release gates](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/stock-publication/host-array-retirement/README.md).
+
 The candidate at `c051ed39` allowed a funded allocation and two fresh full
 tickets to finish while a producer was parked at the 129th distinct mature
 deletion group. Its minimum individual lower 95% bounds for complete collection

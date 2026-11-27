@@ -1,0 +1,792 @@
+{
+  "host-array-native": {
+    "failed": 20,
+    "medians": {
+      "ristretto-stock-counted-jit-0": {
+        "throughput_ops_s": 1921.763866088257,
+        "response_p999_us": 87040,
+        "completed": 19236,
+        "unfinished": 0
+      },
+      "ristretto-stock-counted-jit-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 99328,
+        "completed": 5000,
+        "unfinished": 0
+      },
+      "ristretto-stock-jit-0": {
+        "throughput_ops_s": 1847.9516370004085,
+        "response_p999_us": 88064,
+        "completed": 18616,
+        "unfinished": 0
+      },
+      "ristretto-stock-jit-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 104448,
+        "completed": 5000,
+        "unfinished": 0
+      }
+    }
+  },
+  "exact-parent-stock": {
+    "failed": 0,
+    "medians": {
+      "ristretto-stock-jit-0": {
+        "throughput_ops_s": 2184.375188668377,
+        "response_p999_us": 78848,
+        "completed": 21868,
+        "unfinished": 0
+      },
+      "ristretto-stock-jit-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 92160,
+        "completed": 5000,
+        "unfinished": 0
+      },
+      "ristretto-stock-jit-before-0": {
+        "throughput_ops_s": 2236.1348166778785,
+        "response_p999_us": 74752,
+        "completed": 22406,
+        "unfinished": 0
+      },
+      "ristretto-stock-jit-before-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 91136,
+        "completed": 5000,
+        "unfinished": 0
+      }
+    }
+  },
+  "host-bundle-native-short": {
+    "failed": 0,
+    "medians": {
+      "ristretto-candidate-jit-0": {
+        "throughput_ops_s": 3455.876522502844,
+        "response_p999_us": 28672,
+        "completed": 34559,
+        "unfinished": 0
+      },
+      "ristretto-candidate-jit-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 2304,
+        "completed": 5000,
+        "unfinished": 0
+      },
+      "ristretto-candidate-jit-before-0": {
+        "throughput_ops_s": 3688.9626258291496,
+        "response_p999_us": 26880,
+        "completed": 36970,
+        "unfinished": 0
+      },
+      "ristretto-candidate-jit-before-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 2752,
+        "completed": 5000,
+        "unfinished": 0
+      }
+    }
+  },
+  "host-bundle-native-long": {
+    "failed": 0,
+    "medians": {
+      "ristretto-candidate-jit-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 2768.0,
+        "completed": 60000.0,
+        "unfinished": 0.0
+      },
+      "ristretto-candidate-jit-before-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 2832.0,
+        "completed": 60000.0,
+        "unfinished": 0.0
+      }
+    }
+  },
+  "host-bundle-wasi-short": {
+    "failed": 0,
+    "medians": {
+      "wasm-candidate-0": {
+        "throughput_ops_s": 7267.492284510263,
+        "response_p999_us": 40448,
+        "completed": 72864,
+        "unfinished": 0
+      },
+      "wasm-candidate-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 35328,
+        "completed": 5000,
+        "unfinished": 0
+      },
+      "wasm-candidate-before-0": {
+        "throughput_ops_s": 7038.440545046041,
+        "response_p999_us": 41472,
+        "completed": 70654,
+        "unfinished": 0
+      },
+      "wasm-candidate-before-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 43520,
+        "completed": 5000,
+        "unfinished": 0
+      }
+    }
+  },
+  "host-bundle-wasi-long": {
+    "failed": 0,
+    "medians": {
+      "wasm-candidate-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 35584.0,
+        "completed": 60000.0,
+        "unfinished": 0.0
+      },
+      "wasm-candidate-before-500": {
+        "throughput_ops_s": 500.0,
+        "response_p999_us": 38400.0,
+        "completed": 60000.0,
+        "unfinished": 0.0
+      }
+    }
+  },
+  "native-release": {
+    "capacity": 0.9368152711295318,
+    "sustained_p999": 0.9774011299435028
+  },
+  "wasi-release": {
+    "capacity": 1.032542967152779,
+    "sustained_p999": 0.9266666666666666
+  },
+  "charge_only_comparison": {
+    "forks": 10,
+    "ok": 10
+  },
+  "host_clear_comparison": {
+    "forks": 10,
+    "ok": 10
+  },
+  "binaries": {
+    "native/advisory/gc_compare": {
+      "revision": "129d6efcf12050723c69ab29b27b18fdc6af4fe9",
+      "target": "native",
+      "policy": "advisory",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "gc_compare",
+      "sha256": "b6aec5a845e4e502617901c081c24fa495430c8dea5d976f343535fe8c98867c",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-advisory-recovery-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "native/counted/java": {
+      "revision": "c7b22b9fb0de469c255153cd1c2b9194aac7b92c",
+      "target": "native",
+      "policy": "counted",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "java",
+      "sha256": "ca2de55e0c772d0e2535616095d4d2044a806615983bcced23a07b32efe5b740",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-counted-stock-default-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "native/activation/gc_compare": {
+      "revision": "6a165bbcb81b5adb56dc3270922110899b46bbf1",
+      "target": "native",
+      "policy": "activation",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "gc_compare",
+      "sha256": "85701ccd00404ed8e38918e5a43e60f34641d7cff8f41dfc8d50110bf9589c49",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-start-publication-progress-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "native/host-clear/gc_compare": {
+      "revision": "da78ec5659129481d0dcdbe03066ae063041aab9",
+      "target": "native",
+      "policy": "host-clear",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "gc_compare",
+      "sha256": "ef4c27ee1fd4515031b33d3a5c352b53670c564b92d25edc13b7f84e67d64361",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-host-array-clear-progress-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "native/host-clear/java": {
+      "revision": "da78ec5659129481d0dcdbe03066ae063041aab9",
+      "target": "native",
+      "policy": "host-clear",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "java",
+      "sha256": "3940cdafb7739c8e97e4c307887f99ffd1cdb3653a18c295c9ab6694cf4d490b",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-host-array-clear-progress-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "native/charge-only/gc_compare": {
+      "revision": "77aed442a5ba1bb31e4ea0615d76c35b4384a7a2",
+      "target": "native",
+      "policy": "charge-only",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "gc_compare",
+      "sha256": "ef4c27ee1fd4515031b33d3a5c352b53670c564b92d25edc13b7f84e67d64361",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-exact-java-preflight-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "native/charge-only/java": {
+      "revision": "77aed442a5ba1bb31e4ea0615d76c35b4384a7a2",
+      "target": "native",
+      "policy": "charge-only",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "java",
+      "sha256": "3940cdafb7739c8e97e4c307887f99ffd1cdb3653a18c295c9ab6694cf4d490b",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-exact-java-preflight-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "native/stock/gc_compare": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "native",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "gc_compare",
+      "sha256": "fb1c62376d4f1fa7ec8e6c234d6e1f2d78242a81d17b0d20576b09b7a27d1f21",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "native/stock/java": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "native",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics"
+      ],
+      "binary": "java",
+      "sha256": "ca2de55e0c772d0e2535616095d4d2044a806615983bcced23a07b32efe5b740",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "wasi/counted/java": {
+      "revision": "c7b22b9fb0de469c255153cd1c2b9194aac7b92c",
+      "target": "wasi",
+      "policy": "counted",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics",
+        "--target",
+        "wasm32-wasip2",
+        "--no-default-features"
+      ],
+      "binary": "java.wasm",
+      "sha256": "54729d7cdd9f17b9c68791bf4cd1bfc60668356c534f4a3cd51aa573b425e6c3",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-counted-stock-default-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "wasi/activation/gc_compare": {
+      "revision": "6a165bbcb81b5adb56dc3270922110899b46bbf1",
+      "target": "wasi",
+      "policy": "activation",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics",
+        "--target",
+        "wasm32-wasip2",
+        "--no-default-features"
+      ],
+      "binary": "gc_compare.wasm",
+      "sha256": "adb82f0784cb530970dd0676328db89138ac3b62adb0f2ad5a2e51064c1b12fd",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-start-publication-progress-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "wasi/host-clear/gc_compare": {
+      "revision": "da78ec5659129481d0dcdbe03066ae063041aab9",
+      "target": "wasi",
+      "policy": "host-clear",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics",
+        "--target",
+        "wasm32-wasip2",
+        "--no-default-features"
+      ],
+      "binary": "gc_compare.wasm",
+      "sha256": "9533a108b19139af3aec71e21201f3889f96796eaac6cc7eb066883e240245ba",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-host-array-clear-progress-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "wasi/stock/gc_compare": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "wasi",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_vm",
+        "--example",
+        "gc_compare",
+        "--message-format=json-render-diagnostics",
+        "--target",
+        "wasm32-wasip2",
+        "--no-default-features"
+      ],
+      "binary": "gc_compare.wasm",
+      "sha256": "ce5542ce913cc0e71a9652046dfeee4c91897a44125d006a8dde0436af88c15d",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ]
+    },
+    "wasi/stock/java": {
+      "revision": "19d3cdb716d6483bceb6807cc4613ce79f5da11b",
+      "target": "wasi",
+      "policy": "stock",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "ristretto_java",
+        "--bin",
+        "java",
+        "--message-format=json-render-diagnostics",
+        "--target",
+        "wasm32-wasip2",
+        "--no-default-features"
+      ],
+      "binary": "java.wasm",
+      "sha256": "54729d7cdd9f17b9c68791bf4cd1bfc60668356c534f4a3cd51aa573b425e6c3",
+      "collector_sources": [
+        "/home/brianheineman/development/ristretto-gc-workspaces/gc-alpha-default-publication-v1/ristretto_gc/src/lib.rs"
+      ]
+    }
+  },
+  "policies": {
+    "host-clear-screen-policy.json": {
+      "before": "19d3cdb7",
+      "after": "da78ec5659129481d0dcdbe03066ae063041aab9",
+      "mode": [
+        "stock-jit",
+        "stock-counted-jit"
+      ],
+      "rate": [
+        0,
+        500
+      ],
+      "seconds": 10,
+      "warmup": 4,
+      "pairs": 5,
+      "heap_mib": 64,
+      "cpus": [
+        20,
+        22
+      ],
+      "rss_mib": 512,
+      "seed": 251127741,
+      "require_all": true
+    },
+    "host-bundle-screen-policy.json": {
+      "before": "19d3cdb7",
+      "after": "da78ec56",
+      "native_cpus": [
+        20,
+        22
+      ],
+      "wasi_cpus": [
+        8,
+        10
+      ],
+      "rates": [
+        0,
+        500
+      ],
+      "short": {
+        "warmup": 4,
+        "seconds": 10,
+        "pairs": 3
+      },
+      "sustained": {
+        "warmup": 10,
+        "seconds": 120,
+        "pairs": 2
+      },
+      "capacity_floor": 0.95,
+      "long_p999_ceiling": 1.1,
+      "require_no_oom": true,
+      "require_all_scheduled": true,
+      "heap_mib": 64,
+      "rss_mib": 512,
+      "policy": "previously qualified JVM candidate bundle, counted on both revisions",
+      "seed": [
+        251127755,
+        251127757,
+        251127759,
+        251127761
+      ]
+    },
+    "exact-parent-stock-policy.json": {
+      "comparison": "77aed442 to da78ec56",
+      "command": [
+        "python3",
+        "-B",
+        "benchmarks/gc/run.py",
+        "--jdk",
+        "/home/brianheineman/.ristretto/linux-x64/25.0.5.0.10",
+        "--cpus",
+        "16",
+        "18",
+        "--cpu-quota",
+        "2",
+        "--rss-mib",
+        "512",
+        "--cgroup-parent",
+        "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service",
+        "--heap-mib",
+        "64",
+        "--workers",
+        "2",
+        "--workloads",
+        "reference-array",
+        "--ristretto",
+        "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/default-publication-5a098aa8-v1/artifacts/native/host-clear/gc_compare/gc_compare",
+        "--ristretto-before",
+        "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/default-publication-5a098aa8-v1/artifacts/native/charge-only/gc_compare/gc_compare",
+        "--runtimes",
+        "ristretto-stock-jit-before",
+        "ristretto-stock-jit",
+        "--seconds",
+        "10",
+        "--warmup",
+        "4",
+        "--repeats",
+        "5",
+        "--rates",
+        "0",
+        "500",
+        "--timeout",
+        "120",
+        "--seed",
+        "251127765",
+        "--output",
+        "/home/brianheineman/development/ristretto-gc-evidence/alpha-progress-0134e21a-v1/threefold-v3/default-publication-5a098aa8-v1/exact-parent-stock"
+      ],
+      "capacity_floor": 0.95,
+      "short_tail_exploratory": true
+    },
+    "isolated-parent/policy.json": {
+      "run_order": [
+        [
+          "direct",
+          64,
+          0,
+          "charge-only"
+        ],
+        [
+          "direct",
+          64,
+          0,
+          "host-clear"
+        ],
+        [
+          "direct",
+          64,
+          1,
+          "host-clear"
+        ],
+        [
+          "direct",
+          64,
+          1,
+          "charge-only"
+        ],
+        [
+          "direct",
+          64,
+          2,
+          "charge-only"
+        ],
+        [
+          "direct",
+          64,
+          2,
+          "host-clear"
+        ],
+        [
+          "direct",
+          512,
+          0,
+          "charge-only"
+        ],
+        [
+          "direct",
+          512,
+          0,
+          "host-clear"
+        ],
+        [
+          "direct",
+          512,
+          1,
+          "host-clear"
+        ],
+        [
+          "direct",
+          512,
+          1,
+          "charge-only"
+        ],
+        [
+          "direct",
+          512,
+          2,
+          "charge-only"
+        ],
+        [
+          "direct",
+          512,
+          2,
+          "host-clear"
+        ],
+        [
+          "ordinary",
+          512,
+          0,
+          "host-clear"
+        ],
+        [
+          "ordinary",
+          512,
+          0,
+          "stock"
+        ],
+        [
+          "ordinary",
+          512,
+          1,
+          "host-clear"
+        ],
+        [
+          "ordinary",
+          512,
+          1,
+          "stock"
+        ],
+        [
+          "ordinary",
+          512,
+          2,
+          "host-clear"
+        ],
+        [
+          "ordinary",
+          512,
+          2,
+          "stock"
+        ]
+      ],
+      "cpus": [
+        12,
+        14
+      ],
+      "rss_mib": 1024,
+      "workload": "reference-array",
+      "milliseconds": 4000,
+      "warmup_ms": 1000,
+      "mode": "stock",
+      "purpose": "capacity failure incidence; no timing gate"
+    },
+    "isolated-launcher/policy.json": {
+      "run_order": [
+        [
+          "ordinary",
+          512,
+          0,
+          "charge-only"
+        ],
+        [
+          "ordinary",
+          512,
+          0,
+          "host-clear"
+        ],
+        [
+          "ordinary",
+          512,
+          1,
+          "host-clear"
+        ],
+        [
+          "ordinary",
+          512,
+          1,
+          "charge-only"
+        ],
+        [
+          "ordinary",
+          512,
+          2,
+          "charge-only"
+        ],
+        [
+          "ordinary",
+          512,
+          2,
+          "host-clear"
+        ]
+      ],
+      "cpus": [
+        12,
+        14
+      ],
+      "rss_mib": 1024,
+      "workload": "reference-array",
+      "milliseconds": 4000,
+      "warmup_ms": 1000,
+      "mode": "stock",
+      "purpose": "capacity failure incidence; no timing gate"
+    }
+  },
+  "focused_control": {
+    "parent_result": "out of memory after releasing the storage lease",
+    "candidate_result": "all 4097 element destructors ran, complete physical refund; held lease still exhausts"
+  },
+  "native-tests": 2057,
+  "wasi-tests": 1443,
+  "post_review": "No, because the relaxed counter only influences whether the collector performs a bounded retry, while every allocation remains independently gated by the separate check of actual headroom.\n",
+  "tested_revisions": [
+    {
+      "commit": "da78ec56",
+      "paths_changed_from_runtime": [],
+      "difference": "runtime snapshot"
+    },
+    {
+      "commit": "f6e3f65b882ac06c32a7a8de37602fe7fab600c3",
+      "paths_changed_from_runtime": [
+        "ristretto_gc/src/recovery.rs"
+      ],
+      "difference": "cfg(test) recovery fixtures only"
+    },
+    {
+      "commit": "04f61c28a74b7002304554ac65dcb5d974c397f1",
+      "paths_changed_from_runtime": [
+        "ristretto_gc/src/recovery.rs"
+      ],
+      "difference": "cfg(test) recovery fixtures only"
+    }
+  ]
+}
