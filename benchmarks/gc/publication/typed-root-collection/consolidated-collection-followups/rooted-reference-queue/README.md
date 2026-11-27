@@ -19,7 +19,7 @@ All 36 established complete-collection conditions used the same 4,095-node tree,
 
 The native interpreter, native JIT and WASI interpreter ran the same Java graph, returned 64, and cleared both weak witnesses. The native JIT recorded 25 compiled entries and eight compiled backedges. The ordinary Java Reference suite exercised JDK 8, 11, 17, 21 and 25. Cargo verified the collector package and the normalized native and WASI consumers. Fourteen shipping dependency graphs resolved the same workspace collector.
 
-All nine two-second Chromium trials completed 4,000 requests at 2,000/s each. Collector trials emptied their managed heaps on teardown. [Per-process measurements](browser.jsonl.gz).
+The nine two-second Chromium trials offered 36,000 requests at 2,000/s per trial and completed 35,998 in their measurement windows. One candidate trial and one control trial each had one request unfinished. Collector trials emptied their managed heaps on teardown. [Per-process measurements](browser.jsonl.gz).
 
 ![Chromium scheduled response, host heartbeat and memory](browser.png)
 
