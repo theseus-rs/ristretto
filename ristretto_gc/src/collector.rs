@@ -1922,9 +1922,7 @@ impl GarbageCollector {
         if address == 0 {
             return None;
         }
-        self.objects
-            .lookup(address)
-            .filter(|metadata| metadata.id == slot.target_identity)
+        self.objects.lookup_identity(address, slot.target_identity)
     }
 
     pub(crate) fn snapshot_edge<T>(&self, target: &Gc<T>) {

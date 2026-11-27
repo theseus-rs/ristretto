@@ -1635,3 +1635,120 @@ fn reference_registration_delivery_and_cancellation_survive_a_parked_allocation_
         );
     });
 }
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+mod construction_contention {
+    use super::*;
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    struct Owner {
+        link: GcWeak<u64>,
+        bound: mpsc::Sender<()>,
+        resume: Mutex<mpsc::Receiver<()>>,
+    }
+    // SAFETY: the slot is a conditional edge managed by reference processing.
+    unsafe impl Trace for Owner {
+        fn trace(&self, _: &GarbageCollector) {}
+        unsafe fn attach(&mut self, owner: crate::TraceOwner<'_>) {
+            self.link.set_owner(owner.address());
+            self.bound.send(()).expect("privately bound owner");
+            lock(&self.resume)
+                .recv_timeout(Duration::from_secs(15))
+                .expect("resume owner");
+        }
+    }
+    struct Donor(Arc<AtomicUsize>);
+    // SAFETY: the counter contains no managed references.
+    unsafe impl Trace for Donor {
+        fn trace(&self, _: &GarbageCollector) {}
+    }
+    impl Drop for Donor {
+        fn drop(&mut self) {
+            self.0.fetch_add(1, Ordering::Release);
+        }
+    }
+
+    #[test]
+    fn conditional_construction_and_young_reclamation_pass_a_parked_mature_shard() -> Result<()> {
+        let mut outcomes = Vec::new();
+        for counted in [false, true] {
+            let gc = GarbageCollector::with_config(
+                Configuration::builder()
+                    .concurrent_publication(counted)
+                    .metadata_shards(16)
+                    .allocation_threshold(usize::MAX)
+                    .full_collection_interval(usize::MAX)
+                    .promotion_age(1)
+                    .incremental_step_size(1)
+                    .build(),
+            );
+            let mature = (0..32_u64).map(|n| Gc::new(&gc, n)).collect::<Vec<_>>();
+            gc.collect_full()?;
+            let garbage_drops = Arc::new(AtomicUsize::new(0));
+            let garbage = Gc::new(&gc, Donor(garbage_drops.clone()));
+            let shard = |address| crate::index::address_bucket(address) % 16;
+            let target = mature
+                .iter()
+                .find(|object| shard(object.as_ptr().addr()) != shard(garbage.as_ptr().addr()))
+                .expect("mature target outside garbage shard");
+            let slot = GcWeak::new(target, ReferenceKind::Weak, 0);
+            let witness = slot.slot.clone();
+            drop(garbage);
+            let before = gc.statistics()?.young_collections;
+            let held = gc.objects.lock(target.as_ptr().addr());
+            let (bound_tx, bound_rx) = mpsc::channel();
+            let (resume_tx, resume_rx) = mpsc::channel();
+            let (done_tx, done_rx) = mpsc::channel();
+            let (bound, reclaimed, owner) = thread::scope(|scope| {
+                let heap = &gc;
+                let publisher = scope.spawn(move || {
+                    Gc::try_new(
+                        heap,
+                        Owner {
+                            link: slot,
+                            bound: bound_tx,
+                            resume: Mutex::new(resume_rx),
+                        },
+                    )
+                });
+                let bound = bound_rx.recv_timeout(Duration::from_secs(2)).is_ok();
+                let drop_count = &garbage_drops;
+                let worker = scope.spawn(move || {
+                    heap.collect_young();
+                    for _ in 0..10_000 {
+                        heap.step();
+                        if drop_count.load(Ordering::Acquire) == 1 {
+                            break;
+                        }
+                    }
+                    done_tx
+                        .send(drop_count.load(Ordering::Acquire) == 1)
+                        .expect("report refund");
+                });
+                let reclaimed = done_rx.recv_timeout(Duration::from_secs(2)) == Ok(true);
+                drop(held);
+                resume_tx.send(()).expect("resume owner");
+                worker.join().expect("young collection");
+                (bound, reclaimed, publisher.join().expect("owner thread"))
+            });
+            outcomes.push((bound, reclaimed));
+            let owner = owner?;
+            assert_eq!(witness.owner_identity(), Some(owner.identity()));
+            assert_eq!(witness.target_identity, target.identity());
+            assert_eq!(witness.unpublished_owners.load(Ordering::Acquire), 0);
+            assert!(owner.link.refers_to(target));
+            while !gc.step() {}
+            assert_eq!(gc.statistics()?.young_collections, before + 1);
+            drop((mature, owner));
+            gc.collect_full()?;
+            assert_eq!(gc.managed_bytes(), 0);
+        }
+        assert_eq!(
+            outcomes,
+            [(true, true); 2],
+            "(owner bound, donor destroyed) before shard release"
+        );
+        Ok(())
+    }
+}

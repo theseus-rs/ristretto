@@ -279,17 +279,14 @@ impl GarbageCollector {
         slot: &crate::weak::WeakSlot,
     ) -> Option<crate::roots::TreeRoot> {
         let address = slot.target.load(Ordering::Acquire);
-        if address == 0 || self.weak_is_cleared(slot, address) {
-            return None;
-        }
-        let metadata = self.objects.lock(address).get(&address).cloned()?;
-        if metadata.id != slot.target_identity || self.logically_retired(&metadata) {
+        let metadata = self.uncleared_weak_target(slot, address)?;
+        if self.logically_retired(&metadata) {
             return None;
         }
         let id = self.insert_root(metadata.ptr().0);
         // Enumeration may already have passed this root. Publish its graph to
         // each active mark queue before admission ends, respecting phase floors.
-        self.shade_all(address);
+        self.shade_live_domains(&metadata);
         Some(id)
     }
 

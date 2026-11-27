@@ -111,11 +111,19 @@ impl GarbageCollector {
     }
 
     pub(crate) fn weak_is_cleared(&self, slot: &crate::weak::WeakSlot, address: usize) -> bool {
-        let metadata = self.weak_target_metadata(slot, address);
-        let Some(metadata) = metadata else {
-            return true;
-        };
-        (0..2).any(|index| {
+        self.uncleared_weak_target(slot, address).is_none()
+    }
+
+    /// An exact visible descriptor whose conditional edge survived both domains.
+    /// Publication admission protects the phase decision. The descriptor grants
+    /// no payload access and terminal retirement is a separate test.
+    pub(super) fn uncleared_weak_target(
+        &self,
+        slot: &crate::weak::WeakSlot,
+        address: usize,
+    ) -> Option<MetadataRef> {
+        let metadata = self.weak_target_metadata(slot, address)?;
+        let cleared = (0..2).any(|index| {
             let _context = Context::enter(self, index);
             if slot.birth_stamp(index).load(Ordering::Acquire)
                 == self.domain().epoch.load(Ordering::Acquire)
@@ -129,7 +137,8 @@ impl GarbageCollector {
                 crate::ReferenceKind::PhantomRetained | crate::ReferenceKind::Final => false,
             };
             decision && !self.reference_metadata_live(&metadata, slot.kind)
-        })
+        });
+        (!cleared).then_some(metadata)
     }
 
     pub(crate) fn weak_birth_epochs(&self) -> [u64; 2] {
