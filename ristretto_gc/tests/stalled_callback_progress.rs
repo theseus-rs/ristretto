@@ -331,7 +331,7 @@ fn shutdown_observes_a_failed_clear_from_the_pressure_consumer() -> Result<()> {
     );
     let thread = clearing.recv_timeout(Duration::from_secs(3));
     let still_parked = !older.released.load(Ordering::Acquire);
-    release_failure.send(()).expect("release failing donor");
+    assert_eq!(release_failure.send(()), Ok(()));
     drop(allocation);
     drop(resume);
     let stopped = heap.stop();
