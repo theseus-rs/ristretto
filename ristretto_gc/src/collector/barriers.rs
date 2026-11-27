@@ -229,6 +229,7 @@ impl GarbageCollector {
             target.ptr.as_ptr().addr(),
             target.identity(),
             target.traced_metadata(),
+            target.numeric_edge_for(self),
         );
     }
 
@@ -237,6 +238,7 @@ impl GarbageCollector {
         address: usize,
         identity: crate::ObjectId,
         known: Option<&MetadataRef>,
+        numeric_edge: bool,
     ) {
         let _measurement = self
             .diagnostics
@@ -245,10 +247,10 @@ impl GarbageCollector {
         let mut certificate = None;
         // A traced edge owns its descriptor. A protected raw address is
         // resolved below while its caller still keeps the original birth live.
-        // Preserve the existing raw handoff on heaps with old-only passes.
-        let protected_raw =
-            identity.to_i64() == 0 && self.configuration.old_collection_interval == 0;
-        let context_edge = (known.is_some() || protected_raw)
+        // Numeric managed edges on old-enabled heaps go through exact identity
+        // lookup. Their old-only handoff remains on the admitted barrier path.
+        let precise_full_only = numeric_edge && self.configuration.old_collection_interval != 0;
+        let context_edge = (known.is_some() || identity.to_i64() == 0 || precise_full_only)
             && self.configuration.barrier_buffer_size != 0
             && crate::context::with_state(self, |_| ()).is_some();
         let clock = self
@@ -319,7 +321,7 @@ impl GarbageCollector {
         }
         if context_edge {
             drop(legacy);
-            self.shade_context_edge(metadata);
+            self.shade_context_edge(metadata, precise_full_only);
             return;
         }
         let publication = legacy.unwrap_or_else(|| self.barrier_guard());
@@ -328,7 +330,7 @@ impl GarbageCollector {
         }
     }
 
-    fn shade_context_edge(&self, metadata: &MetadataRef) {
+    fn shade_context_edge(&self, metadata: &MetadataRef, precise_full_only: bool) {
         // The caller holds this exact same-heap birth descriptor. Move
         // its strong-phase traversal onto the epoch queues, where the
         // collector can claim a committed proposal or cancel a pending one.
@@ -345,14 +347,17 @@ impl GarbageCollector {
                 .barrier_buffer_size
                 .min(crate::context::MAX_RECORDS);
             let mut debt = None;
-            let certified = self.certify_root_attempt(phases, metadata, |epoch| {
-                epoch.has_root_capacity(limit).then(|| {
-                    debt.get_or_insert_with(|| {
-                        std::sync::Arc::new(crate::roots::Record::typed(metadata.trace.ptr.addr()))
+            let certified =
+                self.certify_root_attempt_in(phases, metadata, precise_full_only, |epoch| {
+                    epoch.has_root_capacity(limit).then(|| {
+                        debt.get_or_insert_with(|| {
+                            std::sync::Arc::new(crate::roots::Record::typed(
+                                metadata.trace.ptr.addr(),
+                            ))
+                        })
+                        .clone()
                     })
-                    .clone()
-                })
-            });
+                });
             if certified == Some(true)
                 && metadata.birth.is_live()
                 && debt.is_none_or(|record| record.commit_typed())
@@ -363,7 +368,12 @@ impl GarbageCollector {
         // A phase change or cancelled proposal has no private debt. Use
         // fresh admission and strong retention for every receiving domain.
         let publication = self.barrier_guard();
-        if metadata.birth.is_live() && self.shade_live_domains(metadata) {
+        let changed = if precise_full_only {
+            self.barrier_inner(metadata, None)
+        } else {
+            metadata.birth.is_live() && self.shade_live_domains(metadata)
+        };
+        if changed {
             publication.changed();
         }
     }

@@ -1240,11 +1240,21 @@ fn poll_while_flusher_is_suspended(
 fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended() -> Result<()>
 {
     let mut outcomes = Vec::new();
-    for (counted, raw) in [(false, false), (true, false), (false, true), (true, true)] {
+    for (counted, raw, interval, old_pass) in [false, true].into_iter().flat_map(|c| {
+        [
+            (c, false, 0, false),
+            (c, true, 0, false),
+            (c, false, 4, false),
+            (c, true, 4, false),
+            (c, false, 4, true),
+            (c, true, 4, true),
+        ]
+    }) {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .barrier_buffer_size(4)
                 .concurrent_publication(counted)
+                .old_collection_interval(interval)
                 .max_heap_bytes(512)
                 .incremental_step_size(1)
                 .max_pause_time_us(0)
@@ -1257,7 +1267,11 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
         drop(Gc::try_new(&gc, 99u64)?);
         let funding = gc.reserve_bytes(gc.allocation_headroom())?;
         let context = gc.register_context();
-        gc.collect();
+        if old_pass {
+            gc.collect_old();
+        } else {
+            gc.collect();
+        }
         for _ in 0..2048 {
             if lock(&gc.domains[1].cycle).phase == Phase::Mark {
                 break;
@@ -1265,6 +1279,7 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
             gc.step();
         }
         assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Mark);
+        assert_eq!(gc.old_collection_active(), old_pass);
         let target = parent.first().expect("child");
         if raw {
             // SAFETY: the rooted parent retains this exact child across the barrier.
@@ -1276,8 +1291,15 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
         }
         let debt = gc.contexts.pending.load(Ordering::Acquire);
         assert!(debt <= 1);
+        if debt != 0 {
+            let record = context.0.try_peek().expect("exact old handoff record");
+            assert_eq!(record.identity, target.identity());
+            assert_eq!(record.address, target.as_ptr().addr());
+        }
         let (full, acquired, pending) = poll_while_flusher_is_suspended(&gc, context, debt);
-        outcomes.push((counted, raw, debt, pending, full, acquired));
+        outcomes.push((
+            counted, raw, interval, old_pass, debt, pending, full, acquired,
+        ));
         drop(funding);
         gc.collect_full()?;
         assert!(weak.refers_to(target));
@@ -1287,12 +1309,16 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
         gc.stop()?;
         assert_eq!(gc.managed_bytes(), 0);
     }
-    assert!(
-        outcomes
-            .iter()
-            .all(|(_, _, _, _, full, acquired)| *full && *acquired),
-        "{outcomes:?}"
-    );
+    for (counted, raw, interval, old_pass, debt, pending, full, acquired) in outcomes {
+        if old_pass {
+            // An old-only cycle keeps the pre-existing handoff. A counted
+            // publisher may already have certified this young child.
+            assert_eq!((full, acquired), (debt == 0, debt == 0));
+            assert_eq!(pending, debt);
+        } else {
+            assert!(full && acquired, "{counted} {raw} {interval} {debt}");
+        }
+    }
     Ok(())
 }
 
@@ -1437,7 +1463,7 @@ fn detached_clean_edge_preserves_its_graph_for_one_full_epoch() -> Result<()> {
         let before = epoch.proposal_count();
         context.with(|| {
             for _ in 0..4096 {
-                gc.publish_edge(address, id, Some(&descriptor));
+                gc.publish_edge(address, id, Some(&descriptor), false);
             }
         });
         let offered = epoch.proposal_count() - before;

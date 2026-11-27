@@ -519,6 +519,11 @@ impl<T> Gc<T> {
         publication.finish_unrooted(collector)
     }
 
+    pub(crate) fn numeric_edge_for(&self, collector: &GarbageCollector) -> bool {
+        matches!(&self.owner, Owner::Edge(source)
+            if self.id.to_i64() == 0 || std::ptr::eq(source.as_ptr(), collector))
+    }
+
     pub(crate) fn traced_metadata(&self) -> Option<&crate::metadata::MetadataRef> {
         match &self.owner {
             Owner::Traced(metadata) => Some(metadata),

@@ -4477,20 +4477,12 @@ fn raw_explicit_barrier_queues_the_protected_child_identity() -> Result<()> {
         context.with(|| {
             raw.write_barrier(&gc);
             drop(raw);
-            if old_interval == 0 {
-                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
-                let work = gc.domains[1].mark_queue.claim(0, 1, &mut 1);
-                let (item, _) = work.items[0].as_ref().expect("exact deletion mark");
-                assert_eq!(item.metadata.id, id);
-                assert_eq!(item.metadata.trace.ptr.addr(), address.addr());
-                assert_eq!(metadata.retention(1, epoch), Some(Retention::Strong));
-            } else {
-                let record = context.0.try_peek().expect("pending raw edge");
-                assert_eq!(record.identity, id);
-                assert_eq!(record.address, address.addr());
-                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 1);
-                context.flush();
-            }
+            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+            let work = gc.domains[1].mark_queue.claim(0, 1, &mut 1);
+            let (item, _) = work.items[0].as_ref().expect("exact deletion mark");
+            assert_eq!(item.metadata.id, id);
+            assert_eq!(item.metadata.trace.ptr.addr(), address.addr());
+            assert_eq!(metadata.retention(1, epoch), Some(Retention::Strong));
         });
         assert!(metadata.marked(1, epoch));
         assert_eq!(**parent.first().expect("protected child"), 42);
@@ -4722,10 +4714,14 @@ fn construction_retains_only_winning_slot_and_overflow_detaches() {
 fn a_paused_traced_edge_offer_allows_peer_allocation_and_two_full_cycles() -> Result<()> {
     use std::sync::mpsc;
     use std::time::Duration;
-    for (counted, raw) in [(false, false), (true, false), (false, true), (true, true)] {
+    for (counted, raw, interval) in [false, true]
+        .into_iter()
+        .flat_map(|c| [(c, false, 0), (c, true, 0), (c, false, 4), (c, true, 4)])
+    {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
+                .old_collection_interval(interval)
                 .barrier_buffer_size(4)
                 .incremental_step_size(1)
                 .max_pause_time_us(0)
@@ -4777,6 +4773,13 @@ fn a_paused_traced_edge_offer_allows_peer_allocation_and_two_full_cycles() -> Re
                     break;
                 }
                 gc.step();
+            }
+            if interval != 0 {
+                gc.collect_old();
+                assert!((0..2048).any(|_| {
+                    gc.step();
+                    gc.old_collection_active()
+                }));
             }
             let second_ticket = gc.request_full_cycle();
             for _ in 0..2048 {
