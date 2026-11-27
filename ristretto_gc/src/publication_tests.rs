@@ -4491,19 +4491,21 @@ fn raw_explicit_barrier_queues_the_protected_child_identity() -> Result<()> {
         context.with(|| {
             raw.write_barrier(&gc);
             drop(raw);
-            if old_pass {
-                let record = context.0.try_peek().expect("admitted old-only deletion");
-                assert_eq!((record.address, record.identity), (address.addr(), id));
-                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 1);
-                context.flush();
-            } else {
-                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+            // The parent's ordinary old mark can be ahead of the deletion.
+            let mut found = false;
+            for _ in 0..2 {
                 let work = gc.domains[1].mark_queue.claim(0, 1, &mut 1);
-                let (item, _) = work.items[0].as_ref().expect("exact deletion mark");
-                assert_eq!(item.metadata.id, id);
-                assert_eq!(item.metadata.trace.ptr.addr(), address.addr());
-                assert_eq!(metadata.retention(1, epoch), Some(Retention::Strong));
+                let (item, _) = work.items[0].as_ref().expect("queued object");
+                if item.metadata.id == id {
+                    assert_eq!(item.metadata.trace.ptr.addr(), address.addr());
+                    found = true;
+                    break;
+                }
+                assert_eq!(item.metadata.id, parent.identity());
             }
+            assert!(found, "missing exact deletion mark");
+            assert_eq!(metadata.retention(1, epoch), Some(Retention::Strong));
         });
         assert!(metadata.marked(1, epoch));
         assert_eq!(**parent.first().expect("protected child"), 42);

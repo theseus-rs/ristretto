@@ -368,12 +368,9 @@ impl GarbageCollector {
         // A phase change or cancelled proposal has no private debt. Use
         // fresh admission and strong retention for every receiving domain.
         let publication = self.barrier_guard();
-        let changed = if precise_full_only {
-            self.barrier_inner(metadata, None)
-        } else {
-            metadata.birth.is_live() && self.shade_live_domains(metadata)
-        };
-        if changed {
+        // An old-only pass needs visible retention before a young snapshot
+        // can start. Apply the ordinary unbuffered handoff under admission.
+        if metadata.birth.is_live() && self.shade_live_domains(metadata) {
             publication.changed();
         }
     }

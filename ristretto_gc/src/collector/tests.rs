@@ -1239,15 +1239,16 @@ fn poll_while_flusher_is_suspended(
 #[expect(clippy::panic_in_result_fn, reason = "bounded peer progress schedule")]
 fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspended() -> Result<()>
 {
-    let mut outcomes = Vec::new();
-    for (counted, raw, interval, old_pass) in [false, true].into_iter().flat_map(|c| {
+    for (counted, raw, interval, old_pass, promote) in [false, true].into_iter().flat_map(|c| {
         [
-            (c, false, 0, false),
-            (c, true, 0, false),
-            (c, false, 4, false),
-            (c, true, 4, false),
-            (c, false, 4, true),
-            (c, true, 4, true),
+            (c, false, 0, false, false),
+            (c, true, 0, false, false),
+            (c, false, 4, false, false),
+            (c, true, 4, false, false),
+            (c, false, 4, true, false),
+            (c, true, 4, true, false),
+            (c, false, 4, true, true),
+            (c, true, 4, true, true),
         ]
     }) {
         let gc = GarbageCollector::with_config(
@@ -1255,6 +1256,7 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
                 .barrier_buffer_size(4)
                 .concurrent_publication(counted)
                 .old_collection_interval(interval)
+                .promotion_age(1)
                 .max_heap_bytes(512)
                 .incremental_step_size(1)
                 .max_pause_time_us(0)
@@ -1262,8 +1264,13 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
                 .build(),
         );
         let child = Gc::try_new(&gc, 42u64)?.into_rooted();
-        let weak = crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0);
+        // Old-only reference processing would pre-mark a weak referent.
+        // Delay its witness for the mature-white schedule.
+        let weak = (!promote).then(|| crate::GcWeak::new(&child, crate::ReferenceKind::Weak, 0));
         let parent = Gc::try_new(&gc, vec![child])?;
+        if promote {
+            gc.collect_full()?;
+        }
         drop(Gc::try_new(&gc, 99u64)?);
         let funding = gc.reserve_bytes(gc.allocation_headroom())?;
         let context = gc.register_context();
@@ -1281,6 +1288,14 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
         assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Mark);
         assert_eq!(gc.old_collection_active(), old_pass);
         let target = parent.first().expect("child");
+        if promote {
+            let descriptor = gc
+                .objects
+                .lookup_identity(target.as_ptr().addr(), target.identity())
+                .expect("exact child");
+            assert!(!gc.is_young_metadata(&descriptor));
+            assert!(!descriptor.marked(1, gc.domains[1].epoch.load(Ordering::Acquire)));
+        }
         if raw {
             // SAFETY: the rooted parent retains this exact child across the barrier.
             let borrowed = unsafe { Gc::<u64>::from_raw_i64(target.as_ptr_i64())? };
@@ -1290,16 +1305,14 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
             context.with(|| gc.write_barrier(target));
         }
         let debt = gc.contexts.pending.load(Ordering::Acquire);
-        assert!(debt <= 1);
-        if debt != 0 {
-            let record = context.0.try_peek().expect("exact old handoff record");
-            assert_eq!(record.identity, target.identity());
-            assert_eq!(record.address, target.as_ptr().addr());
-        }
         let (full, acquired, pending) = poll_while_flusher_is_suspended(&gc, context, debt);
-        outcomes.push((
-            counted, raw, interval, old_pass, debt, pending, full, acquired,
-        ));
+        assert_eq!(
+            (debt, pending, full, acquired),
+            (0, 0, true, true),
+            "counted={counted} raw={raw} interval={interval} old_pass={old_pass} promote={promote}"
+        );
+        let weak =
+            weak.unwrap_or_else(|| crate::GcWeak::new(target, crate::ReferenceKind::Weak, 0));
         drop(funding);
         gc.collect_full()?;
         assert!(weak.refers_to(target));
@@ -1308,16 +1321,6 @@ fn fresh_full_and_capped_allocation_finish_while_clean_context_flusher_is_suspen
         assert!(weak.upgrade().is_none());
         gc.stop()?;
         assert_eq!(gc.managed_bytes(), 0);
-    }
-    for (counted, raw, interval, old_pass, debt, pending, full, acquired) in outcomes {
-        if old_pass {
-            // An old-only cycle keeps the pre-existing handoff. A counted
-            // publisher may already have certified this young child.
-            assert_eq!((full, acquired), (debt == 0, debt == 0));
-            assert_eq!(pending, debt);
-        } else {
-            assert!(full && acquired, "{counted} {raw} {interval} {debt}");
-        }
     }
     Ok(())
 }

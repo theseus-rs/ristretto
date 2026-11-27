@@ -73,6 +73,99 @@ fn late_weak_registration_marks_a_white_mature_target_in_the_old_pass() -> Resul
 }
 
 #[test]
+fn numeric_deletions_publish_initial_young_retention_before_the_old_handoff_scan() -> Result<()> {
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .old_collection_interval(4)
+                .overlapping_generations(true)
+                .concurrent_publication(counted)
+                .barrier_buffer_size(4)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let mut children = Vec::new();
+        for value in 0..8u64 {
+            children.push(Gc::try_new(&gc, value)?.into_rooted());
+        }
+        let owner = Gc::try_new(&gc, children)?;
+        gc.collect_old();
+        assert!((0..2048).any(|_| {
+            gc.coordinated_step(false);
+            lock(&gc.domains[1].cycle).phase == Phase::OldHandoff
+        }));
+        let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
+        // Activation can visit its first handoff entry in the same step.
+        let (edge, initial) = owner
+            .iter()
+            .find_map(|edge| {
+                let target = gc
+                    .objects
+                    .lookup_identity(edge.as_ptr().addr(), edge.identity())?;
+                (!target.marked(1, epoch)).then_some((edge, target))
+            })
+            .expect("young target ahead of the old cursor");
+        let late = Gc::try_new(&gc, 23u64)?;
+        let after = gc
+            .objects
+            .lookup_identity(late.as_ptr().addr(), late.identity())
+            .expect("post-snapshot birth");
+        assert_eq!(after.old_birth.load(Ordering::Acquire), epoch);
+        assert!(after.marked(1, epoch));
+        assert_eq!(after.retention(1, epoch), None);
+        // SAFETY: late keeps this exact post-snapshot allocation live.
+        let raw = unsafe { Gc::from_raw(late.as_ptr())? };
+        let context = gc.register_context();
+        context.with(|| {
+            gc.write_barrier(edge);
+            raw.write_barrier(&gc);
+            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+            assert_eq!(initial.retention(1, epoch), Some(Retention::Strong));
+            assert_eq!(after.retention(1, epoch), None);
+        });
+        drop((raw, late, owner));
+        let overlapping_owner = Gc::try_new(&gc, vec![Gc::try_new(&gc, 31u64)?.into_rooted()])?;
+        let overlapping = overlapping_owner.first().expect("overlapping child");
+        let both = gc
+            .objects
+            .lookup_identity(overlapping.as_ptr().addr(), overlapping.identity())
+            .expect("overlapping birth");
+        // SAFETY: overlapping_owner protects this child until the barrier returns.
+        let raw_both = unsafe { Gc::from_raw(overlapping.as_ptr())? };
+        // A later young snapshot can read the initial child's old retention
+        // while the old cursor has yet to reach this child.
+        let old = lock(&gc.domains[1].cycle);
+        let young_before = gc.statistics()?.young_collections;
+        gc.collect_young();
+        assert!((0..2048).any(|_| {
+            gc.coordinated_step(false);
+            gc.domains[0].active()
+        }));
+        let young_epoch = gc.domains[0].epoch.load(Ordering::Acquire);
+        assert!(!both.marked(0, young_epoch));
+        context.with(|| raw_both.write_barrier(&gc));
+        assert_eq!(both.retention(0, young_epoch), Some(Retention::Strong));
+        assert_eq!(both.retention(1, epoch), None);
+        assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+        drop((raw_both, overlapping_owner));
+        assert!((0..10000).any(|_| {
+            gc.step();
+            gc.statistics()
+                .is_ok_and(|stats| stats.young_collections > young_before)
+        }));
+        assert!(both.birth.is_live());
+        assert!(initial.birth.is_live());
+        assert!(!after.birth.is_live());
+        drop(old);
+        gc.collect_full()?;
+        assert!(!initial.birth.is_live());
+    }
+    Ok(())
+}
+
+#[test]
 fn old_pass_retains_conditional_referents_until_precise_full_collection() -> Result<()> {
     for concurrent in [false, true] {
         let gc = GarbageCollector::with_config(config(concurrent));
