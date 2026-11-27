@@ -1,0 +1,20 @@
+{
+  "before_source": "729aea8f",
+  "runtime_equivalent_parent": "df71e5a2",
+  "candidate": "379ad59a38884814da15b339cb4e5db574b0128d",
+  "cpus": [
+    8,
+    10
+  ],
+  "rates": [
+    0,
+    500
+  ],
+  "seconds": 10,
+  "warmup": 5,
+  "repeats": 3,
+  "seed": 251127551,
+  "heap_mib": 64,
+  "rss_mib": 512,
+  "cpu_quota": 2
+}

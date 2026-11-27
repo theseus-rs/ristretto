@@ -1,0 +1,6 @@
+{
+  "native_capacity_ratio": 1.0364797540798687,
+  "native_long_tail_ratio": 1.0689655172413792,
+  "wasi_capacity_ratio": 1.1226824161215794,
+  "native_pass": true
+}

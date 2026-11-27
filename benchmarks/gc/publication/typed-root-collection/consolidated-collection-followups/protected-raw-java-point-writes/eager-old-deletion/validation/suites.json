@@ -1,0 +1,12 @@
+{
+  "native": {
+    "passed": 1838,
+    "failed": 0,
+    "ignored": 15
+  },
+  "wasi": {
+    "passed": 1238,
+    "failed": 0,
+    "ignored": 9
+  }
+}

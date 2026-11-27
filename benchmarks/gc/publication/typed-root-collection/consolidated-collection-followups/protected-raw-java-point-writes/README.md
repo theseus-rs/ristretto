@@ -146,3 +146,5 @@ above improved against the original baseline. Longer WASIp2 runs remain open.
 ![Final native JVM compared with the original baseline, G1 and ZGC](native-baseline/comparison.png)
 
 [Resolve numeric edges during precise full marking](precise-full-numeric/README.md).
+
+[Qualify eager old-only deletion and isolate its remaining admission stall](eager-old-deletion/README.md).
