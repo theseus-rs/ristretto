@@ -1,5 +1,10 @@
 # Protected raw barriers and bounded Java array writes
 
+The sparse deletion candidate passed its parked-producer and complete-collection
+screens. Its native two-minute scheduled p99.9 exceeded the release limit.
+[Allocation costs, native and WASIp2 timings, G1/ZGC comparison and exact-claim control](sparse-mature-deletions/README.md).
+
+
 The [mature deletion follow-up](mature-deletion-bitmap/README.md) records the passing native and WASIp2 release screens and the remaining 65-group stall.
 
 The integrated revision `f97f8a99` uses the same JVM collector as its

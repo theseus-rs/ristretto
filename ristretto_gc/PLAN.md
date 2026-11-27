@@ -9,6 +9,20 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+The candidate at `c051ed39` allowed a funded allocation and two fresh full
+tickets to finish while a producer was parked at the 129th distinct mature
+deletion group. Its minimum individual lower 95% bounds for complete collection
+were 10.849× native and 10.906× WASIp2 versus `f1daebeb`. The native two-minute
+Java screen served every arrival, but scheduled p99.9 rose from 2.432 to
+2.800 ms against `f462e61c`. The 15.1% increase exceeded the 10% limit, so
+the alpha retains the dense deletion bitmap. WASIp2 p99.9 fell from 39.680 to
+37.376 ms. On the candidate a collector parked between selecting the exact
+child and reserving its traversal still blocked a funded allocation and a full
+ticket. A reduced model passed when the selector published the ID before
+removing it from the source. The next implementation needs to preserve the
+graph across that handoff and meet the JVM latency gate.
+[Sparse-deletion results, exact-claim schedules and model](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/sparse-mature-deletions/README.md).
+
 The mature deletion bitmap at `f462e61c` passed the collection and JVM release screens.
 Its lowest individual lower 95% bounds for complete collection were 11.228×
 native and 10.934× WASIp2 versus `f1daebeb`. The default index requested

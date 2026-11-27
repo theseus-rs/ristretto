@@ -1,0 +1,19 @@
+{
+  "parent": "f462e61c",
+  "candidate": "c051ed39326913534d8b8b280323970632db077f",
+  "cpus": [
+    8,
+    10
+  ],
+  "cpu_quota": 2,
+  "rss_mib": 512,
+  "heap_mib": 64,
+  "wasmtime": "50.0.1",
+  "seconds": 120,
+  "warmup": 10,
+  "repeats": 2,
+  "rate": 500,
+  "seed": 251127689,
+  "required_completions": 60000,
+  "max_median_scheduled_p999_ratio": 1.1
+}
