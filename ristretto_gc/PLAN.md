@@ -19,7 +19,9 @@ The 14 shipping dependency graphs, native/WASI package consumers and three
 Java previews passed with the same collector. On the 64 MiB Java reference-array
 screen, Ristretto, G1 and ZGC reached 673, 974,983 and 592,186 operations/s,
 respectively. At 500 arrivals/s their median scheduled p99.9 was 159,744, 199
-and 134 µs.
+and 134 µs. Across five two-minute forks at 500/s, each JVM completed
+300,000 arrivals. Median scheduled p99.99 was 458.752 ms on Ristretto,
+1.408 ms on G1 and 1.000 ms on ZGC.
 [Collection results, progress controls and limits](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/statistics-snapshot-progress/README.md).
 
 At `f4cdf10f`, the single JVM collector completed the 8,192-allocation Java

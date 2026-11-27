@@ -43,3 +43,17 @@ All 27 fresh processes completed the reference-array workload using the same Jav
 At 500 arrivals/s the highest sampled Ristretto backlog was 140 operations. These observations cover the complete JVM, including allocation, interpretation, compiled dispatch and collection. The full-cycle speedup above uses a different control and measures collector work only. [Per-fork results](java-screen/processes.csv) · [Histograms and process records](java-screen/processes.jsonl.gz) · [Frozen inputs and limits](java-screen/provenance.json).
 
 ![Whole-JVM throughput and scheduled response by independent fork](java-screen/comparison.png)
+
+### Two minutes at 500 arrivals per second
+
+Five independent forks per JVM each offered 60,000 operations after ten seconds of warmup. All 15 forks finished all arrivals under the same limits as the short screen. Peak cgroup memory stayed below 512 MiB, with no cgroup OOM kills. Each row reports the median of five per-process histogram quantiles and the maximum observed backlog and memory across those forks.
+
+| JVM | Completed | Scheduled p99.9 | Scheduled p99.99 | Maximum sampled backlog | Peak cgroup memory |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Ristretto | 300,000 | 380.928 ms | 458.752 ms | 369 | 131.7 MiB |
+| HotSpot G1 | 300,000 | 0.332 ms | 1.408 ms | 6 | 64.6 MiB |
+| HotSpot ZGC | 300,000 | 0.026 ms | 1.000 ms | 3 | 141.0 MiB |
+
+Ristretto caught up before the end of each run, with substantial variation in its tails across forks. These are end-to-end, scheduled response times. The measurements do not attribute time to a collector-wide pause. At 60,000 completions per fork only six observations fall above the nominal p99.99 rank. Sustained capacity across the workload matrix and shorter tails than both HotSpot collectors remain open. [Forks](java-sustained/processes.csv) · [Histograms and resource observations](java-sustained/processes.jsonl.gz) · [Inputs](java-sustained/provenance.json).
+
+![Scheduled response by JVM in the two-minute comparison](java-sustained/comparison.png)
