@@ -48,7 +48,7 @@ impl GarbageCollector {
         let inherited =
             TraceRetention::current(self).map_or(Retention::Strong, |(strength, _)| strength);
 
-        loop {
+        'retry: loop {
             let snapshot = match self.phase_clock.indexed_root() {
                 publication_state::Birth::Idle => return,
                 publication_state::Birth::Inline(snapshot)
@@ -115,7 +115,7 @@ impl GarbageCollector {
                     let record = intent.get_or_insert_with(|| {
                         Arc::new(crate::roots::Record::typed(metadata.ptr().0))
                     });
-                    self.domain_at(i).mark_queue.propose_root(
+                    if !self.domain_at(i).mark_queue.propose_root(
                         epoch,
                         crate::work::RootProposal {
                             metadata: metadata.clone(),
@@ -124,7 +124,9 @@ impl GarbageCollector {
                             strength,
                             promotion_age: mature,
                         },
-                    );
+                    ) {
+                        continue 'retry;
+                    }
                 }
             }
             if self.phase_clock.certify_epochs(snapshot, intent.is_some())

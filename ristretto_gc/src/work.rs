@@ -5,7 +5,7 @@ use once_cell::race::OnceBox;
 use std::borrow::Cow;
 use std::collections::{LinkedList, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
+use std::sync::{Arc, Mutex, MutexGuard, TryLockError, Weak};
 
 const LOCAL_LIMIT: usize = 256;
 // Bound contiguous injector growth to 4 KiB on either pointer width.
@@ -157,7 +157,7 @@ impl Packets {
 }
 
 const CACHE_BUCKETS: usize = 64;
-type CacheBucket = Box<[Option<std::sync::Weak<Group>>; 16]>;
+type CacheBucket = Box<[Option<Weak<Group>>; 16]>;
 type OwnerBucket = [ArcSwapOption<Group>; 16];
 #[derive(Debug)]
 struct Owners {
@@ -531,6 +531,8 @@ impl RootProposal {
 pub(crate) struct BirthEpoch {
     pub(crate) number: u64,
     pub(crate) old_only: bool,
+    collector: Weak<crate::GarbageCollector>,
+    offers: AtomicUsize,
     direct_identity: OnceBox<Arc<()>>,
     roots: OnceBox<graph_birth_queue::Queue<RootProposal>>,
     inbox: OnceBox<graph_birth_queue::Queue<GraphBirth>>,
@@ -544,14 +546,85 @@ impl Drop for BirthEpoch {
     }
 }
 
+// The high bit stops admission permanently. A read-only epoch witness never
+// contributes to the count and cannot keep disposal runnable.
+const SEALED: usize = 1 << (usize::BITS - 1);
+
+struct Offer<'a>(&'a Arc<BirthEpoch>);
+
+impl Drop for Offer<'_> {
+    fn drop(&mut self) {
+        if self.0.offers.fetch_sub(1, Ordering::AcqRel) & SEALED != 0 {
+            self.0.signal();
+        }
+    }
+}
+
+pub(crate) struct DetachedEpoch(Arc<BirthEpoch>);
+
+impl Drop for DetachedEpoch {
+    fn drop(&mut self) {
+        if self.0.has_publishers() || self.0.has_visible_proposals() {
+            self.0.signal();
+        }
+    }
+}
+
 impl BirthEpoch {
+    fn begin_offer(self: &Arc<Self>) -> Option<Offer<'_>> {
+        self.offers
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |n| {
+                (n < SEALED - 1).then(|| n + 1)
+            })
+            .ok()?;
+        Some(Offer(self))
+    }
+
+    fn signal(self: &Arc<Self>) {
+        if let Some(gc) = self.collector.upgrade() {
+            gc.schedule_stale_epoch(self);
+        }
+    }
+
+    pub(crate) fn has_publishers(&self) -> bool {
+        self.offers.load(Ordering::Acquire) & !SEALED != 0
+    }
+
+    pub(crate) fn has_visible_proposals(&self) -> bool {
+        self.roots.get().is_some_and(|q| !q.is_empty())
+            || self.inbox.get().is_some_and(|q| !q.is_empty())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn proposal_count(&self) -> usize {
+        self.roots
+            .get()
+            .map_or(0, graph_birth_queue::Queue::pending)
+            + self
+                .inbox
+                .get()
+                .map_or(0, graph_birth_queue::Queue::pending)
+    }
+
+    pub(crate) fn discard_one(&self) -> bool {
+        self.roots
+            .get()
+            .and_then(graph_birth_queue::Queue::pop)
+            .is_some()
+            || self
+                .inbox
+                .get()
+                .and_then(graph_birth_queue::Queue::pop)
+                .is_some()
+    }
+
     // An obsolete descriptor witness retains only the small token's control
     // block. It can never retain the mark queue or its descriptor graph.
-    pub(crate) fn direct_witness(&self) -> std::sync::Weak<()> {
+    pub(crate) fn direct_witness(&self) -> Weak<()> {
         Arc::downgrade(self.direct_identity.get_or_init(|| Box::new(Arc::new(()))))
     }
 
-    pub(crate) fn matches_witness(&self, witness: &std::sync::Weak<()>) -> bool {
+    pub(crate) fn matches_witness(&self, witness: &Weak<()>) -> bool {
         self.direct_identity
             .get()
             .is_some_and(|token| std::ptr::eq(Arc::as_ptr(token), witness.as_ptr()))
@@ -664,10 +737,17 @@ impl MarkQueues {
 
     /// The domain coordinator installs a fresh inbox before publishing strong
     /// tracing. Late producers may retain the old inbox across any later epoch.
-    pub(crate) fn open_graph_inbox(&self, number: u64, old_only: bool) {
+    pub(crate) fn open_graph_inbox(
+        &self,
+        number: u64,
+        old_only: bool,
+        collector: Weak<crate::GarbageCollector>,
+    ) {
         self.graph_inbox.store(Some(Arc::new(BirthEpoch {
             number,
             old_only,
+            collector,
+            offers: AtomicUsize::new(0),
             direct_identity: OnceBox::new(),
             roots: OnceBox::new(),
             inbox: OnceBox::new(),
@@ -675,10 +755,12 @@ impl MarkQueues {
         })));
     }
 
-    pub(crate) fn close_graph_inbox(&self) -> Option<Arc<BirthEpoch>> {
+    pub(crate) fn close_graph_inbox(&self) -> Option<DetachedEpoch> {
         self.root_offered.store(false, Ordering::Release);
         self.graph_offered.store(false, Ordering::Release);
-        self.graph_inbox.swap(None)
+        let epoch = self.graph_inbox.swap(None)?;
+        epoch.offers.fetch_or(SEALED, Ordering::AcqRel);
+        Some(DetachedEpoch(epoch))
     }
 
     pub(crate) fn finish_strong_births(&self) {
@@ -699,12 +781,16 @@ impl MarkQueues {
             .is_some_and(|actual| Arc::ptr_eq(actual, expected))
     }
 
-    pub(crate) fn propose_graph(&self, epoch: &BirthEpoch, graph: &GraphBirth) {
+    pub(crate) fn propose_graph(&self, epoch: &Arc<BirthEpoch>, graph: &GraphBirth) -> bool {
+        let Some(_offer) = epoch.begin_offer() else {
+            return false;
+        };
         let queue = epoch
             .inbox
             .get_or_init(|| Box::new(graph_birth_queue::Queue::new()));
         self.graph_offered.store(true, Ordering::Release);
         queue.push(graph.clone());
+        true
     }
 
     fn with_graph_inbox<T>(
@@ -722,12 +808,18 @@ impl MarkQueues {
         epoch.inbox.get().map(f)
     }
 
-    pub(crate) fn propose_root(&self, epoch: &BirthEpoch, proposal: RootProposal) {
+    pub(crate) fn propose_root(&self, epoch: &Arc<BirthEpoch>, proposal: RootProposal) -> bool {
+        let Some(_offer) = epoch.begin_offer() else {
+            return false;
+        };
         let queue = epoch
             .roots
             .get_or_init(|| Box::new(graph_birth_queue::Queue::new()));
         self.root_offered.store(true, Ordering::Release);
         queue.push(proposal);
+        #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
+        crate::collector::pause_after_proposal_link();
+        true
     }
 
     fn with_roots<R>(

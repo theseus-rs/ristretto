@@ -61,11 +61,11 @@ mod tests {
     fn old_epoch_cannot_replace_a_new_mark_with_the_same_epoch_number() {
         let queues = MarkQueues::new(0, 1);
         let marks = DirectMarks::default();
-        queues.open_graph_inbox(4, false);
+        queues.open_graph_inbox(4, false, Weak::new());
         let first = queues.birth_epoch().unwrap();
         marks.publish(1, &first, Retention::Final, &queues);
         queues.close_graph_inbox();
-        queues.open_graph_inbox(4, false);
+        queues.open_graph_inbox(4, false, Weak::new());
         let second = queues.birth_epoch().unwrap();
         assert_eq!(marks.get(1, 4, &queues), None);
         marks.publish(1, &second, Retention::Phantom, &queues);
@@ -102,7 +102,7 @@ mod concurrent_test {
     fn parked_slot_writer_revalidates_after_a_same_number_replacement() {
         let queues = MarkQueues::new(0, 1);
         let marks = DirectMarks::default();
-        queues.open_graph_inbox(4, false);
+        queues.open_graph_inbox(4, false, Weak::new());
         let first = queues.birth_epoch().unwrap();
         let (entered, parked) = mpsc::channel();
         let (release, resume) = mpsc::channel();
@@ -114,7 +114,7 @@ mod concurrent_test {
             });
             parked.recv_timeout(Duration::from_secs(5)).unwrap();
             queues.close_graph_inbox();
-            queues.open_graph_inbox(4, false);
+            queues.open_graph_inbox(4, false, Weak::new());
             let second = queues.birth_epoch().unwrap();
             marks.publish(1, &second, Retention::Final, queues);
             release.send(()).unwrap();

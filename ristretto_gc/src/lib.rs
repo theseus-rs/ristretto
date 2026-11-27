@@ -63,6 +63,7 @@ mod retirement_grants;
 mod root_guard;
 mod roots;
 mod scheduling;
+mod stale_epochs;
 pub mod sync;
 mod trace_owner;
 mod weak;

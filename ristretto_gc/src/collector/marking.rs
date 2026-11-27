@@ -175,7 +175,10 @@ impl GarbageCollector {
     }
 
     pub(super) fn step_inner(&self, concurrent: bool) -> Option<bool> {
-        let result = self.step_work(concurrent);
+        let discarded = self.stale_epochs.step();
+        let result = self
+            .step_work(concurrent)
+            .or_else(|| discarded.then(|| !self.pending()));
         // A reentrant handler can consume the last Java reference and park
         // while its sibling wakes remain published. Service these after the
         // collector turn and outside its guards, including on an idle heap.

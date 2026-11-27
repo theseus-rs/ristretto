@@ -740,6 +740,7 @@ thread_local! {
     static PENDING_BIRTH_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static OBSERVED_ACTIVATION_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static GRAPH_SLOT_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
+    static STALE_LINK_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BEFORE_GRAPH_LINK_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static BIRTH_DECISION_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
     static YOUNG_SLOT_PAUSE: std::cell::Cell<Option<ClaimPause>> = const { std::cell::Cell::new(None) };
@@ -1486,7 +1487,7 @@ fn both_epochs_claim_released_root_debt_after_strong_closure() -> Result<()> {
     let record = slots.prepare_typed_attempt(root.as_ptr() as usize);
     let queues = [0, 1].map(|index| {
         let queue = MarkQueues::new(0, 1);
-        queue.open_graph_inbox(4, false);
+        queue.open_graph_inbox(4, false, Weak::new());
         queue.finish_strong_births();
         let epoch = queue.birth_epoch().unwrap();
         // An existing weaker mark must be upgraded even if the handle drops
@@ -1609,6 +1610,11 @@ pub(super) fn pause_inside_registration_commit() {
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
 pub(crate) fn pause_while_graph_slot_owned() {
     wait_for_constructor_resume(GRAPH_SLOT_PAUSE.take());
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+pub(crate) fn pause_after_proposal_link() {
+    wait_for_constructor_resume(STALE_LINK_PAUSE.take());
 }
 
 #[cfg(all(not(target_family = "wasm"), not(miri)))]
@@ -2370,7 +2376,7 @@ fn a_graph_relinks_if_the_same_strong_flags_now_name_a_different_epoch() -> Resu
         let queue = &gc.domains[1].mark_queue;
         assert_eq!(queue.queued_sample(), Some(1));
         queue.close_graph_inbox();
-        queue.open_graph_inbox(4, false);
+        queue.open_graph_inbox(4, false, Weak::new());
         assert_eq!(queue.queued_sample(), Some(0));
     }));
     let scans = Arc::new(AtomicUsize::new(0));
@@ -4420,6 +4426,188 @@ fn raw_explicit_barrier_queues_the_protected_child_identity() -> Result<()> {
         });
         assert!(metadata.marked(1, epoch));
         assert_eq!(**parent.first().expect("protected child"), 42);
+    }
+    Ok(())
+}
+
+// Stop at the real terminal decision, after the last empty observation and
+// before the inbox identity is detached. Direct offers model already-running
+// publishers missing that observation, including on a cooperative test host.
+type TerminalOffers = Box<dyn FnOnce(&MarkQueues)>;
+thread_local! {
+    static TERMINAL_OFFERS: std::cell::Cell<Option<TerminalOffers>> = const { std::cell::Cell::new(None) };
+}
+
+pub(super) fn complete_late_offers(queue: &MarkQueues) {
+    if let Some(offers) = TERMINAL_OFFERS.take() {
+        offers(queue);
+    }
+}
+
+#[test]
+fn closed_epochs_reject_late_offers_and_drain_preexisting_proposals_one_per_step() -> Result<()> {
+    let per_kind = if cfg!(miri) { 16 } else { 2048 };
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let root = Gc::try_new(&gc, 17_u64)?;
+        let metadata = gc.objects.lookup(root.as_ptr().addr()).unwrap();
+        let record = Arc::new(crate::roots::Record::typed(root.as_ptr().addr()));
+        let queue = &gc.domains[1].mark_queue;
+        let ticket = gc.request_full_cycle();
+        for _ in 0..2048 {
+            gc.step();
+            if lock(&gc.domains[1].cycle).phase == Phase::Compact {
+                break;
+            }
+        }
+        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Compact);
+        let epoch = queue.birth_epoch().expect("real full cycle");
+        let proposal = crate::work::RootProposal {
+            metadata: metadata.clone(),
+            record: record.clone(),
+            index: 1,
+            strength: Retention::Strong,
+            promotion_age: 2,
+        };
+        let late_graph = crate::work::GraphBirth::new(&metadata);
+        let late = proposal.clone();
+        let held = epoch.clone();
+        TERMINAL_OFFERS.set(Some(Box::new(move |queue| {
+            for _ in 0..per_kind {
+                assert!(queue.propose_root(&held, late.clone()));
+                assert!(queue.propose_graph(&held, &late_graph));
+            }
+            assert_eq!(held.proposal_count(), 2 * per_kind);
+        })));
+        let graph = crate::work::GraphBirth::new(&metadata);
+        for _ in 0..2048 {
+            gc.step();
+            if gc.completed_full_ticket() >= ticket {
+                break;
+            }
+        }
+        assert!(gc.completed_full_ticket() >= ticket);
+        assert!(gc.stale_epochs.pending());
+        assert_eq!(epoch.proposal_count(), 2 * per_kind);
+        assert_eq!(Arc::strong_count(&record), per_kind + 2);
+        for _ in 0..2 * per_kind {
+            assert!(!queue.propose_root(&epoch, proposal.clone()));
+            assert!(!queue.propose_graph(&epoch, &graph));
+        }
+        let replacement = gc.request_full_cycle();
+        let mut remaining = epoch.proposal_count();
+        for step in 1..=2 * per_kind {
+            gc.step();
+            assert_eq!(epoch.proposal_count(), remaining - 1);
+            remaining -= 1;
+            if step == per_kind.min(1024) {
+                assert!(gc.completed_full_ticket() >= replacement);
+            }
+        }
+        assert_eq!(Arc::strong_count(&record), 2);
+        assert!(!gc.stale_epochs.pending());
+        drop(epoch);
+        assert_eq!(Arc::strong_count(&record), 2);
+    }
+    Ok(())
+}
+
+#[cfg(all(not(target_family = "wasm"), not(miri)))]
+#[test]
+fn parked_epoch_publisher_allows_sibling_disposal_and_late_link_help() -> Result<()> {
+    use std::sync::mpsc;
+    use std::time::Duration;
+    for counted in [false, true] {
+        let gc = GarbageCollector::with_config(
+            Configuration::builder()
+                .concurrent_publication(counted)
+                .incremental_step_size(1)
+                .max_pause_time_us(0)
+                .allocation_threshold(usize::MAX)
+                .build(),
+        );
+        let root = Gc::try_new(&gc, 23_u64)?;
+        let metadata = gc.objects.lookup(root.as_ptr().addr()).unwrap();
+        let record = Arc::new(crate::roots::Record::typed(root.as_ptr().addr()));
+        let ticket = gc.request_full_cycle();
+        let queue = &gc.domains[1].mark_queue;
+        for _ in 0..2048 {
+            gc.step();
+            if lock(&gc.domains[1].cycle).phase == Phase::Compact {
+                break;
+            }
+        }
+        assert_eq!(lock(&gc.domains[1].cycle).phase, Phase::Compact);
+        let epoch = queue.birth_epoch().unwrap();
+        let item = crate::work::RootProposal {
+            metadata,
+            record: record.clone(),
+            index: 1,
+            strength: Retention::Strong,
+            promotion_age: 2,
+        };
+        let graph = crate::work::GraphBirth::new(&item.metadata);
+        for _ in 0..16 {
+            assert!(queue.propose_graph(&epoch, &graph));
+        }
+        let (first, reserved) = mpsc::channel();
+        let (make_visible, resume_first) = mpsc::channel();
+        let (second, visible) = mpsc::channel();
+        let (finish_offer, resume_second) = mpsc::channel();
+        thread::scope(|scope| -> Result<()> {
+            let held = epoch.clone();
+            let sender = scope.spawn(move || {
+                GRAPH_SLOT_PAUSE.set(Some(ClaimPause {
+                    entered: first,
+                    resume: resume_first,
+                }));
+                STALE_LINK_PAUSE.set(Some(ClaimPause {
+                    entered: second,
+                    resume: resume_second,
+                }));
+                queue.propose_root(&held, item)
+            });
+            reserved
+                .recv_timeout(Duration::from_secs(4))
+                .expect("private slot reserved");
+            for _ in 0..2048 {
+                if gc.step() {
+                    break;
+                }
+            }
+            assert!(gc.completed_full_ticket() >= ticket);
+            assert!(!gc.pending(), "only a parked offer remains");
+            assert_eq!(epoch.proposal_count(), 1);
+            assert_eq!(Arc::strong_count(&record), 2);
+            let fresh = Gc::try_new(&gc, 71_u64)?;
+            gc.collect_full()?;
+            assert_eq!(**fresh, 71);
+            make_visible.send(()).unwrap();
+            visible
+                .recv_timeout(Duration::from_secs(4))
+                .expect("visible before completion");
+            if counted {
+                gc.stop()?;
+            } else {
+                gc.step();
+            }
+            assert_eq!(Arc::strong_count(&record), 1);
+            assert!(!gc.pending());
+            finish_offer.send(()).unwrap();
+            assert!(sender.join().unwrap());
+            for _ in 0..4 {
+                gc.step();
+            }
+            assert!(!gc.pending());
+            Ok(())
+        })?;
     }
     Ok(())
 }

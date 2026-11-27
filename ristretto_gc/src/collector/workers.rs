@@ -242,7 +242,11 @@ impl GarbageCollector {
             cleanup_failed
         };
         self.collect_full()?;
-        while self.retired_ready.load(Ordering::Acquire) != 0 || self.released_donors.has_jobs() {
+        self.stale_epochs.wake_visible();
+        while self.stale_epochs.pending()
+            || self.retired_ready.load(Ordering::Acquire) != 0
+            || self.released_donors.has_jobs()
+        {
             self.step();
         }
         for domain in &self.domains {

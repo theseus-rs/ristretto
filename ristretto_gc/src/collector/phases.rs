@@ -9,8 +9,8 @@ impl GarbageCollector {
         let started = now();
         // Declared before the guards so the detached epoch outlives publication,
         // both cursor locks and the domain context, including on a failed start.
-        // Its last Arc can release a whole queue of stale birth proposals.
-        let _detached_epoch;
+        // Publish its remaining disposal work after leaving those scopes.
+        let mut detached_epoch = None;
         let Ok(coordinator) = self.coordinator.try_lock() else {
             if self.diagnostics_enabled() {
                 self.diagnostics
@@ -126,18 +126,25 @@ impl GarbageCollector {
             cycle.epoch =
                 self.domain().epoch.load(Ordering::Acquire) + crate::metadata::EPOCH_STRIDE;
             self.domain().epoch.store(cycle.epoch, Ordering::Release);
-            self.domain()
-                .mark_queue
-                .open_graph_inbox(cycle.epoch, cycle.kind == CollectionKind::Old);
+            self.domain().mark_queue.open_graph_inbox(
+                cycle.epoch,
+                cycle.kind == CollectionKind::Old,
+                self.this.clone(),
+            );
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
             super::phase_tests::before_snapshot_commit();
             if !self.commit_phase(observation, true, true, 0) {
-                _detached_epoch = self.domain().mark_queue.close_graph_inbox();
+                detached_epoch = self.domain().mark_queue.close_graph_inbox();
                 if cycle.kind == CollectionKind::Old {
                     self.old_requested.store(true, Ordering::Release);
                 } else {
                     self.domain().publish_request();
                 }
+                drop(publication);
+                drop(cycle);
+                drop(coordinator);
+                drop(context);
+                drop(detached_epoch);
                 return Some(false);
             }
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
@@ -590,7 +597,9 @@ impl GarbageCollector {
                         {
                             heap.end_evacuation();
                         }
-                        _detached_epoch = self.domain().mark_queue.close_graph_inbox();
+                        #[cfg(test)]
+                        super::publication_tests::complete_late_offers(&self.domain().mark_queue);
+                        detached_epoch = self.domain().mark_queue.close_graph_inbox();
                         self.domain().active.store(false, Ordering::Release);
                         self.domain().marking.store(false, Ordering::Release);
                         self.domain().weak_phase.store(0, Ordering::Release);
@@ -742,6 +751,7 @@ impl GarbageCollector {
             }
         }
         drop(context);
+        drop(detached_epoch);
         self.record_step(started, cpu_started, concurrent, &mut counters);
         let idle = !self.pending();
         self.notify_progress();

@@ -1127,6 +1127,7 @@ pub struct GarbageCollector {
     retired_ready: AtomicUsize,
     #[cfg(not(target_family = "wasm"))]
     callback_jobs: AtomicUsize,
+    stale_epochs: crate::stale_epochs::StaleEpochs,
     retirement_turn: AtomicBool,
     released_donors: crate::retirement_grants::ReleasedDonors,
     released_turn: AtomicBool,
@@ -1293,12 +1294,18 @@ impl GarbageCollector {
         self.pending_with_retirement(self.retired.load().as_ref().is_some_and(|q| !q.is_empty()))
     }
 
+    pub(crate) fn schedule_stale_epoch(&self, epoch: &Arc<crate::work::BirthEpoch>) {
+        self.stale_epochs.signal(epoch);
+        self.wake();
+    }
+
     fn pending(&self) -> bool {
         self.pending_with_retirement(self.retired_ready.load(Ordering::Acquire) != 0)
     }
 
     fn pending_with_retirement(&self, ready: bool) -> bool {
-        self.remembered.dirty.cleanup_pending()
+        self.stale_epochs.pending()
+            || self.remembered.dirty.cleanup_pending()
             || ready
             || self.released_donors.has_jobs()
             || self
@@ -1803,7 +1810,7 @@ impl GarbageCollector {
                 && retention.is_none_or(|previous| previous > strength)
                 && !(exempt && marked && retention.is_none())
             {
-                self.domain_at(index).mark_queue.propose_root(
+                if !self.domain_at(index).mark_queue.propose_root(
                     epoch,
                     crate::work::RootProposal {
                         metadata: metadata.clone(),
@@ -1812,7 +1819,9 @@ impl GarbageCollector {
                         strength,
                         promotion_age: mature,
                     },
-                );
+                ) {
+                    return None;
+                }
                 linked = true;
             }
         }
@@ -2188,6 +2197,7 @@ impl GarbageCollector {
                 retired_ready: AtomicUsize::new(0),
                 #[cfg(not(target_family = "wasm"))]
                 callback_jobs: AtomicUsize::new(0),
+                stale_epochs: crate::stale_epochs::StaleEpochs::default(),
                 retirement_turn: AtomicBool::new(false),
                 released_donors: crate::retirement_grants::ReleasedDonors::default(),
                 released_turn: AtomicBool::new(false),
@@ -2424,12 +2434,13 @@ impl GarbageCollector {
         });
         let graph = (trace != [false; 2] && metadata.trace.step_fn.is_some())
             .then(|| crate::work::GraphBirth::new(metadata));
+        let mut accepted = true;
         if let Some(graph) = &graph {
             #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
             publication_tests::pause_before_graph_link();
             for (index, (epoch, required)) in epochs.iter().zip(trace).enumerate() {
                 if required && let Some(epoch) = epoch {
-                    self.domain_at(index).mark_queue.propose_graph(epoch, graph);
+                    accepted &= self.domain_at(index).mark_queue.propose_graph(epoch, graph);
                 }
             }
         }
@@ -2451,7 +2462,7 @@ impl GarbageCollector {
         publication_tests::inspect_before_activation(self, metadata);
         #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
         publication_tests::pause_before_observed_activation();
-        if valid && metadata.birth.publish_if_unobserved() {
+        if accepted && valid && metadata.birth.publish_if_unobserved() {
             if graph.is_none() && trace != [false; 2] {
                 self.leaves_marked_at_birth.fetch_add(
                     usize::from(trace[0]) + usize::from(trace[1]),
@@ -3345,7 +3356,9 @@ mod tests;
 mod reference_tests;
 
 #[cfg(all(test, not(target_family = "wasm"), not(miri)))]
-pub(crate) use publication_tests::{pause_after_tree_detach, pause_while_graph_slot_owned};
+pub(crate) use publication_tests::{
+    pause_after_proposal_link, pause_after_tree_detach, pause_while_graph_slot_owned,
+};
 #[cfg(test)]
 #[path = "publication_tests.rs"]
 mod publication_tests;
