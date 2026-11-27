@@ -60,5 +60,7 @@ cargo package --locked -p ristretto_gc
 ```
 
 CI also builds reproducible source archives, runs each tier from the extracted
-archive, and checks normalized Cargo archives from an external consumer.
+archive, and builds normalized Cargo archives from an external consumer.
+Both native and WASI consumer graphs must resolve every collector dependency
+to the exact unpacked `ristretto_gc` release archive.
 [Archive and package instructions](benchmarks/gc/release/README.md)

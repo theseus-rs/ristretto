@@ -3,12 +3,14 @@
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
-RETIRED = {"ristretto_vm_research", "ristretto_gc_catalog"}
+sys.path.insert(0, str(ROOT / ".github/scripts"))
+from collector_graph import RETIRED, verify_tree
 
 
 def verify_workspace():
@@ -32,34 +34,12 @@ def verify_workspace():
     return collector
 
 
-def check_tree(output, expected):
-    collectors = set()
-    for line in output.splitlines():
-        package_id, features = line.removesuffix(" (*)").rsplit("|", 1)
-        name = package_id.split()[0]
-        if name in RETIRED:
-            raise ValueError(f"retired research dependency {name}")
-        if name in {"ristretto_gc", "ristretto_vm"}:
-            if any(feature.startswith("experimental-canonical") for feature in features.split(",")):
-                raise ValueError(f"retired research feature in {name}")
-            if name == "ristretto_gc":
-                collectors.add(package_id)
-    if collectors != {expected}:
-        raise ValueError(f"expected {expected}, found {sorted(collectors)}")
-
-
 def verify(package, target, expected, all_features):
-    edges = "normal,build" if all_features else "normal"
-    args = ["cargo", "tree", "--locked", "--package", package,
-            "--edges", edges, "--prefix", "none", "--format", "{p}|{f}"]
-    if all_features:
-        args.append("--all-features")
-    if target:
-        args.extend(["--target", target])
     mode = "all features and build dependencies" if all_features else "default runtime"
     context = f"{package} ({target or 'native'}, {mode})"
     try:
-        check_tree(subprocess.check_output(args, cwd=ROOT, text=True), expected)
+        verify_tree(ROOT / "Cargo.toml", expected, package=package, target=target,
+                    all_features=all_features, build_deps=all_features)
     except ValueError as error:
         raise ValueError(f"{context}: {error}") from error
     print(f"{context}: {expected}")
