@@ -219,7 +219,7 @@ def main():
     parser.add_argument("--wasm-before", type=Path, help="frozen prior build for Wasm '-before' rows; both builds need provenance")
     parser.add_argument("--wasmtime", type=Path)
     parser.add_argument("--runtimes", nargs="+", choices=RUNTIMES, default=RUNTIMES[:4])
-    parser.add_argument("--workloads", nargs="+", choices=["control", "allocation", "roots", "mixed"], default=["allocation", "roots", "mixed"])
+    parser.add_argument("--workloads", nargs="+", choices=["control", "allocation", "roots", "mixed", "reference-array"], default=["allocation", "roots", "mixed"])
     parser.add_argument("--rates", nargs="+", type=int, default=[0, 1000], help="0: saturation; positive: fixed offered operations/s")
     parser.add_argument("--seconds", type=int, default=30)
     parser.add_argument("--warmup", type=int, default=10)

@@ -64,6 +64,18 @@ public final class GcBench {
             if (sum != 16 * mark + 120) throw new AssertionError("node corruption");
             return sum;
         }
+        if (workload == 4) {
+            // Bound the retained backing independently of the runtime's reference width.
+            slot &= 31;
+            Object[] values = new Object[4097];
+            if (values[0] != null || values[4096] != null) throw new AssertionError("non-null defaults");
+            Node marker = new Node(mark, null);
+            values[0] = marker;
+            values[4096] = marker;
+            roots[slot] = values;
+            marks[slot] = mark;
+            return checkReferenceArray((Object[]) roots[slot], mark);
+        }
         int length = 256;
         if (workload == 3) length = sequence % 4096 == 0 ? 1024 * 1024
             : 32 << (((int) sequence * 31 + seed) & 7);
@@ -78,6 +90,14 @@ public final class GcBench {
         return sum;
     }
 
+    private static int checkReferenceArray(Object[] values, int mark) {
+        Node first = (Node) values[0];
+        Node last = (Node) values[values.length - 1];
+        if (values.length != 4097 || values[2048] != null || first == null ||
+            first != last || first.value != mark) throw new AssertionError("reference array corruption");
+        return first.value + last.value;
+    }
+
     private static void audit(int workload) {
         if (workload == 0) return;
         for (int i = 0; i < SLOTS; i++) if (roots[i] != null) {
@@ -85,6 +105,8 @@ public final class GcBench {
                 int count = 0, sum = 0;
                 for (Node p = (Node) roots[i]; p != null; p = p.next) { count++; sum += p.value; }
                 if (count != 16 || sum != 16 * marks[i] + 120) throw new AssertionError("retained node corruption");
+            } else if (workload == 4) {
+                checkReferenceArray((Object[]) roots[i], marks[i]);
             } else {
                 byte[] p = (byte[]) roots[i];
                 if (p[0] != marks[i] || p[p.length - 1] != marks[i]) throw new AssertionError("retained array corruption");
@@ -99,7 +121,7 @@ public final class GcBench {
     public static void main(String[] args) throws Exception {
         String name = args[0];
         int workload = name.equals("control") ? 0 : name.equals("allocation") ? 1
-            : name.equals("roots") ? 2 : name.equals("mixed") ? 3 : -1;
+            : name.equals("roots") ? 2 : name.equals("mixed") ? 3 : name.equals("reference-array") ? 4 : -1;
         long duration = Long.parseLong(args[1]) * 1000000L;
         long warmup = Long.parseLong(args[2]) * 1000000L;
         long rate = Long.parseLong(args[3]); // Zero is a closed-loop capacity screen.

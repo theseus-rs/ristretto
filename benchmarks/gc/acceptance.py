@@ -72,7 +72,7 @@ def validate_policy(policy):
     if not isinstance(policy["workloads"], dict) or not policy["workloads"]:
         raise ValueError("primary workload limits required")
     for workload, limits in policy["workloads"].items():
-        if workload not in {"allocation", "roots", "mixed"}:
+        if workload not in {"allocation", "roots", "mixed", "reference-array"}:
             raise ValueError("unknown primary workload")
         fields(limits, "response_p999_ns response_p9999_ns peak_backlog required_methods", workload)
         p999 = integer(limits["response_p999_ns"], "response_p999_ns", 1)
