@@ -19,6 +19,22 @@ pub struct ArrayElements {
     scan_mutation: std::sync::atomic::AtomicUsize,
 }
 impl ArrayElements {
+    /// Initializes a reference array with Java nulls in cooperative batches.
+    ///
+    /// # Errors
+    /// Returns an allocation error if the backing buffer cannot be created.
+    pub async fn try_null_in_async(
+        collector: &GarbageCollector,
+        length: usize,
+    ) -> ristretto_gc::Result<Self> {
+        let values = ristretto_gc::HeapBuffer::try_with_fn_in_async(collector, length, |_| {
+            Ok(Value::Object(None))
+        })
+        .await?;
+        // Every element was created here. No validation or card discovery pass is needed.
+        Ok(Self::with_cards(values, CardSet::default()))
+    }
+
     /// Java default fields contain only numeric zeroes and null references.
     pub(crate) fn from_default_fields(values: ristretto_gc::HeapBuffer<Value>) -> Self {
         debug_assert!(

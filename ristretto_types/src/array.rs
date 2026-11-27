@@ -2,7 +2,31 @@
 
 use crate::{JavaError, Result};
 use ristretto_classfile::BaseType;
-use ristretto_classloader::Reference;
+use ristretto_classloader::{ArrayElements, Class, ObjectArray, Reference, Value};
+use std::sync::Arc;
+
+/// Shares the cooperative work allowance across every level of a Java
+/// multidimensional array, including zero-length children.
+pub struct ArrayNodeBudget {
+    remaining: usize,
+}
+
+impl Default for ArrayNodeBudget {
+    fn default() -> Self {
+        Self { remaining: 64 }
+    }
+}
+
+impl ArrayNodeBudget {
+    /// Start the next node, yielding before a new batch when needed.
+    pub async fn next_node(&mut self) {
+        if self.remaining == 0 {
+            tokio::task::yield_now().await;
+            *self = Self::default();
+        }
+        self.remaining -= 1;
+    }
+}
 
 /// Allocates and initializes Java array elements without aborting on allocation failure.
 ///
@@ -49,6 +73,21 @@ pub async fn allocate_array_in_async<T: Clone>(
     gc.make_room_async(array_allocation_size(length, size_of::<T>())?)
         .await?;
     Ok(ristretto_gc::HeapBuffer::try_with_fn_in_async(gc, length, |_| Ok(value.clone())).await?)
+}
+
+/// Creates an all-null reference array, including room for its managed header.
+///
+/// # Errors
+/// Returns a Java out-of-memory error on size overflow or exhausted managed storage.
+pub async fn allocate_null_reference_array_in_async(
+    gc: &ristretto_gc::GarbageCollector,
+    class: Arc<Class>,
+    length: usize,
+) -> Result<Reference> {
+    gc.make_room_async(array_allocation_size(length, size_of::<Value>())?)
+        .await?;
+    let elements = ArrayElements::try_null_in_async(gc, length).await?;
+    Ok(Reference::Array(ObjectArray { class, elements }))
 }
 
 /// Allocates a zero-initialized primitive array using its Java storage representation.
@@ -141,7 +180,6 @@ pub async fn allocate_primitive_array_in_async(
 mod tests {
     use super::*;
     use crate::Error;
-    use ristretto_classloader::Value;
 
     #[tokio::test]
     async fn async_arrays_recover_without_blocking_other_executor_tasks() -> Result<()> {

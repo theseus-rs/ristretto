@@ -8,7 +8,9 @@ use crate::thread::Thread;
 use ristretto_classfile::BaseType;
 use ristretto_classfile::attributes::ArrayType;
 use ristretto_classloader::{Class, Reference, ReferenceWriteGuardExt, Value};
-use ristretto_types::array::{allocate_array_in_async, allocate_primitive_array_in_async};
+use ristretto_types::array::{
+    ArrayNodeBudget, allocate_null_reference_array_in_async, allocate_primitive_array_in_async,
+};
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray>
@@ -65,10 +67,8 @@ pub(crate) async fn anewarray(
     }
     let count = usize::try_from(count)?;
     let vm = thread.vm()?;
-    let reference = Reference::try_from((
-        class,
-        allocate_array_in_async(vm.garbage_collector(), count, Value::Object(None)).await?,
-    ))?;
+    let reference =
+        allocate_null_reference_array_in_async(vm.garbage_collector(), class, count).await?;
     let array = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
     stack.push(array)?;
     Ok(Continue)
@@ -140,7 +140,7 @@ pub(crate) async fn create_multidimensional_array(
     dimension_sizes: &[usize],
     depth: usize,
 ) -> Result<Value> {
-    let mut remaining = 64;
+    let mut remaining = ArrayNodeBudget::default();
     create_multidimensional_array_with_budget(thread, class, dimension_sizes, depth, &mut remaining)
         .await
 }
@@ -152,13 +152,9 @@ async fn create_multidimensional_array_with_budget(
     class: Arc<Class>,
     dimension_sizes: &[usize],
     depth: usize,
-    remaining: &mut usize,
+    remaining: &mut ArrayNodeBudget,
 ) -> Result<Value> {
-    if *remaining == 0 {
-        tokio::task::yield_now().await;
-        *remaining = 64;
-    }
-    *remaining -= 1;
+    remaining.next_node().await;
     let current_size = *dimension_sizes
         .get(depth)
         .ok_or_else(|| InternalError(format!("Invalid array dimension depth: {depth}")))?;
@@ -186,15 +182,9 @@ async fn create_multidimensional_array_with_budget(
         } else {
             // Object array
             let vm = thread.vm()?;
-            let reference = Reference::try_from((
-                class,
-                allocate_array_in_async(
-                    thread.vm()?.garbage_collector(),
-                    current_size,
-                    Value::Object(None),
-                )
-                .await?,
-            ))?;
+            let reference =
+                allocate_null_reference_array_in_async(vm.garbage_collector(), class, current_size)
+                    .await?;
             let array = Value::try_new_object_async(vm.garbage_collector(), reference).await?;
             Ok(array)
         }
@@ -202,17 +192,11 @@ async fn create_multidimensional_array_with_budget(
         let component = thread.array_component_class(&class).await?;
         // Charge and root the parent before allocating its children. No managed guard
         // crosses the recursive await or an allocation slow path.
-        let reference = Reference::try_from((
-            class,
-            allocate_array_in_async(
-                thread.vm()?.garbage_collector(),
-                current_size,
-                Value::Object(None),
-            )
-            .await?,
-        ))?;
-        let array =
-            Value::try_new_object_async(thread.vm()?.garbage_collector(), reference).await?;
+        let vm = thread.vm()?;
+        let collector = vm.garbage_collector();
+        let reference =
+            allocate_null_reference_array_in_async(collector, class, current_size).await?;
+        let array = Value::try_new_object_async(collector, reference).await?;
         for index in 0..current_size {
             let child = Box::pin(create_multidimensional_array_with_budget(
                 thread,
@@ -412,6 +396,42 @@ mod tests {
         let object = stack.pop()?;
         let reference = object.as_reference()?;
         assert_eq!("[Ljava/lang/Object;", reference.class_name()?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_anewarray_large_null_array_preserves_its_last_store() -> Result<()> {
+        use ristretto_gc::{GcWeak, ReferenceKind};
+        let (vm, _thread, mut frame) = crate::test::frame().await?;
+        let index = Arc::get_mut(frame.class_mut())
+            .expect("class")
+            .constant_pool_mut()
+            .add_class("java/lang/Object")?;
+        let mut stack = OperandStack::with_max_size(1);
+        stack.push_int(4097)?;
+        anewarray(&frame, &mut stack, index).await?;
+        let array = stack.pop()?;
+        {
+            let reference = array.as_reference()?;
+            let (_, values) = reference.as_class_vec_ref()?;
+            assert_eq!(values.len(), 4097);
+            assert!(values.iter().all(|v| matches!(v, Value::Object(None))));
+        }
+        let gc = vm.garbage_collector();
+        let child = Value::new_object(gc, Reference::from(vec![73_i8]));
+        let Value::Object(Some(handle)) = &child else {
+            unreachable!()
+        };
+        let witness = GcWeak::new(handle, ReferenceKind::Weak, 0);
+        array
+            .as_reference_mut()?
+            .set_array_element(4096, child)
+            .expect("last element");
+        gc.collect_full()?;
+        assert!(witness.upgrade().is_some());
+        drop(array);
+        gc.collect_full()?;
+        assert!(witness.is_cleared());
         Ok(())
     }
 

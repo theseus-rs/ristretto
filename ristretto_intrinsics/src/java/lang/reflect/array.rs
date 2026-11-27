@@ -1,7 +1,7 @@
 use crate::java::lang::class::get_class_no_init;
 use ristretto_classfile::BaseType;
 use ristretto_classfile::VersionSpecification::Any;
-use ristretto_classloader::{Class, ObjectArray, Reference, Value};
+use ristretto_classloader::{Class, Reference, ReferenceWriteGuardExt, Value};
 use ristretto_gc::GarbageCollector;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::{InternalError, InvalidOperand};
@@ -11,7 +11,9 @@ use ristretto_types::JavaError::{
 };
 use ristretto_types::Thread;
 use ristretto_types::VM;
-use ristretto_types::array::{allocate_array_in_async, allocate_primitive_array_in_async};
+use ristretto_types::array::{
+    ArrayNodeBudget, allocate_null_reference_array_in_async, allocate_primitive_array_in_async,
+};
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -607,20 +609,14 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
     if first_length == 0 || remaining_dimensions.is_empty() {
         let class = loader.array_class(component, dimensions.len()).await?;
         let class = thread.resolve_class(&class, false).await?;
-        let elements = allocate_array_in_async(
-            vm.garbage_collector(),
+        let collector = vm.garbage_collector();
+        let reference = allocate_null_reference_array_in_async(
+            collector,
+            class,
             usize::try_from(first_length)?,
-            Value::Object(None),
         )
         .await?;
-        return Ok(Value::try_new_object_async(
-            vm.garbage_collector(),
-            Reference::Array(ObjectArray {
-                class,
-                elements: elements.into(),
-            }),
-        )
-        .await?);
+        return Ok(Value::try_new_object_async(collector, reference).await?);
     }
 
     let mut levels = Vec::with_capacity(dimensions.len());
@@ -648,6 +644,15 @@ async fn allocate_array_dimensions(
     collector: &Arc<GarbageCollector>,
     levels: &[(usize, ArrayKind)],
 ) -> Result<Value> {
+    allocate_array_nodes(collector, levels, &mut ArrayNodeBudget::default()).await
+}
+
+async fn allocate_array_nodes(
+    collector: &Arc<GarbageCollector>,
+    levels: &[(usize, ArrayKind)],
+    budget: &mut ArrayNodeBudget,
+) -> Result<Value> {
+    budget.next_node().await;
     let Some(((length, kind), remaining)) = levels.split_first() else {
         return Err(InternalError("Missing array dimension".to_string()));
     };
@@ -659,29 +664,17 @@ async fn allocate_array_dimensions(
         }
         ArrayKind::Reference(class) => class,
     };
-    let elements = allocate_array_in_async(collector, *length, Value::Object(None)).await?;
-    let parent = Value::try_new_object_async(
-        collector,
-        Reference::Array(ObjectArray {
-            class: Arc::clone(class),
-            elements: elements.into(),
-        }),
-    )
-    .await?;
+    let reference =
+        allocate_null_reference_array_in_async(collector, Arc::clone(class), *length).await?;
+    let parent = Value::try_new_object_async(collector, reference).await?;
     if !remaining.is_empty() {
         for index in 0..*length {
-            let child = Box::pin(allocate_array_dimensions(collector, remaining)).await?;
+            let child = Box::pin(allocate_array_nodes(collector, remaining, budget)).await?;
             // No managed guard crosses recovery or a recursive await.
-            let mut reference = parent.as_reference_mut()?;
-            let Reference::Array(array) = &mut *reference else {
-                return Err(InternalError(
-                    "Invalid multidimensional array parent".into(),
-                ));
-            };
-            *array
-                .elements
-                .get_mut(index)
-                .ok_or_else(|| InternalError("Missing array slot".into()))? = child;
+            parent
+                .as_reference_mut()?
+                .set_array_element(index, child)
+                .map_err(|_| InternalError("Missing array slot".into()))?;
         }
     }
     Ok(parent)
@@ -775,10 +768,8 @@ pub async fn new_array<T: Thread + 'static>(
             let loader = vm.class_loader().read().await.clone();
             let class = loader.array_class(&component, 1).await?;
             let class = thread.resolve_class(&class, false).await?;
-            let reference = Reference::try_from((
-                class,
-                allocate_array_in_async(collector, length, Value::Object(None)).await?,
-            ))?;
+            let reference =
+                allocate_null_reference_array_in_async(collector, class, length).await?;
             Value::try_new_object_async(collector, reference).await?
         }
     };
@@ -1070,6 +1061,43 @@ mod tests {
                     .all(|value| matches!(value, Value::Object(None)))
             );
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reflective_empty_children_yield_and_remain_reachable_from_parent() -> Result<()> {
+        use ristretto_gc::{GcWeak, ReferenceKind};
+        use std::future::Future;
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("[[I").await?;
+        let levels = [
+            (129, ArrayKind::Reference(class)),
+            (0, ArrayKind::Primitive(BaseType::Int)),
+        ];
+        let gc = vm.garbage_collector();
+        let mut future = Box::pin(allocate_array_dimensions(gc, &levels));
+        let mut pending = 0;
+        let array = std::future::poll_fn(|cx| {
+            let result = future.as_mut().poll(cx);
+            pending += usize::from(result.is_pending());
+            result
+        })
+        .await?;
+        assert!(pending >= 2, "130 array nodes must cross two work budgets");
+        let witness = {
+            let guard = array.as_reference()?;
+            let (_, values) = guard.as_class_vec_ref()?;
+            assert_eq!(values.len(), 129);
+            let Value::Object(Some(last)) = &values[128] else {
+                panic!("missing final child")
+            };
+            GcWeak::new(last, ReferenceKind::Weak, 0)
+        };
+        gc.collect_full()?;
+        assert!(witness.upgrade().is_some());
+        drop(array);
+        gc.collect_full()?;
+        assert!(witness.is_cleared());
         Ok(())
     }
 

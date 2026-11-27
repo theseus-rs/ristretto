@@ -1,9 +1,9 @@
 //! Allocation awaits run with no generated frame, raw managed borrow or context lock active.
 use super::{
     Arc, BaseType, Class, InternalError, NegativeArraySizeException, Object, Ordering, Reference,
-    Result, RuntimeContext, Value, allocate_array_in_async, allocate_primitive_array_in_async,
-    build_multianewarray, resolve_allocation_class, resolve_class_ref_no_init_async,
-    set_top_frame_pc, store_pending_error_async,
+    Result, RuntimeContext, Value, allocate_null_reference_array_in_async,
+    allocate_primitive_array_in_async, build_multianewarray, resolve_allocation_class,
+    resolve_class_ref_no_init_async, set_top_frame_pc, store_pending_error_async,
 };
 use ristretto_classfile::attributes::ArrayType;
 use ristretto_jit::{AllocationKind, AllocationRequest};
@@ -110,13 +110,13 @@ pub(super) async fn reference_array(ctx: &RuntimeContext, index: u16, count: i32
     if count < 0 {
         return Err(NegativeArraySizeException(count.to_string()).into());
     }
-    let elements = allocate_array_in_async(
+    let reference = allocate_null_reference_array_in_async(
         ctx.garbage_collector(),
+        array_class,
         usize::try_from(count)?,
-        Value::Object(None),
     )
     .await?;
-    publish(ctx, Reference::try_from((array_class, elements))?).await
+    publish(ctx, reference).await
 }
 
 pub(super) async fn multi_array(

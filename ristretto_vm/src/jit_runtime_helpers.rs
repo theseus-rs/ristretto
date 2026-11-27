@@ -28,7 +28,9 @@ use ristretto_classfile::BaseType;
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_gc::sync::{Mutex, MutexGuard, RwLock};
 use ristretto_gc::{GarbageCollector, Gc, GcRootGuard};
-use ristretto_types::array::{allocate_array_in_async, allocate_primitive_array_in_async};
+use ristretto_types::array::{
+    allocate_null_reference_array_in_async, allocate_primitive_array_in_async,
+};
 use smallvec::SmallVec;
 use std::future::Future;
 use std::sync::atomic::{AtomicBool, Ordering};
