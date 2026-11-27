@@ -38,7 +38,8 @@ roots and runs a full collection. Both witnesses must clear and the managed
 charge must return to its pre-allocation baseline. For this check the VM stops its background GC worker and drives
 collection explicitly. These are functional checks.
 [Java fixture](ristretto_vm/tests/fixtures/canonical/CanonicalGraphWorkload.java) ·
-[Rust example](ristretto_vm/examples/gc_preview.rs)
+[Rust example](ristretto_vm/examples/gc_preview.rs) ·
+[Archive results and broken-edge control](benchmarks/gc/release/shared-heap-cycle.json)
 
 ## Migrate from the restricted research preview
 

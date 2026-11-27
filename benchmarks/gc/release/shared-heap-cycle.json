@@ -1,0 +1,54 @@
+{
+  "source_commit": "5890a582c9a7ef4c71eb758950a503115000ef16",
+  "archive_sha256": "b1cb658cf86a886dff73fd250e8a34aaf0c452e5996780b23952b942eeccae8d",
+  "matching_independent_archives": 2,
+  "workspace_dependency_graphs": 14,
+  "package_consumers": [
+    "native",
+    "wasm32-wasip2"
+  ],
+  "release_tests": 11,
+  "tiers": {
+    "native-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "native-compiled": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 8,
+      "compiled_entries": 25,
+      "cycle_rewired_by": "compiled",
+      "full_collections": 1,
+      "interpreted_entries": 0,
+      "managed_bytes_freed": 768,
+      "result": 64
+    },
+    "wasi-interpreted": {
+      "cleared_witnesses": 2,
+      "compiled_backedges": 0,
+      "compiled_entries": 0,
+      "cycle_rewired_by": "interpreted",
+      "full_collections": 1,
+      "interpreted_entries": 25,
+      "managed_bytes_freed": 480,
+      "result": 64
+    }
+  },
+  "negative_control": {
+    "source_change": "Save a.value + a.other.value to a local, clear a.other, then return the saved value.",
+    "stock_java_result": 64,
+    "rejected_by": [
+      "native-interpreted",
+      "native-compiled",
+      "wasi-interpreted"
+    ],
+    "diagnostic": "missing Java cycle after checksum"
+  },
+  "scope": "Runtime identity, cross-tier Java field mutation and reclamation on the shared VM heap. Browser coverage here is dependency identity only."
+}
