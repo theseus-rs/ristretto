@@ -50,3 +50,9 @@ On the 64 MiB reference-array workload, the 24 fresh forks used five seconds of 
 These are medians of three forks per condition. The broader spread in the [earlier two-minute comparisons](../statistics-snapshot-progress/README.md#two-minutes-at-500-arrivals-per-second) illustrates the limits of short tail screens. [Individual forks](java/forks.csv) · [Raw histograms](java/processes.jsonl.gz) · [Binary and classfile identities](java/provenance.json).
 
 ![Matched Java throughput and scheduled response](java/comparison.png)
+
+### Where the native reference-array workload spent time
+
+Three separate diagnostic forks sampled terminal instruction addresses using a seven-millisecond process CPU timer. Each ran the same release executable at saturation on two cores, with five seconds of warmup and a twenty-second measurement. The samples include VM bootstrap, warmup, worker activity, reporting and shutdown. Instrumented forks are excluded from the timing comparisons above.
+
+Of 19,852 samples, 4,304 (21.7%) landed in symbols for ArcSwap reader-debt payment. Within that group, 2,604 samples matched publication-queue types and 866 matched the pressure predictor. The most frequently sampled resolved symbol accounted for 2,195 samples and specialized queue-node debt payment for reclamation tasks. A further 2,537 samples fell outside resolved main-executable symbols. These terminal addresses identify candidates for a controlled change. They do not distinguish every caller or establish the speedup from batching queue updates. [Counts and method](java/profile/summary.json) · [Full symbol distributions](java/profile/symbols.json.gz) · [Sampler and raw addresses](java/profile/).

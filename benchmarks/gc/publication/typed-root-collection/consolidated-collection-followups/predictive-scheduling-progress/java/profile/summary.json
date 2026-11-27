@@ -1,0 +1,24 @@
+{
+  "total": 19852,
+  "forks": [
+    6668,
+    6559,
+    6625
+  ],
+  "debt_payment": 4304,
+  "queue_debt_payment": 2604,
+  "predictor_debt_payment": 866,
+  "outside_executable_symbols": 2537,
+  "binary_sha256": "06f4a8ada7b2fab6f981f5f7e81f579f5a51e9fe46d124d6381f674e437782bd",
+  "period_us": 7000,
+  "scope": "whole process including boot, warmup, measured workload and shutdown; process CPU timer terminal PCs only",
+  "cpus": [
+    8,
+    10
+  ],
+  "warmup_s": 5,
+  "measurement_s": 20,
+  "offered_rate": 0,
+  "workers": 2,
+  "heap_mib": 64
+}
