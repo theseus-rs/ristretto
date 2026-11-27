@@ -4451,12 +4451,16 @@ fn flushing_an_old_identity_preserves_an_unrelated_pending_birth() -> Result<()>
 
 #[test]
 fn raw_explicit_barrier_queues_the_protected_child_identity() -> Result<()> {
-    for (counted, old_interval) in [(false, 0), (true, 0), (false, 4), (true, 4)] {
+    for (counted, old_interval, old_pass) in [false, true]
+        .into_iter()
+        .flat_map(|counted| [(counted, 0, false), (counted, 4, false), (counted, 4, true)])
+    {
         let gc = GarbageCollector::with_config(
             Configuration::builder()
                 .concurrent_publication(counted)
                 .barrier_buffer_size(4)
                 .old_collection_interval(old_interval)
+                .promotion_age(1)
                 .incremental_step_size(1)
                 .max_pause_time_us(0)
                 .allocation_threshold(usize::MAX)
@@ -4469,20 +4473,37 @@ fn raw_explicit_barrier_queues_the_protected_child_identity() -> Result<()> {
         // SAFETY: the rooted parent keeps the original child alive until after the barrier.
         let raw = unsafe { Gc::from_raw(address)? };
         let metadata = gc.objects.lookup(address.addr()).expect("child descriptor");
-        gc.collect();
-        gc.step();
+        if old_pass {
+            gc.collect_full()?;
+            assert!(metadata.age.load(Ordering::Acquire) >= 1);
+            gc.collect_old();
+        } else {
+            gc.collect();
+        }
+        assert!((0..2048).any(|_| {
+            gc.step();
+            lock(&gc.domains[1].cycle).phase == Phase::Mark
+        }));
+        assert_eq!(gc.old_collection_active(), old_pass);
         let epoch = gc.domains[1].epoch.load(Ordering::Acquire);
         assert!(!metadata.marked(1, epoch));
         let context = gc.register_context();
         context.with(|| {
             raw.write_barrier(&gc);
             drop(raw);
-            assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
-            let work = gc.domains[1].mark_queue.claim(0, 1, &mut 1);
-            let (item, _) = work.items[0].as_ref().expect("exact deletion mark");
-            assert_eq!(item.metadata.id, id);
-            assert_eq!(item.metadata.trace.ptr.addr(), address.addr());
-            assert_eq!(metadata.retention(1, epoch), Some(Retention::Strong));
+            if old_pass {
+                let record = context.0.try_peek().expect("admitted old-only deletion");
+                assert_eq!((record.address, record.identity), (address.addr(), id));
+                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 1);
+                context.flush();
+            } else {
+                assert_eq!(gc.contexts.pending.load(Ordering::Acquire), 0);
+                let work = gc.domains[1].mark_queue.claim(0, 1, &mut 1);
+                let (item, _) = work.items[0].as_ref().expect("exact deletion mark");
+                assert_eq!(item.metadata.id, id);
+                assert_eq!(item.metadata.trace.ptr.addr(), address.addr());
+                assert_eq!(metadata.retention(1, epoch), Some(Retention::Strong));
+            }
         });
         assert!(metadata.marked(1, epoch));
         assert_eq!(**parent.first().expect("protected child"), 42);
