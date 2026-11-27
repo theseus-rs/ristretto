@@ -168,7 +168,20 @@ impl ArrayElements {
     }
 
     pub(crate) fn clear_step(&mut self, offset: usize, budget: usize) -> TraceProgress {
-        let elements = self.values.clear_step(offset, budget);
+        // A run of Java nulls has no roots or destructors to invoke. Extend
+        // only through a bounded run so one cleanup turn stays independent of
+        // the length of the array. HeapBuffer still owns destruction and return.
+        const EXTRA_NULLS: usize = 512;
+        let ordinary = self.values.len().min(budget.max(1));
+        let extra = self
+            .values
+            .iter()
+            .rev()
+            .skip(ordinary)
+            .take(EXTRA_NULLS)
+            .take_while(|value| matches!(value, Value::Object(None)))
+            .count();
+        let elements = self.values.clear_step(offset, ordinary + extra);
         if elements != TraceProgress::Complete {
             // Values still present may depend on the old-to-young card map.
             return elements;
@@ -372,6 +385,50 @@ mod tests {
     use ristretto_gc::sync::RwLock;
     use ristretto_gc::{Configuration, Gc, GcWeak, ReferenceKind};
     use std::sync::Arc;
+
+    #[test]
+    fn array_retirement_skips_only_bounded_runs_of_nulls() -> ristretto_gc::Result<()> {
+        let gc = GarbageCollector::new();
+        for regional in [false, true] {
+            let values = if regional {
+                ristretto_gc::HeapBuffer::try_with_fn_in(&gc, 4097, |_| Ok(Value::Object(None)))?
+            } else {
+                vec![Value::Object(None); 4097].into()
+            };
+            let mut array = ArrayElements::from(values);
+            let mut witnesses = Vec::new();
+            for index in [0, 3570, 4096] {
+                let value = Value::new_object(&gc, Reference::ByteArray(vec![42].into()));
+                let Value::Object(Some(handle)) = &value else {
+                    unreachable!()
+                };
+                witnesses.push(GcWeak::new(handle, ReferenceKind::Weak, 0));
+                array.set(index, value).unwrap();
+            }
+            let [first, middle, last]: [_; 3] = witnesses.try_into().unwrap();
+            assert_eq!(array.clear_step(0, 1), TraceProgress::Continue(0));
+            assert_eq!(array.len(), 3584);
+            gc.collect_full()?;
+            assert!(first.upgrade().is_some() && middle.upgrade().is_some());
+            assert!(last.upgrade().is_none());
+            assert_eq!(array.clear_step(0, 1), TraceProgress::Continue(0));
+            assert_eq!(array.len(), 3571, "the next owning slot must survive");
+            let mut turns = 2;
+            while array.clear_step(0, 1) != TraceProgress::Complete {
+                turns += 1;
+                assert!(turns < 32);
+            }
+            gc.collect_full()?;
+            assert!(
+                [first, middle, last]
+                    .iter()
+                    .all(|weak| weak.upgrade().is_none())
+            );
+        }
+        gc.stop()?;
+        assert_eq!(gc.managed_bytes(), 0);
+        Ok(())
+    }
 
     #[test]
     fn incremental_clear_retains_cards_until_all_values_have_been_removed() {
