@@ -1,6 +1,6 @@
 # Mature deletion under a saturated marking inbox
 
-Revision `f462e61c` tests a bounded overflow bitmap in the single JVM collector. The release decision was **include in the alpha PR**. The sparse-group schedule still prevents a zero-pause claim. 
+The alpha PR includes the mature deletion bitmap at `f462e61c`. It passed the complete-collection and whole-JVM regression screens. A producer parked on the 65th sparse identity group can still block its peers.
 [Gate results](decision.json)
 
 ## Publication, tracing and progress
