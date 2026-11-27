@@ -1,0 +1,14 @@
+{
+  "conversation_id": "22a2cb80-9e9a-4ba9-bda9-59c654e64c9f",
+  "status": "SUCCESS",
+  "response": "**No.** Because the caller keeps the original allocation live until return, `objects.lookup(address)` binds `resolved` once to that exact owning descriptor; all subsequent checks, queued descriptors, nonzero-identity certificates, and fallback shades use `metadata` without re-resolving the raw address.\n\n**Blocking/phase caveat:** Raw `context_edge` requires `old_collection_interval == 0`, nonzero `barrier_buffer_size`, and thread context; otherwise it stays on the blocking legacy path. Even on `context_edge`, `drop(legacy)` releases admission before `indexed_root()`\u2014allowing phase changes, including `Birth::Idle` early return\u2014while non-strong phases (`stage != 0`), full root buffers, or cancelled/failed commits fall back to blocking `barrier_guard()`.\n",
+  "duration_seconds": 67.047476969,
+  "num_turns": 1,
+  "usage": {
+    "input_tokens": 2454,
+    "output_tokens": 8170,
+    "thinking_tokens": 8001,
+    "cache_read_tokens": 8182,
+    "total_tokens": 10624
+  }
+}

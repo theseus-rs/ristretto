@@ -83,3 +83,8 @@ the cause of the full combined loss unresolved.
 Native GC and class loader tests passed 1,834 cases with 15 ignored. WASIp2 passed 1,235 with nine ignored. Strict Clippy passed on both. The collector packaged and verified, both normalized Cargo consumers passed, and the shipping dependency checks found the single collector. Native interpreted, native compiled and WASIp2 interpreted Java previews each returned 64, cleared two exact witnesses and reclaimed their charges. All nine short Chromium trials completed. The three candidate trials served 4,000/4,000 arrivals with request-turn p99.9 of 46, 60 and 75 µs. [Suites](validation/suites.json) · [Package](validation/gc-package.log.gz) · [Shipping graphs](validation/graphs.log.gz) · [Compiled preview](validation/native-compiled.json) · [Browser forks](browser/REPORT.md)
 
 A protected raw embedding handle can still leave a private clean record while its flusher is parked. The traced edge completes the identical forced schedule. Raw-handle progress, general unprepared writes, later collector phases and sustained HotSpot parity remain open. [Raw-handle control](validation/raw-control.patch.gz) · [Observed assertion](validation/raw-control.log.gz)
+
+The subsequent point-write and protected-raw barrier changes recovered
+short WASIp2 capacity against the original PR baseline. A full-cycle
+stall remains reproducible when the heap enables old-only passes.
+[Direct JVM comparison and next progress boundary](../protected-raw-java-point-writes/README.md).

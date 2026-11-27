@@ -9,6 +9,18 @@ operations, weak clearing and physical reclamation on the JVM heap.
 [Preview and migration](../GC_PREVIEW.md) ·
 [Workspace and shipping dependency checks](../benchmarks/gc/release/verify_alpha_heap.py).
 
+The integrated point-write and protected raw barrier revision `f97f8a99`
+passed 640 forced configurations. All 36 complete-collection conditions
+again cleared 10× versus `f1daebeb`, with minimum individual lower 95%
+bounds of 10.780× native and 10.953× WASIp2. The native two-minute forks
+each served 60,000/60,000 with scheduled p99.9 of 2.496 and 2.304 ms.
+On the workerless WASIp2 JVM its saturation was 7,392 ops/s against 6,090
+on the original PR baseline, 960,302 on G1 and 542,163 on ZGC. With the
+old-generation interval set to four, a parked context flusher during precise
+full marking still blocked a funded allocation and a fresh full ticket on
+both publication policies. The zero-global-pause and endurance gates remain open.
+[Progress controls, whole-JVM measurements and shipping checks](../benchmarks/gc/publication/typed-root-collection/consolidated-collection-followups/protected-raw-java-point-writes/README.md).
+
 Prepared owner publication and bounded reference-array retirement at `58fe2949`
 passed two randomized 36-condition complete-collection runs. The confirmation's
 lowest individual lower 95% bounds versus `f1daebeb` were 10.411× native and

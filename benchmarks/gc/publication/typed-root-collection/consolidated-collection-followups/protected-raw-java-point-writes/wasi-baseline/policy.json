@@ -1,0 +1,20 @@
+{
+  "control": "df71e5a2",
+  "candidate": "f97f8a99",
+  "seeds": 251127493,
+  "rate": [
+    0,
+    500
+  ],
+  "cpus": [
+    12,
+    14
+  ],
+  "seconds": 10,
+  "warmup": 4,
+  "repeats": 3,
+  "minimum_capacity_ratio": 0.95,
+  "scheduled_required": 5000,
+  "cgroup_rss_mib": 512,
+  "heap_mib": 64
+}

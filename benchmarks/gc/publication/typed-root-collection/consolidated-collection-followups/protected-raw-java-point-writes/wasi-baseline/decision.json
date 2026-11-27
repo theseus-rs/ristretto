@@ -1,0 +1,50 @@
+{
+  "runtimes": {
+    "Ristretto WASI before": {
+      "saturation": 6089.763782347857,
+      "p999_us": 44544,
+      "completed": [
+        5000,
+        5000,
+        5000
+      ],
+      "unfinished": 0,
+      "failed": 0
+    },
+    "Ristretto WASI candidate": {
+      "saturation": 7392.18864012717,
+      "p999_us": 32000,
+      "completed": [
+        5000,
+        5000,
+        5000
+      ],
+      "unfinished": 0,
+      "failed": 0
+    },
+    "HotSpot G1": {
+      "saturation": 960302.2161362526,
+      "p999_us": 24,
+      "completed": [
+        5000,
+        5000,
+        5000
+      ],
+      "unfinished": 0,
+      "failed": 0
+    },
+    "HotSpot ZGC": {
+      "saturation": 542163.0787472073,
+      "p999_us": 20,
+      "completed": [
+        5000,
+        5000,
+        5000
+      ],
+      "unfinished": 0,
+      "failed": 0
+    }
+  },
+  "capacity_ratio": 1.2138711622205443,
+  "passed": true
+}
