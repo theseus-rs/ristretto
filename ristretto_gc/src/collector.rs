@@ -1065,6 +1065,8 @@ fn now() -> Option<std::time::Instant> {
 #[path = "native_callbacks.rs"]
 mod native_callbacks;
 #[cfg(not(target_family = "wasm"))]
+pub(crate) use native_callbacks::Turn as CallbackTurn;
+#[cfg(not(target_family = "wasm"))]
 #[path = "worker_signals.rs"]
 mod worker_signals;
 #[cfg(not(target_family = "wasm"))]
@@ -2848,11 +2850,28 @@ impl GarbageCollector {
         if self.callback_jobs.load(Ordering::Acquire) == 0 {
             return None;
         }
-        self.worker_signals
-            .load()
-            .as_ref()?
-            .callbacks
-            .terminal_turn()
+        let pool = self.worker_signals.load();
+        let pool = pool.as_ref()?;
+        pool.callbacks.terminal_turn(pool)
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    async fn wait_for_dispatch(
+        &self,
+        dispatch: &CallbackTurn,
+        request: &crate::retirement_grants::Request,
+        size: usize,
+    ) -> Result<()> {
+        self.ensure_refund_notifier(false)?;
+        if let Some(notifier) = self.refund_notifier.load_full() {
+            return notifier.wait_for_turn(self, dispatch, request, size).await;
+        }
+        if dispatch.pending() {
+            return Err(crate::Error::SyncError(
+                "no callback dispatch worker".into(),
+            ));
+        }
+        Ok(())
     }
 
     pub(crate) fn reserve_bytes_blocking(&self, size: usize) -> Result<AllocationReservation<'_>> {
@@ -2904,8 +2923,9 @@ impl GarbageCollector {
                     // queue cannot extend the wait for the user callback to return.
                     let turn =
                         terminal_service.get_or_insert_with(|| self.terminal_callback_turn());
-                    if turn.as_ref().is_some_and(native_callbacks::Turn::pending) {
-                        crate::recovery::yield_once().await;
+                    if let Some(dispatch) = turn.as_ref().filter(|turn| turn.pending()) {
+                        self.wait_for_dispatch(dispatch, &demand.request, size)
+                            .await?;
                         continue;
                     }
                     if turn.take().is_some() {

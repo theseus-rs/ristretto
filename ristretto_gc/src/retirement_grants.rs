@@ -195,6 +195,14 @@ impl Request {
             .is_some_and(|d| d.canceled.load(Ordering::Acquire) == PAID)
     }
 
+    /// A terminal allocator must either consume the reserved charge or reopen
+    /// its abandoned generation before another donor can bind.
+    #[cfg(not(target_family = "wasm"))]
+    pub(crate) fn settled_donor(&self) -> bool {
+        self.donor()
+            .is_some_and(|donor| matches!(donor.canceled.load(Ordering::Acquire), PAID | ABANDONED))
+    }
+
     pub(crate) fn private(&self) -> bool {
         self.donor()
             .is_some_and(|d| d.private.load(Ordering::Acquire))

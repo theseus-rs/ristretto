@@ -7,6 +7,9 @@ pub(crate) mod grant_wake;
 #[path = "recovery_index.rs"]
 mod index;
 use index::{Entry, Ready, Waiters};
+#[cfg(not(target_family = "wasm"))]
+#[path = "recovery_terminal.rs"]
+mod terminal;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -140,6 +143,7 @@ pub(crate) struct RefundNotifier {
 #[cfg(not(target_family = "wasm"))]
 #[derive(Debug, Default)]
 struct RefundEvent {
+    turns: terminal::Registrations,
     pending: AtomicBool,
     closed: AtomicBool,
 }
@@ -153,9 +157,20 @@ impl RefundNotifier {
         let handle = std::thread::Builder::new()
             .name("gc-refund".into())
             .spawn(move || {
-                while !wake.closed.load(Ordering::Acquire) {
+                let mut scan = terminal::Scan::default();
+                loop {
+                    let closed = wake.closed.load(Ordering::Acquire);
+                    let Some(gc) = weak.upgrade() else { break };
+                    let watching = wake.turns.dispatch(&gc, &mut scan, closed);
+                    drop(gc);
+                    if closed && !watching {
+                        break;
+                    }
                     if wake.pending.swap(false, Ordering::AcqRel) {
                         Self::dispatch(&weak, &wake);
+                    } else if watching {
+                        // A claimant may park after its CAS, before issuing a notice.
+                        std::thread::park_timeout(std::time::Duration::from_millis(1));
                     } else {
                         std::thread::park();
                     }
@@ -175,10 +190,15 @@ impl RefundNotifier {
         if let Some(gc) = weak.upgrade() {
             gc.recovery.prepare_notifications(&gc);
         }
-        while !event.closed.load(Ordering::Acquire) {
-            let Some(gc) = weak.upgrade() else { break };
+        // Yield to the terminal-turn scan even under a continuous stream of
+        // ordinary refunds.
+        for _ in 0..32 {
+            if event.closed.load(Ordering::Acquire) {
+                return;
+            }
+            let Some(gc) = weak.upgrade() else { return };
             if !gc.recovery.refund_ready(gc.allocation_headroom(), false) {
-                break;
+                return;
             }
             let (send, receive) = std::sync::mpsc::sync_channel::<Waker>(1);
             // Secure an independent delivery context before taking the waiter.
@@ -196,13 +216,14 @@ impl RefundNotifier {
                 drop(gc);
                 event.pending.store(true, Ordering::Release);
                 std::thread::park_timeout(std::time::Duration::from_millis(1));
-                break;
+                return;
             }
             let waker = gc.recovery.take_refund_waker(&gc);
             drop(gc);
             let Some(waker) = waker else { continue };
             let _ = send.send(waker);
         }
+        event.pending.store(true, Ordering::Release);
     }
 
     pub(crate) fn join(&self) {

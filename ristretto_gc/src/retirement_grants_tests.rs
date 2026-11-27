@@ -222,18 +222,26 @@ fn exhausted_positions_leave_no_resurrected_page_or_demand() -> crate::Result<()
 fn repeated_abandonment_never_reuses_a_previous_donors_receipt() -> crate::Result<()> {
     let gc = fixture()?;
     let request = gc.grant_registry.register(&gc, 32)?;
+    #[cfg(not(target_family = "wasm"))]
+    assert!(!request.request.settled_donor());
     let mut retired = Vec::new();
     for _ in 0..3 {
         let mut selection = capture(&gc);
         assert!(selection.advance(&mut 0));
         retired.push(selection.donor.clone().ok_or(crate::Error::OutOfMemory)?);
         drop(selection);
+        #[cfg(not(target_family = "wasm"))]
+        assert!(request.request.settled_donor());
         assert!(request.take().is_none());
         assert!(request.request.waiting());
+        #[cfg(not(target_family = "wasm"))]
+        assert!(!request.request.settled_donor());
     }
     let mut final_donor = capture(&gc);
     assert!(final_donor.advance(&mut 0));
     assert_eq!(final_donor.pay(), 32);
+    #[cfg(not(target_family = "wasm"))]
+    assert!(request.request.settled_donor());
     assert!(
         retired
             .iter()

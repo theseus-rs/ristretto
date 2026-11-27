@@ -13,14 +13,19 @@ use callback_pages::Pages;
 #[path = "pressure_turn.rs"]
 mod pressure_turn;
 
-pub(super) struct Turn {
+#[derive(Clone, Debug)]
+pub(crate) struct Turn {
+    pool: std::sync::Weak<super::WorkerSignals>,
     dispatch: pressure_turn::Turn,
     inbox: std::sync::Weak<Inbox<Job>>,
 }
 
 impl Turn {
-    pub(super) fn pending(&self) -> bool {
-        self.dispatch.pending()
+    pub(crate) fn pending(&self) -> bool {
+        self.pool
+            .upgrade()
+            .is_some_and(|pool| !pool.closed.load(Ordering::Acquire))
+            && self.dispatch.pending()
             && self
                 .inbox
                 .upgrade()
@@ -178,7 +183,7 @@ struct Job {
 }
 
 impl Callbacks {
-    pub(super) fn terminal_turn(&self) -> Option<Turn> {
+    pub(super) fn terminal_turn(&self, pool: &Arc<super::WorkerSignals>) -> Option<Turn> {
         let runner = self.0.get()?;
         if !runner.inbox.has_work() {
             return None;
@@ -188,6 +193,7 @@ impl Callbacks {
         // A peer may take the last job after enrollment, before the pressure
         // assistant acknowledges the turn. Private jobs keep their charge.
         Some(Turn {
+            pool: Arc::downgrade(pool),
             dispatch: turn,
             inbox: Arc::downgrade(&runner.inbox),
         })
@@ -499,8 +505,222 @@ mod tests {
         delayed_pressure(PressureSchedule::LastClaim)
     }
 
+    #[test]
+    fn terminal_dispatch_sleeps_until_a_published_donor_is_serviced() -> Result<()> {
+        delayed_pressure(PressureSchedule::Sleeping)
+    }
+
+    #[test]
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::unwrap_in_result,
+        reason = "overlapping pool generations"
+    )]
+    fn stopping_the_originating_pool_wakes_a_terminal_allocation() -> Result<()> {
+        let fixture = PressureHeap::new(false, 0)?;
+        let heap = &fixture.heap;
+        let pool = heap.worker_signals.load_full().expect("pool");
+        let runner = pool.callbacks.0.get().expect("runner");
+        let (seen, allow) = pause_before_dispatch(runner);
+        let mut request = Box::pin(Gc::try_new_async(heap, 11_u64));
+        let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+        let deadline = Instant::now() + Duration::from_secs(4);
+        assert!(
+            poll_until_dispatch(request.as_mut(), &mut cx, &runner.service, 0, deadline).is_none()
+        );
+        let notifications = quiet_executor(request.as_mut());
+        seen.recv_timeout(Duration::from_secs(3))
+            .expect("assistant stopped");
+        let stopping = {
+            let heap = heap.clone();
+            thread::spawn(move || heap.stop())
+        };
+        while !pool.closed.load(Ordering::Acquire) {
+            assert!(Instant::now() < deadline);
+            thread::yield_now();
+        }
+        heap.start();
+        notifications
+            .recv_timeout(Duration::from_secs(3))
+            .expect("originating pool closure woke allocation");
+        assert!(heap.registered_workers() > 0);
+        assert_eq!(
+            (heap.managed_bytes(), fixture.drops.load(Ordering::Acquire)),
+            (fixture.cap, 0)
+        );
+        drop(request);
+        allow.send(()).expect("resume assistant");
+        fixture.resume.send(()).expect("resume primary");
+        stopping.join().expect("old pool stopped")?;
+        heap.stop()?;
+        assert_eq!(fixture.drops.load(Ordering::Acquire), 1);
+        Ok(())
+    }
+
+    #[test]
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::unwrap_in_result,
+        reason = "exact charge and bounded independent delivery"
+    )]
+    fn an_independent_refund_wakes_a_fitting_sleeper_past_a_full_scan() -> Result<()> {
+        let fixture = PressureHeap::new(false, 16)?;
+        let heap = &fixture.heap;
+        let spare = heap.reserve_exact_bytes(16)?;
+        let pool = heap.worker_signals.load_full().expect("pool");
+        let runner = pool.callbacks.0.get().expect("runner");
+        let (seen, allow) = pause_before_dispatch(runner);
+        let deadline = Instant::now() + Duration::from_secs(4);
+        let mut larger = Vec::new();
+        let (send, unfitting) = mpsc::channel();
+        let observed = std::task::Waker::from(Arc::new(Notice(send)));
+        let mut cx = std::task::Context::from_waker(&observed);
+        for _ in 0..33 {
+            let earlier = runner.service.snapshot();
+            let mut request = Box::pin(heap.reserve_bytes_async(32));
+            assert!(
+                poll_until_dispatch(
+                    request.as_mut(),
+                    &mut cx,
+                    &runner.service,
+                    earlier,
+                    deadline
+                )
+                .is_none()
+            );
+            larger.push(request);
+        }
+        // Drain the initial cooperative wakes used to reach terminal dispatch.
+        while unfitting.try_recv().is_ok() {}
+        let earlier = runner.service.snapshot();
+        let mut fitting = Box::pin(heap.reserve_bytes_async(16));
+        let mut initial = std::task::Context::from_waker(std::task::Waker::noop());
+        assert!(
+            poll_until_dispatch(
+                fitting.as_mut(),
+                &mut initial,
+                &runner.service,
+                earlier,
+                deadline
+            )
+            .is_none()
+        );
+        let notifications = quiet_executor(fitting.as_mut());
+        seen.recv_timeout(Duration::from_secs(3))
+            .expect("assistant stopped");
+        drop(spare);
+        notifications
+            .recv_timeout(Duration::from_secs(3))
+            .expect("independent refund woke fitting sleeper");
+        assert_eq!(unfitting.try_recv(), Err(mpsc::TryRecvError::Empty));
+        let paid = finish_poll(fitting.as_mut(), &mut initial, deadline)?;
+        assert!(runner.inbox.jobs.has_available());
+        assert_eq!(
+            (heap.managed_bytes(), fixture.drops.load(Ordering::Acquire)),
+            (fixture.cap, 0)
+        );
+        drop(larger);
+        drop(paid);
+        drop(fitting);
+        allow.send(()).expect("resume assistant");
+        fixture.resume.send(()).expect("resume primary");
+        heap.stop()?;
+        assert_eq!(heap.managed_bytes(), 0);
+        Ok(())
+    }
+
+    struct ParkedWake {
+        entered: mpsc::Sender<()>,
+        resume: Mutex<mpsc::Receiver<()>>,
+    }
+
+    impl std::task::Wake for ParkedWake {
+        fn wake(self: Arc<Self>) {
+            let _ = self.entered.send(());
+            let _ = lock(&self.resume).recv_timeout(Duration::from_secs(5));
+        }
+    }
+
+    #[test]
+    #[expect(
+        clippy::panic_in_result_fn,
+        clippy::unwrap_in_result,
+        reason = "isolate arbitrary executor wake code"
+    )]
+    fn cancelled_and_parked_executors_leave_sibling_dispatch_available() -> Result<()> {
+        let fixture = PressureHeap::new(false, 0)?;
+        let heap = &fixture.heap;
+        let pool = heap.worker_signals.load_full().expect("pool");
+        let runner = pool.callbacks.0.get().expect("runner");
+        let (seen, allow) = pause_before_dispatch(runner);
+        let deadline = Instant::now() + Duration::from_secs(4);
+        let mut initial = std::task::Context::from_waker(std::task::Waker::noop());
+        let mut enroll = || {
+            let earlier = runner.service.snapshot();
+            let mut future = Box::pin(heap.reserve_bytes_async(16));
+            assert!(
+                poll_until_dispatch(
+                    future.as_mut(),
+                    &mut initial,
+                    &runner.service,
+                    earlier,
+                    deadline
+                )
+                .is_none()
+            );
+            future
+        };
+        let mut first = enroll();
+        let (entered, blocked) = mpsc::channel();
+        let (resume, release) = mpsc::channel();
+        let waker = std::task::Waker::from(Arc::new(ParkedWake {
+            entered,
+            resume: Mutex::new(release),
+        }));
+        assert!(
+            first
+                .as_mut()
+                .poll(&mut std::task::Context::from_waker(&waker))
+                .is_pending()
+        );
+        let mut cancelled = enroll();
+        let removed = quiet_executor(cancelled.as_mut());
+        drop(cancelled);
+        let mut sibling = enroll();
+        let notifications = quiet_executor(sibling.as_mut());
+        receive_notice(&seen);
+        let job = runner.inbox.jobs.claim().expect("silent last claim");
+        receive_notice(&blocked);
+        receive_notice(&notifications);
+        assert_eq!(removed.try_recv(), Err(mpsc::TryRecvError::Disconnected));
+        assert_eq!(
+            (heap.managed_bytes(), fixture.drops.load(Ordering::Acquire)),
+            (fixture.cap, 0)
+        );
+        drop(sibling);
+        drop(first);
+        resume.send(()).expect("resume parked executor");
+        assert!(!job.run());
+        allow.send(()).expect("resume assistant");
+        fixture.resume.send(()).expect("resume primary");
+        heap.stop()?;
+        assert_eq!(heap.managed_bytes(), 0);
+        Ok(())
+    }
+
+    struct Notice(mpsc::Sender<()>);
+    impl std::task::Wake for Notice {
+        fn wake(self: Arc<Self>) {
+            self.wake_by_ref();
+        }
+        fn wake_by_ref(self: &Arc<Self>) {
+            let _ = self.0.send(());
+        }
+    }
+
     #[derive(Clone, Copy)]
     enum PressureSchedule {
+        Sleeping,
         Empty,
         LastClaim,
         Available,
@@ -587,6 +807,64 @@ mod tests {
         Ok((heap, resume, cap))
     }
 
+    struct PressureHeap {
+        heap: Arc<GarbageCollector>,
+        resume: mpsc::Sender<()>,
+        cap: usize,
+        drops: Arc<AtomicUsize>,
+        retained: Option<crate::GcRootGuard<Donor>>,
+    }
+
+    impl PressureHeap {
+        #[expect(clippy::panic_in_result_fn, reason = "bounded callback publication")]
+        fn new(empty: bool, spare: usize) -> Result<Self> {
+            let drops = Arc::new(AtomicUsize::new(0));
+            let donor = Donor(drops.clone());
+            let (heap, resume, cap) = parked_primary(Gc::allocation_size(&donor)? + spare)?;
+            let retained = empty.then_some(Gc::try_new(&heap, donor)?);
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            let deadline = Instant::now() + Duration::from_secs(4);
+            finish_poll(std::pin::pin!(heap.collect_full_async()), &mut cx, deadline)?;
+            while heap.callback_jobs.load(Ordering::Acquire) != if empty { 1 } else { 2 } {
+                assert!(Instant::now() < deadline);
+                thread::yield_now();
+            }
+            Ok(Self {
+                heap,
+                resume,
+                cap,
+                drops,
+                retained,
+            })
+        }
+    }
+
+    fn pause_before_dispatch(runner: &Runner) -> (mpsc::Receiver<()>, mpsc::Sender<()>) {
+        let (notified, seen) = mpsc::sync_channel(1);
+        let (allow, assistant) = mpsc::channel();
+        *lock(&runner.pressure_gate) = Some((notified, assistant));
+        (seen, allow)
+    }
+
+    fn receive_notice(receiver: &mpsc::Receiver<()>) {
+        assert_eq!(receiver.recv_timeout(Duration::from_secs(3)), Ok(()));
+    }
+
+    fn quiet_executor<F: Future>(mut request: std::pin::Pin<&mut F>) -> mpsc::Receiver<()> {
+        let (send, notifications) = mpsc::channel();
+        let waker = std::task::Waker::from(Arc::new(Notice(send)));
+        let mut cx = std::task::Context::from_waker(&waker);
+        // Migrate off the original executor and repeatedly poll the stable wait.
+        for _ in 0..2048 {
+            assert!(request.as_mut().poll(&mut cx).is_pending());
+        }
+        assert_eq!(
+            notifications.recv_timeout(Duration::from_millis(10)),
+            Err(mpsc::RecvTimeoutError::Timeout)
+        );
+        notifications
+    }
+
     #[expect(
         clippy::panic_in_result_fn,
         clippy::unwrap_in_result,
@@ -595,36 +873,39 @@ mod tests {
     )]
     fn delayed_pressure(schedule: PressureSchedule) -> Result<()> {
         use std::task::{Context, Waker};
-        let drops = Arc::new(AtomicUsize::new(0));
-        let donor = Donor(drops.clone());
-        let (heap, resume, cap) = parked_primary(Gc::allocation_size(&donor)?)?;
         let empty = matches!(schedule, PressureSchedule::Empty);
-        let retained = empty.then_some(Gc::try_new(&heap, donor)?);
-        let mut cycle = std::pin::pin!(heap.collect_full_async());
-        let mut cx = Context::from_waker(Waker::noop());
+        let PressureHeap {
+            heap,
+            resume,
+            cap,
+            drops,
+            retained,
+        } = PressureHeap::new(empty, 0)?;
         let deadline = Instant::now() + Duration::from_secs(4);
-        finish_poll(cycle.as_mut(), &mut cx, deadline)?;
-        while heap.callback_jobs.load(Ordering::Acquire) != if empty { 1 } else { 2 } {
-            assert!(Instant::now() < deadline);
-            thread::yield_now();
-        }
+        let mut cx = Context::from_waker(Waker::noop());
         let pool = heap.worker_signals.load_full().expect("pool");
         let runner = pool.callbacks.0.get().expect("runner");
         let contended = matches!(schedule, PressureSchedule::Contended);
         let receiver = contended.then(|| lock(&runner.notices));
-        let (notified, seen) = mpsc::sync_channel(1);
-        let (allow, assistant) = mpsc::channel();
-        *lock(&runner.pressure_gate) = Some((notified, assistant));
+        let (seen, allow) = pause_before_dispatch(runner);
         let mut request = Box::pin(Gc::try_new_async(&heap, 11_u64));
         let mut early =
             poll_until_dispatch(request.as_mut(), &mut cx, &runner.service, 0, deadline);
+        let notifications = matches!(
+            schedule,
+            PressureSchedule::Sleeping | PressureSchedule::LastClaim
+        )
+        .then(|| quiet_executor(request.as_mut()));
         if empty || matches!(schedule, PressureSchedule::LastClaim) {
-            seen.recv_timeout(Duration::from_secs(3))
-                .expect("assistant stopped before probing");
+            receive_notice(&seen);
             let last = (!empty).then(|| {
                 assert!(early.is_none() && runner.service.snapshot() > 0);
                 runner.inbox.jobs.claim().expect("last published callback")
             });
+            if let Some(notifications) = &notifications {
+                // The private claimant has sent no notification and still owns the charge.
+                receive_notice(notifications);
+            }
             early = early.or_else(|| poll_while_service_is_parked(request.as_mut(), &mut cx));
             let turn_count = runner.service.snapshot();
             let charged = heap.managed_bytes();
@@ -660,8 +941,7 @@ mod tests {
                 deadline,
             );
         }
-        seen.recv_timeout(Duration::from_secs(3))
-            .expect("assistant saw demand");
+        receive_notice(&seen);
         let pending = early.is_none();
         let charged = heap.managed_bytes();
         let before = drops.load(Ordering::Acquire);
@@ -669,6 +949,9 @@ mod tests {
         let result = if let Some(result) = early {
             result
         } else {
+            if let Some(notifications) = &notifications {
+                receive_notice(notifications);
+            }
             // Re-poll only once the donor has been destroyed and its charge refunded.
             while heap.callback_jobs.load(Ordering::Acquire) == 2 {
                 assert!(Instant::now() < deadline);
