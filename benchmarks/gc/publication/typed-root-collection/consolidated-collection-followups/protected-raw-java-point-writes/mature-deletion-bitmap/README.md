@@ -12,6 +12,8 @@ Both a funded peer allocation and two fresh full tickets completed while the pro
 Parking a marking claimant after it cleared the bit and before it reserved its batch left the mark gate held, the child marked and its grandchild white. After 2,048 peer steps strong marking was still open. Resuming the claimant preserved the subgraph. The schedule passed under both publication policies in 24 fresh processes. A separate producer parked under fresh admission with **65 distinct pending identity groups** exhausted both peer budgets in all 96 cases. Resumption completed reclamation. Together these fixtures establish where progress still depends on a suspended thread.
 [Randomized trials](validation/schedules.json.gz) · [Sparse schedule](validation/sparse.patch.gz) · [Mark claim interlock](validation/claim-gate.patch.gz) · [Discarded-traversal control](validation/no-traversal.patch.gz)
 
+A [sparse overflow experiment](sparse-overflow/README.md) let both peers progress at 65 and 129 groups. Its per-target proposals raised host allocation requests to 361,936 bytes at 2,048 sparse targets. The PR retains the bitmap and the same-number epoch regression.
+
 ## Allocation cost
 
 At 2,048 dense targets, the default identity index requested **4,288 bytes in 4 host allocations** on first visit, compared with 19,712 bytes in 22 on the shipping parent and 373,184 bytes in 7,693 on the earlier per-target experiment. The experimental index used 21,432 bytes in 37 requests. The bitmap requested zero bytes on the second and steady passes in both builds. On the default index, steady 2,048-target traversal in this debug fixture took 12.62 ms versus 5.94 ms. These are host allocator requests inside the fixture. The release throughput screens below use optimized binaries.

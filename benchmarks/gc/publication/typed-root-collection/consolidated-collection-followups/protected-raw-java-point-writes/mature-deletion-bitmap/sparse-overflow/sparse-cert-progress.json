@@ -1,0 +1,248 @@
+{
+  "commit": "31e6f63bfb46100008e8d4499b3d432c1f238d75",
+  "fixture": "b0b379e401a1f3c3c8b3e115213866efa4eb131e6617f924d3cbc51a7fb90950",
+  "binary_sha256": "053f02d488616503e7999d1583c334cfc8c1739da88b2ba02fc43b41e727cd38",
+  "seed": 251127677,
+  "results": [
+    {
+      "fork": 7,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 15,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 4,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 1,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 19,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 10,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 11,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 5,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 6,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 12,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 9,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 22,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 23,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 11,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 13,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 8,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 15,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 22,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 20,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 21,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 12,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 17,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 16,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 1,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 10,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 4,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 18,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 23,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 9,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 18,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 19,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 16,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 2,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 2,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 20,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 5,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 14,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 24,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 3,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 21,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 3,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 14,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 24,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 13,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 6,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 17,
+      "sparse_groups": 129,
+      "configurations": 4
+    },
+    {
+      "fork": 8,
+      "sparse_groups": 65,
+      "configurations": 4
+    },
+    {
+      "fork": 7,
+      "sparse_groups": 129,
+      "configurations": 4
+    }
+  ]
+}

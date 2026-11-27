@@ -1,0 +1,20 @@
+{
+  "processes": 48,
+  "visits": 384,
+  "seed": 251127675,
+  "cpus": [
+    16,
+    18
+  ],
+  "test_only_unused_ids_between_targets": 64,
+  "arms": {
+    "bitmap": {
+      "binary_sha256": "7c68e98e4a4e3edfaef078a5882bae8b58d3a72552cc414938fb8692be27f30e",
+      "commit": "f462e61ca477e2b6e6330b563369171f0e23d214"
+    },
+    "certificate": {
+      "binary_sha256": "cffb7ee9e5a6bb96c081165abcb94ce6e82fdb1896cb81a8f012234db92f475f",
+      "commit": "31e6f63bfb46100008e8d4499b3d432c1f238d75"
+    }
+  }
+}
