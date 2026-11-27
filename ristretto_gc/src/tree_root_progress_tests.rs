@@ -187,3 +187,89 @@ fn parked_manual_root_revalidates_the_borrowed_identity_after_a_peer_collection(
     );
     Ok(())
 }
+
+#[test]
+fn conditional_owner_reservation_permits_a_fresh_full_ticket() {
+    use crate::{GcWeak, ReferenceKind};
+
+    fn collect(gc: &GarbageCollector) {
+        lock(&gc.tree_root_insert_probe).take();
+        let ticket = gc.request_full_cycle();
+        for _ in 0..2048 {
+            if gc.completed_full_ticket() >= ticket {
+                return;
+            }
+            gc.step();
+        }
+        assert!(
+            gc.completed_full_ticket() >= ticket,
+            "full ticket stalled while preparing the referent root"
+        );
+    }
+
+    struct Owner {
+        donor: Option<Gc<u64>>,
+        slot: Option<GcWeak<u64>>,
+    }
+    // SAFETY: any donor independently owns its root until attach consumes it.
+    // The registered object then contains only the conditional slot.
+    unsafe impl Trace for Owner {
+        fn trace(&self, _: &GarbageCollector) {}
+        unsafe fn attach(&mut self, owner: crate::TraceOwner<'_>) {
+            let gc = owner.collector().upgrade().unwrap();
+            *lock(&gc.tree_root_insert_probe) = Some(collect);
+            if let Some(donor) = self.donor.take() {
+                self.slot = Some(GcWeak::new(&donor, ReferenceKind::Weak, owner.address()));
+            } else {
+                self.slot.as_ref().unwrap().set_owner(owner.address());
+            }
+            assert!(lock(&gc.tree_root_insert_probe).is_none());
+        }
+    }
+    for counted in [false, true] {
+        for storage in [
+            crate::RootStorage::Tree,
+            crate::RootStorage::Slots,
+            crate::RootStorage::Contexts,
+        ] {
+            // New private slots have a donor. A pre-existing slot may lose its
+            // last donor before the full collection inside reservation.
+            for (new, retain) in [(true, true), (false, true), (false, false)] {
+                let gc = GarbageCollector::with_config(
+                    Configuration::builder()
+                        .concurrent_publication(counted)
+                        .root_storage(storage)
+                        .allocation_threshold(usize::MAX)
+                        .build(),
+                );
+                let value = Gc::try_new(&gc, 73_u64).unwrap().into_rooted();
+                let original = value.identity();
+                let payload = Owner {
+                    donor: new.then(|| value.clone()),
+                    slot: (!new).then(|| GcWeak::new(&value, ReferenceKind::Weak, 0)),
+                };
+                let donor = retain.then_some(value);
+                let owner = Gc::try_new(&gc, payload).unwrap();
+                let slot = owner.slot.as_ref().unwrap();
+                assert_eq!(
+                    slot.upgrade().map(|v| (v.identity(), *v)),
+                    retain.then_some((original, 73))
+                );
+                drop(donor);
+                gc.collect_full().unwrap();
+                assert!(slot.is_cleared());
+                assert_eq!(
+                    gc.take_pending_reference::<Owner>()
+                        .unwrap()
+                        .map(|v| v.identity()),
+                    retain.then_some(owner.identity())
+                );
+                assert!(gc.take_pending_reference::<Owner>().unwrap().is_none());
+                drop(owner);
+                gc.collect_full().unwrap();
+                assert_eq!(gc.root_statistics().compatibility_roots, 0);
+                assert_eq!(gc.managed_bytes(), 0);
+            }
+        }
+    }
+}

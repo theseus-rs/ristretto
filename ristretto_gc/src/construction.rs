@@ -237,6 +237,24 @@ fn adopt_batch(collector: &GarbageCollector, registrations: &mut Vec<Registratio
     })
 }
 
+/// Prepare backing while the slot remains available to collectors. The TLS scope
+/// is synchronous. Binding rechecks the target under phase and decision admission.
+pub(crate) fn prepare_reference_owner<'gc>(
+    collector: &'gc GarbageCollector,
+    slot: &Arc<crate::weak::WeakSlot>,
+) -> Option<crate::roots::VacantRoot<'gc>> {
+    let mut needed = false;
+    with_roots(collector, true, |roots| {
+        let mut owners = roots.reference_owners.borrow_mut();
+        if !owners.iter().any(|existing| Arc::ptr_eq(existing, slot)) {
+            owners.reserve(1);
+            roots.registrations.borrow_mut().reserve(1);
+            needed = true;
+        }
+    });
+    needed.then(|| collector.reserve_tree_root())
+}
+
 /// An unpublished Reference owner cannot yet participate in reference processing
 /// or queue delivery. Root its eligible referent before publishing a pending
 /// count, so collectors can skip this slot and finish while the hook is stalled.
@@ -245,7 +263,9 @@ fn adopt_batch(collector: &GarbageCollector, registrations: &mut Vec<Registratio
 pub(crate) fn protect_reference_owner(
     collector: &GarbageCollector,
     slot: &Arc<crate::weak::WeakSlot>,
+    reservation: Option<&mut crate::roots::VacantRoot<'_>>,
 ) {
+    let Some(tree) = reservation else { return };
     with_roots(collector, true, |roots| {
         if roots
             .reference_owners
@@ -262,7 +282,7 @@ pub(crate) fn protect_reference_owner(
             pending < usize::MAX,
             "conditional owner publication count exhausted"
         );
-        if let Some(id) = collector.retain_construction_referent(slot) {
+        if let Some(id) = collector.retain_construction_referent(slot, tree) {
             roots
                 .registrations
                 .borrow_mut()

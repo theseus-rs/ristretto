@@ -40,7 +40,7 @@ impl GarbageCollector {
         super::PreparedRootRegistration { owned, tree }
     }
 
-    pub(super) fn reserve_tree_root(&self) -> crate::roots::VacantRoot<'_> {
+    pub(crate) fn reserve_tree_root(&self) -> crate::roots::VacantRoot<'_> {
         #[cfg(test)]
         self.probe_tree_root_insertion();
         self.roots.reserve(&self.next_root_id)
@@ -289,13 +289,14 @@ impl GarbageCollector {
     pub(crate) fn retain_construction_referent(
         &self,
         slot: &crate::weak::WeakSlot,
+        tree: &mut crate::roots::VacantRoot<'_>,
     ) -> Option<crate::roots::TreeRoot> {
         let address = slot.target.load(Ordering::Acquire);
         let metadata = self.uncleared_weak_target(slot, address)?;
         if self.logically_retired(&metadata) {
             return None;
         }
-        let id = self.insert_root(metadata.ptr().0);
+        let id = self.publish_reserved_tree_root(tree, metadata.ptr().0);
         // Enumeration may already have passed this root. Publish its graph to
         // each active mark queue before admission ends, respecting phase floors.
         self.shade_live_domains(&metadata);

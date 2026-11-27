@@ -160,14 +160,17 @@ impl<T: Trace + 'static> GcWeak<T> {
             if let Some(visibility) = &slot.visibility {
                 gc.publish_host_weak(&slot, visibility, None);
             } else {
+                let mut reservation = if owner == 0 {
+                    None
+                } else {
+                    crate::construction::prepare_reference_owner(gc, &slot)
+                };
                 let publication = gc.root_publication_guard();
                 for (stamp, epoch) in slot.born_after.iter().zip(gc.weak_birth_epochs()) {
                     stamp.store(epoch, Ordering::Relaxed);
                 }
                 slot.bind_owner(gc.identity_for_address(owner));
-                if owner != 0 {
-                    crate::construction::protect_reference_owner(gc, &slot);
-                }
+                crate::construction::protect_reference_owner(gc, &slot, reservation.as_mut());
                 publication.register_weak(&slot);
             }
         }
@@ -240,8 +243,9 @@ impl<T: Trace + 'static> GcWeak<T> {
     /// Associates this edge with its containing Reference allocation.
     pub fn set_owner(&self, owner: usize) {
         if let Some(gc) = self.collector.upgrade() {
+            let mut reservation = crate::construction::prepare_reference_owner(&gc, &self.slot);
             let (_publication, _decision) = self.slot.admitted_decision(&gc);
-            crate::construction::protect_reference_owner(&gc, &self.slot);
+            crate::construction::protect_reference_owner(&gc, &self.slot, reservation.as_mut());
             self.slot.owner.store(owner, Ordering::Release);
             self.slot.bind_owner(gc.identity_for_address(owner));
             return;
